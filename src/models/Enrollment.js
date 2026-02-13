@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const enrollmentSchema = new mongoose.Schema({
-  studentId: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
   },
