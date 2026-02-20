@@ -19,7 +19,9 @@ exports.searchCourses = async (req, res) => {
     page = parseInt(page);
     limit = parseInt(limit);
 
-    const query = {};
+    const query = {
+      status: "published"
+    };
 
     /* ======================
        KEYWORD SEARCH
@@ -28,100 +30,84 @@ exports.searchCourses = async (req, res) => {
       query.$text = { $search: keyword };
     }
 
-    /* ======================
-       FILTER CATEGORY
-    ====================== */
-    if (category) {
-      query.category = category;
-    }
+    if (category) query.category = category;
+    if (level) query.level = level;
 
-    /* ======================
-       FILTER LEVEL
-    ====================== */
-    if (level) {
-      query.level = level;
-    }
-
-    /* ======================
-       FILTER PRICE
-    ====================== */
+    /* PRICE */
     if (minPrice || maxPrice) {
       query.price = {};
-
       if (minPrice) query.price.$gte = Number(minPrice);
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
-    /* ======================
-       FILTER RATING
-    ====================== */
+    /* RATING */
     if (minRating) {
       query.rating = { $gte: Number(minRating) };
     }
 
     /* ======================
-       FILTER USER PURCHASED COURSES
+       GET USER ENROLLMENTS
     ====================== */
-    if (myCourses === "true") {
+    let purchasedCourseIds = [];
 
-      if (!req.user) {
-        return res.status(401).json({
-          message: "Login required"
-        });
-      }
-
+    if (req.user) {
       const enrollments = await Enrollment.find({
-        userId: req.user.id
+        userId: req.user._id,
+        paymentStatus: "paid"
       }).select("courseId");
 
-      const courseIds = enrollments.map(e => e.courseId);
+      purchasedCourseIds = enrollments.map(e =>
+        e.courseId.toString()
+      );
 
-      query._id = { $in: courseIds };
+      /* filter only my courses */
+      if (myCourses === "true") {
+        query._id = { $in: purchasedCourseIds };
+      }
     }
 
     /* ======================
-       ONLY PUBLISHED COURSE
+       SORT
     ====================== */
-    query.status = "published";
-
-    /* ======================
-       SORTING
-    ====================== */
-    let sortOption = {};
+    let sortOption = { createdAt: -1 };
 
     switch (sortBy) {
       case "priceAsc":
-        sortOption.price = 1;
+        sortOption = { price: 1 };
         break;
-
       case "priceDesc":
-        sortOption.price = -1;
+        sortOption = { price: -1 };
         break;
-
       case "rating":
-        sortOption.rating = -1;
+        sortOption = { rating: -1 };
         break;
-
       case "popular":
-        sortOption.enrollmentCount = -1;
+        sortOption = { enrollmentCount: -1 };
         break;
-
       case "newest":
-        sortOption.createdAt = -1;
+        sortOption = { createdAt: -1 };
         break;
-
-      default:
-        sortOption.createdAt = -1;
     }
 
     /* ======================
-       EXECUTE QUERY
+       QUERY COURSES
     ====================== */
     const courses = await Course.find(query)
-      .populate("instructorId", "name email")
+      .populate("instructorId", "fullName email")
       .sort(sortOption)
       .skip((page - 1) * limit)
-      .limit(limit);
+      .limit(limit)
+      .lean();
+
+    /* ======================
+       ADD isEnrolled FIELD
+    ====================== */
+    const result = courses.map(course => ({
+      ...course,
+      isEnrolled: purchasedCourseIds.includes(
+        course._id.toString()
+      )
+    }));
 
     const total = await Course.countDocuments(query);
 
@@ -130,10 +116,12 @@ exports.searchCourses = async (req, res) => {
       total,
       page,
       pages: Math.ceil(total / limit),
-      data: courses
+      data: result
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error.message
+    });
   }
 };

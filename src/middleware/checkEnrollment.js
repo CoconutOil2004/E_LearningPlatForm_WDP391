@@ -2,7 +2,14 @@ const Enrollment = require("../models/Enrollment");
 
 const checkEnrollment = async (req, res, next) => {
   try {
-    const userId = req.user.id; // lấy từ JWT middleware
+
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Unauthorized"
+      });
+    }
+
+    const userId = req.user._id;
     const { courseId } = req.params;
 
     if (!courseId) {
@@ -13,14 +20,18 @@ const checkEnrollment = async (req, res, next) => {
 
     const enrollment = await Enrollment.findOne({
       userId,
-      courseId
+      courseId,
+      paymentStatus: "paid"
     });
 
     if (!enrollment) {
       return res.status(403).json({
-        message: "You must purchase this course to access"
+        message: "You must purchase this course"
       });
     }
+
+    /* attach for next controller */
+    req.enrollment = enrollment;
 
     next();
 
