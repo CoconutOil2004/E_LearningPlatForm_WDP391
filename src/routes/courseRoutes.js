@@ -5,11 +5,14 @@ const router = express.Router();
 const {
   searchCourses,
   getCourseLessons
-} = require("../controllers/courseController");
+} = require("../controller/courseController");
 
 /* Middlewares */
-const protect = require("../middlewares/authMiddleware");
-const checkEnrollment = require("../middlewares/checkEnrollment");
+const { protect } = require("../middleware/authMiddleware");
+const checkEnrollment = require("../middleware/checkEnrollment");
+
+console.log("courseRoutes.js - protect:", typeof protect);
+console.log("courseRoutes.js - checkEnrollment:", typeof checkEnrollment);
 
 /* =========================
    PUBLIC ROUTES

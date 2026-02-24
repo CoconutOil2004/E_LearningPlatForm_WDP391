@@ -2,14 +2,19 @@ const express = require("express");
 const router = express.Router();
 
 /* Middlewares */
-const protect = require("../middlewares/authMiddleware");
-const checkEnrollment = require("../middlewares/checkEnrollment");
+const { protect } = require("../middleware/authMiddleware");
+const checkEnrollment = require("../middleware/checkEnrollment");
 
 /* Controllers */
 const {
-  completeLesson,
   getMyCourses
-} = require("../controllers/enrollmentController");
+} = require("../controller/enrollmentController");
+const { completeLesson } = require("../controller/lessonController");
+
+console.log("enrollmentRoutes.js - protect:", typeof protect);
+console.log("enrollmentRoutes.js - checkEnrollment:", typeof checkEnrollment);
+console.log("enrollmentRoutes.js - completeLesson:", typeof completeLesson);
+console.log("enrollmentRoutes.js - getMyCourses:", typeof getMyCourses);
 
 /* ======================================
    STUDENT LEARNING ROUTES

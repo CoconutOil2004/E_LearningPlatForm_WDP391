@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const imageController = require('../controllers/imageController');
+const imageController = require('../controller/imageController');
 const { upload } = require('../config/cloudinary');
 
 // Upload a single image

@@ -4,7 +4,7 @@ const User = require("../models/User");
 /* =====================================
    PROTECT ROUTE (Require Login)
 ===================================== */
-exports.protect = async (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
     let token;
 
@@ -55,3 +55,5 @@ exports.protect = async (req, res, next) => {
     });
   }
 };
+
+module.exports = { protect };
