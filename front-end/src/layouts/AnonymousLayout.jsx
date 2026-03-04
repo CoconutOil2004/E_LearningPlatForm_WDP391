@@ -4,19 +4,29 @@
  * KHÔNG chứa ToastContainer (đã mount ở App level)
  */
 import React from "react";
-import { Outlet, ScrollRestoration } from "react-router-dom";
+import { Outlet, ScrollRestoration, useLocation } from "react-router-dom";
 import Header from "../components/home/Header/Header";
 import Footer from "../components/home/Footer/Footer";
 
 const AnonymousLayout = () => {
+  const location = useLocation();
+  const learnXPaths = [
+    "/",
+    "/signin",
+    "/signup",
+    "/forgot-password",
+    "/verify-otp",
+  ];
+  const isLearnXPage = learnXPaths.includes(location.pathname);
+
   return (
     <div className="flex flex-col min-h-screen overscroll-none">
-      <Header />
+      {!isLearnXPage && <Header />}
       <main className="flex-grow min-h-[60vh]">
         <ScrollRestoration />
         <Outlet />
       </main>
-      <Footer />
+      {!isLearnXPage && <Footer />}
     </div>
   );
 };

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import logoTrang from "../../../assets/images/home/logo-trang.png";
 
 const Footer = () => {
   const [emailInfo, setEmailInfo] = useState("");
@@ -31,7 +30,7 @@ const Footer = () => {
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-6">
           {/* LOGO + BRAND */}
           <div className="space-y-4 lg:col-span-2">
-            <img src={logoTrang} alt="YÊN Detox Tea" className="w-auto h-16" />
+            <img alt="YÊN Detox Tea" className="w-auto h-16" />
 
             <p className="max-w-xs text-sm leading-relaxed text-white/70">
               YÊN trân quý những lá trà Lâm Đồng lỡ hẹn với vẻ ngoài hoàn hảo.

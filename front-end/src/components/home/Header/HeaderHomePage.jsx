@@ -1,247 +1,183 @@
-import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronDown,
-  Menu,
-  Package,
-  ShoppingCart,
-  User,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { BookOpen, ChevronDown, Menu, User, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import logoTrang from "../../../assets/images/home/logo-trang.png";
-import logoXanh from "../../../assets/images/home/logo-xanh.png";
+import { Link, useNavigate } from "react-router-dom";
 import { logout } from "../../../features/auth/authSlice";
-import { resetUserInfo, setUserInfo } from "../../../redux/orebiSlice";
 
 const Header = () => {
   const [sidenav, setSidenav] = useState(false);
   const [showUser, setShowUser] = useState(false);
-  const [userName, setUserName] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem("accessToken"),
-  );
-  const [scrolled, setScrolled] = useState(false);
 
-  const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userMenuRef = useRef();
-
-  const API_BASE_URL = process.env.REACT_APP_API_URL || API_BASE_URL;
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const cartItems = useSelector((state) => state.cart?.items) || [];
-  const cartTotalCount = cartItems.reduce(
-    (total, item) => total + item.quantity,
-    0,
-  );
+  const profileUser = useSelector((state) => state.profile?.user);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  // Dùng profile data nếu có, fallback về auth state
+  const displayName =
+    profileUser?.fullname ||
+    profileUser?.username ||
+    user?.fullname ||
+    user?.username ||
+    "Học viên";
+  const avatarURL = profileUser?.avatarURL || user?.avatarURL;
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setShowUser(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const fetchUserData = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) return;
-
-      const response = await axios.get(`${API_BASE_URL}/api/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUserName(response.data.fullname || response.data.username);
-      dispatch(setUserInfo(response.data));
-    } catch (error) {
-      if (error.response?.status === 401) {
-        localStorage.removeItem("accessToken");
-        setIsLoggedIn(false);
-      }
-    }
-  }, [API_BASE_URL, dispatch]);
-
-  useEffect(() => {
-    if (isLoggedIn) fetchUserData();
-  }, [isLoggedIn, fetchUserData]);
-
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      await axios.post(`${API_BASE_URL}/api/logout`, null, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error("Lỗi đăng xuất", error);
-    } finally {
-      localStorage.removeItem("accessToken");
-      dispatch(resetUserInfo());
-      dispatch(logout());
-      setIsLoggedIn(false);
-      setUserName(null);
-      navigate("/signin");
-    }
+  const handleLogout = () => {
+    dispatch(logout());
+    setShowUser(false);
+    navigate("/signin");
   };
 
   return (
     <>
-      <header
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
-          scrolled
-            ? "bg-[#fdfbf7]/95 backdrop-blur-md py-4 shadow-sm text-[#1E4D3B]"
-            : "bg-transparent py-8 text-white"
-        }`}
-      >
-        <div className="container flex items-center justify-between px-6 mx-auto lg:px-12">
-          {/* NAV TRÁI (DESKTOP) */}
-          <nav className="items-center hidden w-1/3 gap-8 ml-4 text-xs font-bold tracking-widest uppercase lg:flex">
-            <Link
-              to="/products"
-              className="transition-colors hover:text-emerald-600"
-            >
-              Cửa hàng
-            </Link>
-            <Link
-              to="/about-us"
-              className="transition-colors hover:text-emerald-600"
-            >
-              Về chúng tôi
-            </Link>
-          </nav>
-
-          {/* LOGO GIỮA */}
-          <Link to="/" className="flex flex-col items-center w-1/3 group">
-            <img
-              src={scrolled ? logoXanh : logoTrang}
-              alt="Yên Detox Tea"
-              className="object-contain w-auto transition-all duration-300 h-14"
-            />
-            <span
-              className={`text-[10px] tracking-[0.5em] uppercase transition-colors duration-300 
-              ${scrolled ? "text-[#1E4D3B]" : "text-white"}`}
-            >
-              DETOX TEA
+      <header className="sticky top-0 z-50 bg-[#080812]/90 backdrop-blur-xl border-b border-white/8">
+        <div className="flex items-center justify-between h-16 px-4 mx-auto max-w-7xl">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg shadow-lg bg-gradient-to-br from-violet-600 to-indigo-600 shadow-violet-500/30">
+              <BookOpen size={16} className="text-white" />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-white">
+              LearnX
             </span>
           </Link>
 
-          {/* ICON HÀNH ĐỘNG PHẢI */}
-          <div className="flex items-center justify-end w-1/3 gap-4 lg:gap-8">
-            {/* Giỏ hàng */}
-            <Link
-              to="/cart"
-              className="relative p-1 transition-colors hover:text-emerald-600"
-            >
-              <ShoppingCart size={20} />
-              {cartTotalCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                  {cartTotalCount}
-                </span>
-              )}
+          {/* Nav */}
+          <nav className="items-center hidden gap-6 text-sm md:flex text-white/50">
+            <Link to="/" className="transition-colors hover:text-white">
+              Khóa học
             </Link>
+            <Link to="/profile" className="transition-colors hover:text-white">
+              Hồ sơ
+            </Link>
+          </nav>
 
-            <div className="flex items-center gap-3 lg:gap-5">
-              {/* Menu Người dùng */}
+          {/* User actions */}
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setShowUser(!showUser)}
-                  className="flex items-center gap-1 p-1 transition-colors hover:text-emerald-600"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
                 >
-                  <User size={20} />
+                  {avatarURL ? (
+                    <img
+                      src={avatarURL}
+                      alt=""
+                      className="object-cover w-6 h-6 rounded-full"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500">
+                      <span className="text-[10px] font-bold text-white">
+                        {displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-sm text-white/80 max-w-[100px] truncate">
+                    {displayName}
+                  </span>
                   <ChevronDown
-                    className={`w-3 h-3 transition-transform duration-300 ${showUser ? "rotate-180" : ""}`}
+                    size={14}
+                    className={`text-white/40 transition-transform ${showUser ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 <AnimatePresence>
                   {showUser && (
                     <motion.div
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 15 }}
-                      className="absolute right-0 mt-4 w-56 bg-white shadow-xl rounded-lg overflow-hidden text-[#333] border border-stone-100"
+                      initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-52 rounded-xl border border-white/10 bg-[#111118] shadow-2xl overflow-hidden"
                     >
-                      {isAuthenticated ? (
-                        <div className="flex flex-col">
-                          <div className="px-4 py-3 border-b bg-stone-50">
-                            <p className="text-xs font-bold tracking-widest uppercase text-stone-400">
-                              Xin chào
-                            </p>
-                            <p className="text-sm font-serif text-[#1E4D3B] truncate">
-                              {userName || user?.username}
-                            </p>
-                          </div>
+                      {/* User info */}
+                      <div className="px-4 py-3 border-b border-white/8 bg-white/3">
+                        <p className="text-xs text-white/40 mb-0.5">
+                          Đăng nhập với
+                        </p>
+                        <p className="text-sm font-semibold text-white truncate">
+                          {displayName}
+                        </p>
+                        {(profileUser?.email || user?.email) && (
+                          <p className="text-xs truncate text-white/30">
+                            {profileUser?.email || user?.email}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          onClick={() => setShowUser(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                        >
+                          <User size={14} /> Trang cá nhân
+                        </Link>
+
+                        {user?.role === "instructor" && (
                           <Link
-                            to="/profile"
-                            className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-stone-50"
+                            to="/overview"
+                            onClick={() => setShowUser(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                           >
-                            <User size={14} /> Hồ sơ cá nhân
+                            <BookOpen size={14} /> Quản lý khóa học
                           </Link>
+                        )}
+
+                        {user?.role === "admin" && (
                           <Link
-                            to="/order-history"
-                            className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-stone-50"
+                            to="/admin"
+                            onClick={() => setShowUser(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                           >
-                            <Package size={14} /> Lịch sử đơn hàng
+                            Admin Dashboard
                           </Link>
-                          {/* <Link
-                            to="/watchlist"
-                            className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-stone-50"
-                          >
-                            <Heart size={14} /> Sản phẩm yêu thích
-                          </Link> */}
-                          <button
-                            onClick={handleLogout}
-                            className="px-4 py-3 text-sm font-bold text-left text-red-600 border-t hover:bg-red-50"
-                          >
-                            Đăng xuất
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col">
-                          <Link
-                            to="/signin"
-                            className="px-4 py-4 text-center text-sm font-bold bg-[#1E4D3B] text-white"
-                          >
-                            Đăng nhập
-                          </Link>
-                          <Link
-                            to="/signup"
-                            className="px-4 py-3 text-sm text-center hover:bg-stone-50"
-                          >
-                            Tạo tài khoản
-                          </Link>
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      <div className="py-1 border-t border-white/8">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 transition-colors"
+                        >
+                          Đăng xuất
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/signin"
+                  className="px-4 py-1.5 text-sm text-white/60 hover:text-white transition-colors"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  to="/signup"
+                  className="px-4 py-1.5 text-sm font-semibold text-white rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 transition-all shadow-lg shadow-violet-500/20"
+                >
+                  Đăng ký
+                </Link>
+              </div>
+            )}
 
-              {/* Mobile Menu Toggle */}
-              <button
-                className="p-1 lg:hidden"
-                onClick={() => setSidenav(true)}
-              >
-                <Menu size={20} />
-              </button>
-            </div>
+            <button
+              className="md:hidden p-1.5 text-white/60 hover:text-white"
+              onClick={() => setSidenav(true)}
+            >
+              <Menu size={20} />
+            </button>
           </div>
         </div>
       </header>
 
-      {/* MOBILE SIDENAV */}
+      {/* Mobile sidenav */}
       <AnimatePresence>
         {sidenav && (
           <>
@@ -250,55 +186,54 @@ const Header = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSidenav(false)}
-              className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden"
             />
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 z-[70] w-72 h-full bg-[#fdfbf7] shadow-2xl lg:hidden p-8"
+              className="fixed top-0 right-0 z-[70] w-72 h-full bg-[#0e0e1a] border-l border-white/8 shadow-2xl md:hidden p-6"
             >
               <button
                 onClick={() => setSidenav(false)}
-                className="absolute top-8 right-8"
+                className="absolute top-5 right-5 text-white/40 hover:text-white"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
-
-              <div className="flex flex-col mt-12 space-y-8">
+              <div className="flex flex-col gap-6 mt-12">
                 <Link
                   to="/"
                   onClick={() => setSidenav(false)}
-                  className="text-2xl font-serif text-[#1E4D3B]"
+                  className="text-lg font-medium text-white/70 hover:text-white"
                 >
-                  Trang chủ
+                  Khóa học
                 </Link>
-                <Link
-                  to="/products"
-                  onClick={() => setSidenav(false)}
-                  className="text-2xl font-serif text-[#1E4D3B]"
-                >
-                  Cửa hàng
-                </Link>
-                <Link
-                  to="/about-us"
-                  onClick={() => setSidenav(false)}
-                  className="text-2xl font-serif text-[#1E4D3B]"
-                >
-                  Câu chuyện
-                </Link>
-
-                <div className="pt-8 border-t border-stone-200">
-                  {!isAuthenticated && (
+                {isAuthenticated ? (
+                  <>
                     <Link
-                      to="/signin"
-                      className="block py-4 px-6 bg-[#1E4D3B] text-white text-center rounded-full font-bold"
+                      to="/profile"
+                      onClick={() => setSidenav(false)}
+                      className="text-lg font-medium text-white/70 hover:text-white"
                     >
-                      Đăng nhập
+                      Hồ sơ
                     </Link>
-                  )}
-                </div>
+                    <button
+                      onClick={handleLogout}
+                      className="text-lg font-medium text-left text-rose-400"
+                    >
+                      Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/signin"
+                    onClick={() => setSidenav(false)}
+                    className="block px-6 py-3 mt-4 font-semibold text-center text-white bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl"
+                  >
+                    Đăng nhập
+                  </Link>
+                )}
               </div>
             </motion.div>
           </>

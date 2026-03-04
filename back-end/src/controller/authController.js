@@ -176,6 +176,14 @@ exports.login = async (req, res) => {
         message: "Email hoặc mật khẩu không đúng",
       });
 
+    if (!user.isVerified)
+      return res.status(403).json({
+        success: false,
+        message:
+          "Tài khoản chưa xác thực. Vui lòng kiểm tra email để nhập OTP.",
+        email: user.email,
+      });
+
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
