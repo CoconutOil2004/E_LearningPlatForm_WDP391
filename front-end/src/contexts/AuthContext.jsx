@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthService from "../services/api/AuthService";
+import AuthService from "../services/api/AuthenService";
 import useAuthStore from "../store/slices/authStore";
-import { useToast } from "./ToastContext";
 import { ROUTES } from "../utils/constants";
+import { useToast } from "./ToastContext";
 
 const AuthContext = createContext(null);
 
@@ -12,7 +12,12 @@ const AuthContext = createContext(null);
  * Components can call useAuth() to get helpers.
  */
 export const AuthProvider = ({ children }) => {
-  const { setCredentials, logout: storeLogout, isAuthenticated, token } = useAuthStore();
+  const {
+    setCredentials,
+    logout: storeLogout,
+    isAuthenticated,
+    token,
+  } = useAuthStore();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -47,7 +52,9 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     try {
       const res = await AuthService.register(data);
-      toast.success(res.message || "Đăng ký thành công! Vui lòng xác thực email.");
+      toast.success(
+        res.message || "Đăng ký thành công! Vui lòng xác thực email.",
+      );
       navigate(`${ROUTES.VERIFY_OTP}?email=${encodeURIComponent(data.email)}`);
       return { success: true };
     } catch (error) {

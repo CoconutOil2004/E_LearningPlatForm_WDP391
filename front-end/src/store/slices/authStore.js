@@ -10,7 +10,7 @@ const useAuthStore = create(
     (set) => ({
       user: null,
       token: null,
-      role: "guest", // "guest" | "student" | "instructor" | "admin"
+      role: "guest",
       isAuthenticated: false,
 
       setCredentials: (user, token) =>
@@ -38,8 +38,8 @@ const useAuthStore = create(
         role: state.role,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );
 
 export default useAuthStore;

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
 import AuthenService from "../../services/api/AuthenService";
@@ -93,21 +93,17 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const toastShown = useRef(false);
+
   useEffect(() => {
+    if (toastShown.current) return; // chặn lần chạy thứ 2 (StrictMode)
+
     if (location.state?.message) {
-      toast.info(location.state.message);
+      toastShown.current = true; // đánh dấu đã hiện
+      toast.info(location.state?.message);
       navigate(".", { replace: true, state: {} });
     }
-    const errorParam = new URLSearchParams(location.search).get("error");
-    if (errorParam) {
-      toast.error(
-        errorParam === "google_failed"
-          ? "Đăng nhập Google thất bại."
-          : decodeURIComponent(errorParam),
-      );
-      navigate(".", { replace: true, state: {} });
-    }
-  }, [location, navigate, toast]);
+  }, []);
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
