@@ -1,0 +1,146 @@
+[
+  {
+    "username": "student01",
+    "fullname": "Nguyễn Văn A",
+    "email": "student01@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=1",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "student02",
+    "fullname": "Trần Thị B",
+    "email": "student02@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=2",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "student03",
+    "fullname": "Lê Văn C",
+    "email": "student03@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=3",
+    "action": "unlock",
+    "isVerified": false
+  },
+  {
+    "username": "instructor01",
+    "fullname": "Phạm Thị D",
+    "email": "instructor01@example.com",
+    "password": "password123",
+    "role": "instructor",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=4",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "instructor02",
+    "fullname": "Hoàng Văn E",
+    "email": "instructor02@example.com",
+    "password": "password123",
+    "role": "instructor",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=5",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "admin01",
+    "fullname": "Đỗ Thị F",
+    "email": "admin01@example.com",
+    "password": "admin123",
+    "role": "admin",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=6",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "googleId": "google_123456789",
+    "fullname": "Nguyễn Google User",
+    "email": "google.user@example.com",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=7",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "googleId": "google_987654321",
+    "fullname": "Trần Google Instructor",
+    "email": "google.instructor@example.com",
+    "role": "instructor",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=8",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "student_locked",
+    "fullname": "Lê Văn Locked",
+    "email": "locked@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=9",
+    "action": "lock",
+    "isVerified": true
+  },
+  {
+    "username": "student_unverified",
+    "fullname": "Phạm Thị Unverified",
+    "email": "unverified@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=10",
+    "action": "unlock",
+    "isVerified": false,
+    "otp": "123456",
+    "otpExpires": "2024-12-31T23:59:59.000Z"
+  },
+  {
+    "username": "instructor03",
+    "fullname": "Võ Văn G",
+    "email": "instructor03@example.com",
+    "password": "password123",
+    "role": "instructor",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=11",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "student04",
+    "fullname": "Bùi Thị H",
+    "email": "student04@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=12",
+    "action": "unlock",
+    "isVerified": true
+  },
+  {
+    "username": "student05",
+    "fullname": "Đinh Văn I",
+    "email": "student05@example.com",
+    "password": "password123",
+    "role": "student",
+    "watchlist": [],
+    "avatarURL": "https://i.pravatar.cc/150?img=13",
+    "action": "unlock",
+    "isVerified": false
+  }
+]
+

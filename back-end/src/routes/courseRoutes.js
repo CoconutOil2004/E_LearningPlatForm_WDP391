@@ -3,8 +3,8 @@ const router = express.Router();
 
 /* Controllers */
 const {
-  searchCourses,
-  getCourseLessons
+   searchCourses,
+   getCourseLessons
 } = require("../controller/courseController");
 
 /* Middlewares */
@@ -28,10 +28,10 @@ router.get("/search", searchCourses);
 
 // Get lessons of course (User must login + purchased)
 router.get(
-  "/:courseId/lessons",
-  protect,
-  checkEnrollment,
-  getCourseLessons
+   "/:courseId/lessons",
+   protect,
+   checkEnrollment,
+   getCourseLessons
 );
 
 module.exports = router;
