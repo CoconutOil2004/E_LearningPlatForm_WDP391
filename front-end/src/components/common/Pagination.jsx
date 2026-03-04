@@ -69,8 +69,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
           className={`hidden sm:flex items-center justify-center h-10 px-2 rounded-lg
             ${
               currentPage === 1
-                ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                ? "text-disabled cursor-not-allowed bg-subtle"
+                : "text-body hover:bg-subtle hover:text-primary"
             } transition-colors`}
           aria-label="First page"
         >
@@ -87,8 +87,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
           className={`flex items-center justify-center h-10 w-10 rounded-lg
             ${
               currentPage === 1
-                ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                ? "text-disabled cursor-not-allowed bg-subtle"
+                : "text-body hover:bg-subtle hover:text-primary"
             } transition-colors`}
           aria-label="Previous page"
         >
@@ -102,7 +102,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
               return (
                 <span
                   key={page}
-                  className="flex items-center justify-center w-10 h-10 text-gray-500"
+                  className="flex items-center justify-center w-10 h-10 text-muted"
                   aria-hidden="true"
                 >
                   ···
@@ -120,8 +120,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
                 className={`relative flex items-center justify-center w-10 h-10 rounded-lg font-medium text-sm
                   ${
                     currentPage === page
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                      ? "bg-primary text-white shadow-md"
+                      : "text-body hover:bg-subtle hover:text-primary"
                   } transition-colors`}
                 aria-label={`Page ${page}`}
                 aria-current={currentPage === page ? "page" : undefined}
@@ -129,7 +129,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
                 {currentPage === page && (
                   <motion.span
                     layoutId="activePageHighlight"
-                    className="absolute inset-0 bg-blue-600 rounded-lg -z-10"
+                    className="absolute inset-0 bg-primary rounded-lg -z-10"
                   />
                 )}
                 {page}
@@ -148,8 +148,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
           className={`flex items-center justify-center h-10 w-10 rounded-lg
             ${
               currentPage === totalPages
-                ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                ? "text-disabled cursor-not-allowed bg-subtle"
+                : "text-body hover:bg-subtle hover:text-primary"
             } transition-colors`}
           aria-label="Next page"
         >
@@ -166,8 +166,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
           className={`hidden sm:flex items-center justify-center h-10 px-2 rounded-lg
             ${
               currentPage === totalPages
-                ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                ? "text-disabled cursor-not-allowed bg-subtle"
+                : "text-body hover:bg-subtle hover:text-primary"
             } transition-colors`}
           aria-label="Last page"
         >
@@ -176,7 +176,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
       </div>
 
       {/* Page info */}
-      <div className="mt-3 text-sm text-center text-gray-500">
+      <div className="mt-3 text-sm text-center text-muted">
         Page {currentPage} of {totalPages}
       </div>
     </nav>

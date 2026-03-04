@@ -1,26 +1,37 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
-import { ToastProvider } from "./context/ToastContext";
-import { fetchUserProfile } from "./features/profile/profileSlice";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastProvider } from "./contexts/ToastContext";
 import router from "./routes";
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 1000 * 60 * 2 },
+  },
+});
+
 function App() {
-  const dispatch = useDispatch();
-  const { token } = useSelector((state) => state.auth);
-
-  useEffect(() => {
-    if (token) {
-      dispatch(fetchUserProfile());
-    }
-  }, [dispatch, token]);
-
   return (
-    <ToastProvider>
-      <div className="font-bodyFont">
-        <RouterProvider router={router} />
-      </div>
-    </ToastProvider>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <div className="font-bodyFont">
+          <RouterProvider router={router} />
+        </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={1000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }
 

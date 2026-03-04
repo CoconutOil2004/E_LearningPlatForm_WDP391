@@ -9,4 +9,58 @@ const formatCurrency = (amount) =>
     currency: "VND",
   }).format(amount);
 
-export { API_BASE_URL, BACKEND_API_URI, formatCurrency };
+const formatUSD = (amount) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+
+const ROLES = {
+  GUEST: "guest",
+  STUDENT: "student",
+  INSTRUCTOR: "instructor",
+  ADMIN: "admin",
+};
+
+const ROUTES = {
+  HOME: "/",
+  COURSES: "/courses",
+  COURSE_DETAIL: "/courses/:id",
+  SEARCH: "/search",
+  ABOUT: "/about",
+  CONTACT: "/contact",
+  // Auth
+  LOGIN: "/signin",
+  REGISTER: "/signup",
+  VERIFY_OTP: "/verify-otp",
+  FORGOT_PASSWORD: "/forgot-password",
+  RESET_PASSWORD: "/reset-password/:token",
+  // Student
+  STUDENT_DASHBOARD: "/student/dashboard",
+  MY_COURSES: "/student/my-courses",
+  LEARNING: "/student/learning/:courseId",
+  QUIZ: "/student/quiz/:courseId",
+  CERTIFICATE: "/student/certificate/:courseId",
+  WISHLIST: "/student/wishlist",
+  PROGRESS: "/student/progress",
+  STUDENT_PROFILE: "/student/profile",
+  STUDENT_SETTINGS: "/student/settings",
+  // Instructor
+  INSTRUCTOR_DASHBOARD: "/instructor/dashboard",
+  INSTRUCTOR_COURSES: "/instructor/courses",
+  CREATE_COURSE: "/instructor/courses/create",
+  EDIT_COURSE: "/instructor/courses/edit/:id",
+  INSTRUCTOR_REVENUE: "/instructor/revenue",
+  INSTRUCTOR_STUDENTS: "/instructor/students",
+  INSTRUCTOR_ANALYTICS: "/instructor/analytics",
+  INSTRUCTOR_PROFILE: "/instructor/profile",
+  // Admin
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_USERS: "/admin/users",
+  ADMIN_COURSES: "/admin/courses",
+  ADMIN_APPROVAL: "/admin/approval",
+  ADMIN_ANALYTICS: "/admin/analytics",
+  ADMIN_REVENUE: "/admin/revenue",
+  ADMIN_REPORTS: "/admin/reports",
+  ADMIN_SETTINGS: "/admin/settings",
+  ADMIN_LOGS: "/admin/logs",
+};
+
+export { API_BASE_URL, BACKEND_API_URI, formatCurrency, formatUSD, ROLES, ROUTES };
