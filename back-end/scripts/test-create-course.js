@@ -13,7 +13,7 @@ const axios = require("axios");
 const BASE_URL = process.env.BASE_URL || "http://localhost:9999";
 
 const EMAIL = "hoangtrieultvp@gmail.com";
-const PASSWORD = "pass123";
+const PASSWORD = "22062004";
 
 // Dữ liệu course mẫu (có thể sửa khi chạy)
 const COURSE_PAYLOAD = {

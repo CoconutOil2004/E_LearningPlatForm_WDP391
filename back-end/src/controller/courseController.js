@@ -259,6 +259,12 @@ exports.updateCourse = async (req, res) => {
       return res.status(403).json({ message: "Not the course instructor" });
     }
 
+    if (["pending", "published"].includes(course.status)) {
+      return res.status(400).json({
+        message: `Cannot update course while it is ${course.status}. Please move it back to draft first.`
+      });
+    }
+
     if (categoryId !== undefined) {
       const categoryValidation = await validateCategoryId(categoryId || null);
       if (!categoryValidation.valid) {
@@ -271,7 +277,7 @@ exports.updateCourse = async (req, res) => {
     if (description !== undefined) course.description = description.trim();
     if (level !== undefined) course.level = level;
     if (price !== undefined) course.price = Number(price);
-    if (status !== undefined && ["draft", "published", "archived"].includes(status)) {
+    if (status !== undefined && ["draft", "pending", "published", "rejected", "archived"].includes(status)) {
       course.status = status;
     }
 
@@ -346,6 +352,138 @@ exports.getCourseLessons = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   SUBMIT COURSE (Instructor)
+===================================================== */
+exports.submitCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.instructorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not the course instructor" });
+    }
+
+    if (!["draft", "rejected"].includes(course.status)) {
+      return res.status(400).json({
+        message: `Cannot submit course with status: ${course.status}`
+      });
+    }
+
+    course.status = "pending";
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Course submitted for review",
+      data: course
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   ADMIN: GET PENDING COURSES
+===================================================== */
+exports.getPendingCourses = async (req, res) => {
+  try {
+    const courses = await Course.find({ status: "pending" })
+      .populate("instructorId", "fullname email")
+      .populate("category", "name")
+      .sort({ updatedAt: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      count: courses.length,
+      data: courses
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   ADMIN: APPROVE COURSE
+===================================================== */
+exports.approveCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.status !== "pending") {
+      return res.status(400).json({
+        message: `Cannot approve course with status: ${course.status}`
+      });
+    }
+
+    course.status = "published";
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Course approved and published",
+      data: course
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   ADMIN: REJECT COURSE
+===================================================== */
+exports.rejectCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { reason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.status !== "pending") {
+      return res.status(400).json({
+        message: `Cannot reject course with status: ${course.status}`
+      });
+    }
+
+    course.status = "rejected";
+    // Optional: save rejection reason if model is updated to support it
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Course rejected",
+      data: course
+    });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
