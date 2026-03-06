@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 
+/**
+ * @deprecated Payment logic is consolidated in Order.js (Buy Now flow).
+ * Order holds: userId, courseId, amount, paymentMethod, status, transactionId.
+ * This model kept for legacy/audit until controllers are migrated to Order.
+ */
 const paymentSchema = new mongoose.Schema({
   enrollmentId: {
     type: mongoose.Schema.Types.ObjectId,

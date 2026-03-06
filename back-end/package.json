@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nodemon server",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "import-data": "node scripts/import-data.js"
+    "import-data": "node scripts/import-data.js",
+    "test:create-course": "node scripts/test-create-course.js"
   },
   "keywords": [
     "nodejs",

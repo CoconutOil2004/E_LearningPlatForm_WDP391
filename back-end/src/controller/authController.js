@@ -166,14 +166,14 @@ exports.login = async (req, res) => {
     if (!user)
       return res.status(400).json({
         success: false,
-        message: "Email hoặc mật khẩu không đúng",
+        message: "Email hoặc mật khẩu không đúng đâu",
       });
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch)
       return res.status(400).json({
         success: false,
-        message: "Email hoặc mật khẩu không đúng",
+        message: "Email hoặc mật khẩu không đúng nhé",
       });
 
     if (!user.isVerified)
