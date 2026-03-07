@@ -5,24 +5,13 @@ const logger = require("../utils/logger");
 const { sendEmail } = require("../services/emailService");
 const crypto = require("crypto"); // để tạo OTP ngẫu nhiên
 const passport = require("passport");
+const { generateRandomPassword } = require("../utils/password");
 
 // Hàm kiểm tra định dạng email
 const validateEmail = (email) => {
   const re =
     /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(String(email).toLowerCase());
-};
-
-// Hàm tạo mật khẩu ngẫu nhiên
-const generatePassword = () => {
-  const length = 8;
-  const charset =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return password;
 };
 
 // ------------------ REGISTER ------------------
@@ -184,7 +173,7 @@ exports.login = async (req, res) => {
         email: user.email,
       });
 
-    if (user.action === 'lock')
+    if (user.action === "lock")
       return res.status(403).json({
         success: false,
         message: "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
@@ -261,7 +250,7 @@ exports.forgotPassword = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Không tìm thấy người dùng" });
 
-    const newPassword = generatePassword();
+    const newPassword = generateRandomPassword(10);
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.updateOne({ _id: user._id }, { password: hashedPassword });
 
