@@ -184,6 +184,12 @@ exports.login = async (req, res) => {
         email: user.email,
       });
 
+    if (user.action === 'lock')
+      return res.status(403).json({
+        success: false,
+        message: "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
+      });
+
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,

@@ -178,6 +178,78 @@ exports.searchCourses = async (req, res) => {
 };
 
 /* =====================================================
+   DANH SÁCH KHÓA HỌC THEO CATEGORY (public)
+   GET /api/courses/by-category/:categoryId?page=1&limit=10&sortBy=...
+===================================================== */
+exports.getCoursesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    let { page = 1, limit = 10, sortBy } = req.query;
+
+    if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId không hợp lệ"
+      });
+    }
+
+    page = Math.max(1, parseInt(page, 10) || 1);
+    limit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+
+    const query = {
+      status: "published",
+      category: new mongoose.Types.ObjectId(categoryId)
+    };
+
+    let sortOption = { createdAt: -1 };
+    switch (sortBy) {
+      case "priceAsc":
+        sortOption = { price: 1 };
+        break;
+      case "priceDesc":
+        sortOption = { price: -1 };
+        break;
+      case "rating":
+        sortOption = { rating: -1 };
+        break;
+      case "popular":
+        sortOption = { enrollmentCount: -1 };
+        break;
+      default:
+        break;
+    }
+
+    const [courses, total] = await Promise.all([
+      Course.find(query)
+        .populate("instructorId", "fullname email avatarURL")
+        .populate("category", "name slug description")
+        .sort(sortOption)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Course.countDocuments(query)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: courses,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi server khi lấy danh sách khóa học theo category"
+    });
+  }
+};
+
+/* =====================================================
    CREATE COURSE (Instructor) – Yêu cầu 1
    title bắt buộc max 60, categoryId bắt buộc tồn tại, level enum.
    Mặc định status: draft, price: 0. Response 201 + populate category name.
