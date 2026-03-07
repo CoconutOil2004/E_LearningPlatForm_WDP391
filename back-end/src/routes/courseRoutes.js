@@ -4,6 +4,7 @@ const router = express.Router();
 /* Controllers */
 const {
    searchCourses,
+   getCoursesByCategory,
    getCourseLessons,
    createCourse,
    updateCourse,
@@ -33,6 +34,7 @@ const handleUploadError = uploadVideoMw.handleUploadError;
    PUBLIC ROUTES
 ========================= */
 router.get("/search", searchCourses);
+router.get("/by-category/:categoryId", getCoursesByCategory);
 router.get("/levels", (req, res) => {
    const { LEVEL_ENUM } = require("../controller/courseController");
    res.json({ success: true, data: LEVEL_ENUM });
