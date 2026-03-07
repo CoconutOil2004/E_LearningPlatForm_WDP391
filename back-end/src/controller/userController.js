@@ -293,6 +293,63 @@ const getInstructors = async (req, res) => {
   }
 };
 
+/**
+ * Cập nhật action lock/unlock cho tài khoản instructor (chỉ admin)
+ * Body: { action: 'lock' | 'unlock' }
+ */
+const updateInstructorAction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+
+    if (!action || !['lock', 'unlock'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'action phải là "lock" hoặc "unlock"',
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người dùng',
+      });
+    }
+
+    if (user.role !== 'instructor') {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ được phép lock/unlock tài khoản instructor',
+      });
+    }
+
+    user.action = action;
+    await user.save();
+
+    logger.info(`Instructor ${user.email} action updated to "${action}" by admin`);
+
+    return res.status(200).json({
+      success: true,
+      message: action === 'lock' ? 'Đã khóa tài khoản instructor' : 'Đã mở khóa tài khoản instructor',
+      instructor: {
+        _id: user._id,
+        username: user.username,
+        fullname: user.fullname,
+        email: user.email,
+        role: user.role,
+        action: user.action,
+      },
+    });
+  } catch (error) {
+    logger.error('Error updating instructor action:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi cập nhật trạng thái instructor',
+    });
+  }
+};
+
 module.exports = {
   searchUsers,
   getUserById,
@@ -301,4 +358,5 @@ module.exports = {
   getStudents,
   getInstructors,
   createInstructor,
+  updateInstructorAction,
 }; 

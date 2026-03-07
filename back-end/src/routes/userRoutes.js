@@ -4,6 +4,7 @@ const {
   getStudents,
   getInstructors,
   createInstructor,
+  updateInstructorAction,
   searchUsers,
   getUserById,
 } = require('../controller/userController');
@@ -14,6 +15,7 @@ const { isAdmin } = require('../middleware/auth.middleware');
 router.get('/students', protect, isAdmin, getStudents);
 router.get('/instructors', protect, isAdmin, getInstructors);
 router.post('/instructors', protect, isAdmin, createInstructor);
+router.patch('/instructors/:id/action', protect, isAdmin, updateInstructorAction);
 
 // Tìm kiếm & xem chi tiết user
 router.get('/search', protect, searchUsers);
