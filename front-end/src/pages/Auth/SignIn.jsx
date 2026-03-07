@@ -188,6 +188,13 @@ const SignIn = () => {
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
             Tiếp tục hành trình học tập của bạn
           </p>
+
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            Admin: admin@gmail.com/abc@123
+          </p>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            Instructor: instructor@gmail.com/abc@123
+          </p>
         </div>
 
         {/* Card */}
