@@ -26,6 +26,7 @@ app.use(express.json());
 
 /* ================= ROUTES ================= */
 app.use("/api/auth", require("./src/routes/authRoutes"));
+app.use("/api/users", require("./src/routes/userRoutes"));
 app.use("/api/courses", require("./src/routes/courseRoutes"));
 app.use("/api/categories", require("./src/routes/categoryRoutes"));
 app.use("/api/images", require("./src/routes/imageRoutes"));
