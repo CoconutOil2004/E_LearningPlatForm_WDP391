@@ -112,6 +112,14 @@
     --sidebar-accent-foreground: var(--color-secondary-fg);
     --sidebar-border:       var(--border-default);
     --sidebar-ring:         var(--color-primary);
+    /* ── Admin sidebar — đổi màu panel admin tại đây ── */
+    --admin-sidebar-bg:          #003B5C; /* Màu xanh Deep Sea đậm */
+    --admin-sidebar-active-bg:   rgba(0, 191, 165, 0.25); /* Teal sáng hơn */
+    --admin-sidebar-active-text: #00BFA5; /* Màu Mint/Teal chuẩn */
+    --admin-sidebar-text:        rgba(255, 255, 255, 0.9); /* Tăng lên 0.9 để chữ trắng rõ */
+    --admin-sidebar-hover-bg:    rgba(255, 255, 255, 0.1); 
+    --admin-sidebar-border:      rgba(255, 255, 255, 0.15);
+    --admin-sidebar-icon-bg:     rgba(0, 191, 165, 0.3);
     --chart-1: var(--color-primary);
     --chart-2: var(--color-secondary);
     --chart-3: var(--color-success);

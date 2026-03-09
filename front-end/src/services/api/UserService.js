@@ -1,37 +1,53 @@
-import { api } from '../index';
+
+import { api } from "../index";
 
 class UserService {
-    async addUser(email, password, fullName, address, phoneNumber) {
-        const result = await api.post(`/user/register`, { email, password, fullName, address, phoneNumber });
-        return result.data;
-    }
+  // ─── Instructors ────────────────────────────────────────────────────────────
 
-    async getPaginatedUsers(page, pageSize, keywords, sortBy) {
-        const response = await api.get('/user/get-paginated-users', {
-            params: {
-                page,
-                pageSize,
-                keywords,
-                sortBy
-            }
-        });
-        return response.data;
-    }
+  /**
+   * Lấy danh sách instructor (phân trang)
+   * @returns {{ success, instructors, pagination }}
+   */
+  async getInstructors({ page = 1, limit = 20 } = {}) {
+    const { data } = await api.get("/users/instructors", {
+      params: { page, limit },
+    });
+    return data;
+  }
 
-    async changeRole(role) {
-        try {
-            const result = await api.put('/buyers/change-role', { role });
-            return result.data;
-        } catch (error) {
-            throw error;
-        }
-    }
+  /**
+   * Admin tạo instructor — BE tự tạo password random + gửi email
+   * @param {{ email: string, fullname: string }} payload
+   * @returns {{ success, message, instructor }}
+   */
+  async createInstructor(payload) {
+    const { data } = await api.post("/users/instructors", payload);
+    return data;
+  }
 
-    async updateUser(userId, email, fullName, address, phoneNumber, role, isVerified) {
-        const result = await api.put(`/user/update/${userId}`, { email, fullName, address, phoneNumber, role, isVerified });
-        return result.data;
-    }
+  /**
+   * Lock / Unlock tài khoản instructor
+   * @param {string} id          - _id của instructor
+   * @param {'lock'|'unlock'} action
+   * @returns {{ success, message, instructor }}
+   */
+  async updateInstructorAction(id, action) {
+    const { data } = await api.patch(`/users/instructors/${id}/action`, { action });
+    return data;
+  }
 
+  // ─── Students ───────────────────────────────────────────────────────────────
+
+  /**
+   * Lấy danh sách student (phân trang)
+   * @returns {{ success, students, pagination }}
+   */
+  async getStudents({ page = 1, limit = 20 } = {}) {
+    const { data } = await api.get("/users/students", {
+      params: { page, limit },
+    });
+    return data;
+  }
 }
 
 export default new UserService();

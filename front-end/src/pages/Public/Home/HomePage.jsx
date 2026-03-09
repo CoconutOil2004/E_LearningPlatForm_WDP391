@@ -9,6 +9,7 @@ import { ROUTES } from "../../../utils/constants";
 import useCourseStore from "../../../store/slices/courseStore";
 import useAuthStore from "../../../store/slices/authStore";
 import { useToast } from "../../../contexts/ToastContext";
+import useCategorySection from "../../../hooks/useCategorySection";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -149,6 +150,13 @@ const HomePage = () => {
   const { isAuthenticated, user } = useAuthStore();
   const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } = useCourseStore();
   const toast = useToast();
+
+  // ── Real API: categories + courses từ BE ─────────────────────────────────
+  const {
+    sections: categorySections,
+    loading:  sectionsLoading,
+    error:    sectionsError,
+  } = useCategorySection({ limit: 4, sortBy: "popular", maxCategories: 5 });
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 700);
@@ -642,8 +650,8 @@ const HomePage = () => {
         </section>
 
         {/* ════════════════════════════════════════════════════════════════
-            FEATURED COURSES
-            Dùng lại CourseCard + handleEnroll + handleWishlist từ HomePage cũ
+            FEATURED COURSES — nhóm theo category từ BE
+            API: GET /api/categories → GET /api/courses/by-category/:id
         ════════════════════════════════════════════════════════════════ */}
         <section className="max-w-7xl mx-auto px-6 py-16">
           <div className="text-center mb-12">
@@ -655,40 +663,135 @@ const HomePage = () => {
             </p>
           </div>
 
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <GlassCard key={i} className="rounded-[2.5rem] overflow-hidden">
-                  <div className="h-48 bg-white/40 animate-pulse" />
-                  <div className="p-6 space-y-3">
-                    <div className="h-4 bg-white/40 rounded-full animate-pulse" />
-                    <div className="h-3 bg-white/40 rounded-full w-3/4 animate-pulse" />
+          {/* ── Loading skeleton ─────────────────────────────────────── */}
+          {sectionsLoading && (
+            <div className="space-y-12">
+              {[...Array(3)].map((_, si) => (
+                <div key={si}>
+                  {/* Category title skeleton */}
+                  <div className="h-7 w-40 bg-white/50 rounded-full animate-pulse mb-6" />
+                  {/* Cards skeleton */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="glass-card rounded-[2.5rem] overflow-hidden">
+                        <div className="h-44 bg-white/40 animate-pulse" />
+                        <div className="p-6 space-y-3">
+                          <div className="h-4 bg-white/40 rounded-full animate-pulse" />
+                          <div className="h-3 bg-white/40 rounded-full w-3/4 animate-pulse" />
+                          <div className="h-3 bg-white/40 rounded-full w-1/2 animate-pulse" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </GlassCard>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {FAKE_COURSES.slice(0, 4).map((course, i) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <CourseCard
-                    course={course}
-                    onEnroll={handleEnroll}
-                    onWishlist={handleWishlist}
-                    isEnrolled={enrolledCourseIds.includes(course.id)}
-                    isWishlisted={wishlistIds.includes(course.id)}
-                  />
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
 
-          <div className="text-center mt-10">
+          {/* ── Error state: fallback về FAKE_COURSES ────────────────── */}
+          {!sectionsLoading && sectionsError && (
+            <>
+              {/* Hiển thị thông báo nhỏ — không làm hỏng layout */}
+              <div className="mb-8 flex items-center gap-3 glass-card px-5 py-3 rounded-2xl w-fit mx-auto text-sm text-muted">
+                <Icon name="wifi-off" size={16} color="var(--text-muted)" />
+                Đang hiển thị dữ liệu mẫu · {sectionsError}
+              </div>
+
+              {/* Fallback: fake data, layout cũ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {FAKE_COURSES.slice(0, 4).map((course, i) => (
+                  <motion.div
+                    key={course.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <CourseCard
+                      course={course}
+                      onEnroll={handleEnroll}
+                      onWishlist={handleWishlist}
+                      isEnrolled={enrolledCourseIds.includes(course.id)}
+                      isWishlisted={wishlistIds.includes(course.id)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── Real data: một section per category ──────────────────── */}
+          {!sectionsLoading && !sectionsError && (
+            <div className="space-y-16">
+              {categorySections.map((section, si) => (
+                <motion.div
+                  key={section.category._id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: si * 0.07 }}
+                >
+                  {/* Category header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-1.5 h-8 rounded-full"
+                        style={{ background: "var(--gradient-brand)" }}
+                      />
+                      <h3 className="text-2xl font-extrabold text-heading tracking-tight">
+                        {section.category.name}
+                      </h3>
+                      <span className="text-xs text-muted font-bold bg-white/50 px-3 py-1 rounded-full border border-border/40">
+                        {section.total} khóa học
+                      </span>
+                    </div>
+
+                    {/* Xem tất cả → CoursesPage với category filter */}
+                    <button
+                      onClick={() =>
+                        navigate(`${ROUTES.COURSES}?category=${section.category._id}`)
+                      }
+                      className="flex items-center gap-1.5 text-sm font-bold text-primary hover:gap-3 transition-all duration-200"
+                    >
+                      Xem tất cả
+                      <Icon name="chevronRight" size={16} color="var(--color-primary)" />
+                    </button>
+                  </div>
+
+                  {/* Course cards row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {section.courses.map((course, i) => (
+                      <motion.div
+                        key={course.id ?? course._id}
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.08 }}
+                      >
+                        <CourseCard
+                          course={course}
+                          onEnroll={handleEnroll}
+                          onWishlist={handleWishlist}
+                          isEnrolled={enrolledCourseIds.includes(course.id ?? course._id)}
+                          isWishlisted={wishlistIds.includes(course.id ?? course._id)}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Empty state: BE có courses nhưng tất cả trống */}
+              {categorySections.length === 0 && (
+                <div className="text-center py-20">
+                  <Icon name="inbox" size={48} color="var(--text-muted)" />
+                  <p className="text-muted text-lg font-medium mt-4">
+                    Chưa có khóa học nào được xuất bản.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Nút xem tất cả chung */}
+          <div className="text-center mt-12">
             <button
               className="btn-aurora-outline"
               onClick={() => navigate(ROUTES.COURSES)}

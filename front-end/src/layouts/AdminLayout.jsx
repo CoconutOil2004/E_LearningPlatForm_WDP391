@@ -43,37 +43,37 @@ const AdminLayout = () => {
     >
       <ScrollRestoration />
 
-      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
+      {/* ── Sidebar Arctic Tech (Bản thu gọn không cuộn) ─────────────────── */}
       <motion.aside
-        animate={{ width: collapsed ? 72 : 240 }}
+        animate={{ width: collapsed ? 64 : 220 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="sticky top-0 flex flex-col h-screen overflow-hidden border-r shrink-0 border-white/10"
-        style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(20px)" }}
+        className="relative flex flex-col h-screen overflow-hidden border-r shrink-0 z-30 shadow-2xl"
+        style={{ 
+            backgroundColor: "var(--admin-sidebar-bg)",
+            borderColor: "var(--admin-sidebar-border)"
+        }}
       >
-        {/* Logo */}
-        <div className="flex items-center h-16 gap-3 p-4 border-b border-white/10">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/20 shrink-0">
-            <Icon name="shield" size={18} color="white" />
+        {/* Header: Thu nhỏ chiều cao từ 20 xuống 14 */}
+        <div className="flex items-center h-14 gap-2 px-4 border-b border-white/5 bg-black/10">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#00BFA5] shrink-0">
+            <Icon name="terminal" size={16} color="white" />
           </div>
           {!collapsed && (
-            <span className="text-lg font-black text-white whitespace-nowrap">
-              Admin Panel
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-black text-white uppercase truncate">Future IT</span>
+              <span className="text-[8px] font-medium text-blue-200/50 tracking-tighter">Admin Hub</span>
+            </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto p-1.5 rounded-lg hover:bg-white/10 shrink-0"
+            className="ml-auto p-1 text-white/40 hover:text-white"
           >
-            <Icon
-              name={collapsed ? "chevronRight" : "menu"}
-              size={18}
-              color="white"
-            />
+            <Icon name={collapsed ? "chevronRight" : "menu"} size={16} />
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex flex-col flex-1 gap-1 p-3 overflow-y-auto">
+        {/* Nav: Giảm gap và padding để không tràn màn hình */}
+        <nav className="flex flex-col flex-1 gap-0.5 p-2 overflow-y-auto no-scrollbar">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.path);
             return (
@@ -81,53 +81,57 @@ const AdminLayout = () => {
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm font-semibold w-full",
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-[13px] font-semibold w-full group",
                   active
-                    ? "bg-white/20 text-white"
-                    : "text-white/60 hover:bg-white/10 hover:text-white",
+                    ? "bg-white/10 text-[#00BFA5] shadow-sm"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
                 )}
                 title={collapsed ? item.label : undefined}
               >
-                <Icon name={item.icon} size={20} color="currentColor" />
+                <div className={cn(
+                    "shrink-0",
+                    active ? "text-[#00BFA5]" : "text-white/30 group-hover:text-white"
+                )}>
+                    <Icon name={item.icon} size={18} color="currentColor" />
+                </div>
                 {!collapsed && (
-                  <span className="whitespace-nowrap">{item.label}</span>
+                  <span className="whitespace-nowrap truncate">{item.label}</span>
                 )}
               </button>
             );
           })}
         </nav>
 
-        {/* User + Logout */}
-        <div className="p-3 border-t border-white/10">
+        {/* Footer: Thiết kế siêu gọn */}
+        <div className="p-2 border-t border-white/5 bg-black/10">
           {!collapsed && (
-            <div className="flex items-center gap-3 px-3 py-2 mb-2">
-              <div className="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-xl bg-white/20 shrink-0">
-                {getInitials(user?.name || "A")}
+            <div className="flex items-center gap-2 px-2 py-2 mb-1 rounded-xl bg-white/5">
+              <div className="w-8 h-8 rounded-full border border-[#00BFA5] overflow-hidden shrink-0 shadow-md">
+                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqOvN8u67iE2_2ownYCUc4wNKJFwYHkWblBFQukroYkILvPq4C19VD_2Fl43UZqGtZL69zgYx7O55PqkChk0_7KRGEP0-0h4WyWdVs4VBgGhWNp3ChRKkucBoLapp0-1ugUbvi1kJvbSemo1BKOIdPUeNuAFHm4D1h7QZD7jSmst-uxFOd96IDEZOav3dqp19NGNM-aXn52Mw_CCKnYdyfMAo8H8ICfmPfv_KXBHwFCncEyXbqSDxgtF92izv8RYCUqiVr_UcIKwP3" alt="Admin" className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">
-                  {user?.name || "Admin"}
+                <p className="text-[12px] font-bold text-white truncate leading-tight">
+                  {user?.name || "Dr. Alistair"}
                 </p>
-                <p className="text-xs truncate text-primary/70">
-                  {user?.email}
-                </p>
+                <p className="text-[9px] text-blue-300/70 uppercase truncate">Architect</p>
               </div>
             </div>
           )}
           <button
             onClick={logout}
-            className="flex items-center w-full gap-3 px-3 py-3 text-sm font-semibold transition-colors rounded-xl text-danger/80 hover:bg-danger/30/30"
-            title={collapsed ? "Logout" : undefined}
+            className="flex items-center w-full gap-2.5 px-3 py-2 text-[12px] font-bold text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
           >
-            <Icon name="logout" size={20} />
+            <Icon name="logout" size={18} />
             {!collapsed && <span>Logout</span>}
           </button>
         </div>
       </motion.aside>
 
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
+      {/* ── Main Content Area ─────────────────────────────────────────────── */}
+      <main className="flex-1 overflow-y-auto bg-[#F5F7FA]">
+        <div className="p-6">
+            <Outlet />
+        </div>
       </main>
     </div>
   );
