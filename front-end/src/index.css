@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -80,8 +80,8 @@
     --radius-full: 9999px;
 
     /* ── Typography ── */
-    --font-body:    "Plus Jakarta Sans", sans-serif;
-    --font-heading: "Syne", sans-serif;
+--font-body:    "Outfit",  sans-serif;   /* ← font chữ thường, paragraph, label */
+--font-heading: "Syne",    sans-serif;   /* ← font tiêu đề h1 h2 h3, font-black */
 
     /* ── Tailwind bridge ── */
     --background:           var(--bg-page);

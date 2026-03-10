@@ -60,7 +60,7 @@ const AdminLayout = () => {
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-black text-white uppercase truncate">Future IT</span>
+              <span className="text-xs font-black text-white uppercase truncate">EduFlow</span>
               <span className="text-[8px] font-medium text-blue-200/50 tracking-tighter">Admin Hub</span>
             </div>
           )}
