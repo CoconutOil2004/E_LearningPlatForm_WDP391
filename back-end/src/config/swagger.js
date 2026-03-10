@@ -9,10 +9,14 @@ const swaggerDocument = {
   info: {
     title: "WDP391 Backend API",
     version: "1.0.0",
-    description: "REST API cho ứng dụng học trực tuyến. Dùng **Authorize** (JWT) để test các endpoint bảo vệ.",
+    description:
+      "REST API cho ứng dụng học trực tuyến. Dùng **Authorize** (JWT) để test các endpoint bảo vệ.",
   },
   servers: [
-    { url: "/", description: "Same origin (dùng khi mở /api-docs trên cùng server)" },
+    {
+      url: "/",
+      description: "Same origin (dùng khi mở /api-docs trên cùng server)",
+    },
   ],
   components: {
     securitySchemes: {
@@ -31,6 +35,97 @@ const swaggerDocument = {
           message: { type: "string" },
         },
       },
+
+      Blog: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "67dabc1234567890abcd1234" },
+          title: {
+            type: "string",
+            example: "Hướng dẫn học Node.js cho người mới",
+          },
+          summary: {
+            type: "string",
+            example:
+              "Bài viết giới thiệu lộ trình học Node.js từ cơ bản đến nâng cao.",
+          },
+          category: {
+            type: "string",
+            example: "67dabc1234567890abcd9999",
+          },
+          status: {
+            type: "string",
+            enum: ["draft", "pending", "approved", "rejected"],
+            example: "draft",
+          },
+          content: {
+            type: "string",
+            example: "<p>Nội dung bài viết...</p>",
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+
+      UpdateBlogRequest: {
+        type: "object",
+        required: ["title", "summary", "category", "content"],
+        properties: {
+          title: { type: "string", example: "Tiêu đề bài viết mới" },
+          summary: {
+            type: "string",
+            example: "Tóm tắt mới cho bài viết.",
+          },
+          category: {
+            type: "string",
+            example: "67dabc1234567890abcd9999",
+          },
+          status: {
+            type: "string",
+            enum: ["draft", "pending", "approved", "rejected"],
+            example: "draft",
+          },
+          content: {
+            type: "string",
+            example: "<p>Nội dung mới...</p>",
+          },
+        },
+      },
+
+      RejectBlogRequest: {
+        type: "object",
+        properties: {
+          reason: {
+            type: "string",
+            example:
+              "Bài viết cần chỉnh lại nội dung hoặc bổ sung thêm thông tin.",
+          },
+        },
+      },
+
+      BlogListResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: {
+            type: "string",
+            example: "Lấy danh sách quản lý bài viết thành công.",
+          },
+          data: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Blog" },
+          },
+          pagination: {
+            type: "object",
+            properties: {
+              currentPage: { type: "integer", example: 1 },
+              totalPages: { type: "integer", example: 3 },
+              totalItems: { type: "integer", example: 25 },
+              pageSize: { type: "integer", example: 10 },
+            },
+          },
+        },
+      },
     },
   },
   tags: [
@@ -41,6 +136,7 @@ const swaggerDocument = {
     { name: "Enrollments", description: "Khóa học của tôi" },
     { name: "Payments", description: "Thanh toán" },
     { name: "Images", description: "Upload ảnh" },
+    { name: "Blogs", description: "Quản lý bài viết" },
   ],
   paths: {
     /* ========== AUTH ========== */
@@ -63,7 +159,10 @@ const swaggerDocument = {
             },
           },
         },
-        responses: { "200": { description: "OK" }, "400": { description: "Bad request" } },
+        responses: {
+          "200": { description: "OK" },
+          "400": { description: "Bad request" },
+        },
       },
     },
     "/api/auth/login": {
@@ -84,7 +183,13 @@ const swaggerDocument = {
             },
           },
         },
-        responses: { "200": { description: "success, token, user" }, "400": { description: "Sai email/password" }, "403": { description: "Chưa verify OTP hoặc tài khoản bị khóa" } },
+        responses: {
+          "200": { description: "success, token, user" },
+          "400": { description: "Sai email/password" },
+          "403": {
+            description: "Chưa verify OTP hoặc tài khoản bị khóa",
+          },
+        },
       },
     },
     "/api/auth/verify-otp": {
@@ -111,11 +216,22 @@ const swaggerDocument = {
       post: {
         tags: ["Auth"],
         summary: "Gửi lại OTP",
-        requestBody: { content: { "application/json": { schema: { type: "object", properties: { email: { type: "string" } } } } } },
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  email: { type: "string" },
+                },
+              },
+            },
+          },
+        },
         responses: { "200": { description: "OK" } },
       },
     },
-    "/api/auth/forgot-password": {  
+    "/api/auth/forgot-password": {
       post: {
         tags: ["Auth"],
         summary: "Quên mật khẩu",
@@ -233,7 +349,14 @@ const swaggerDocument = {
         tags: ["Users"],
         summary: "Lock/Unlock instructor (Admin)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         requestBody: {
           content: {
             "application/json": {
@@ -241,7 +364,10 @@ const swaggerDocument = {
                 type: "object",
                 required: ["action"],
                 properties: {
-                  action: { type: "string", enum: ["lock", "unlock"] },
+                  action: {
+                    type: "string",
+                    enum: ["lock", "unlock"],
+                  },
                 },
               },
             },
@@ -255,7 +381,14 @@ const swaggerDocument = {
         tags: ["Users"],
         summary: "Tìm user (cần JWT)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "query", in: "query", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "query",
+            in: "query",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { "200": { description: "users" } },
       },
     },
@@ -264,7 +397,14 @@ const swaggerDocument = {
         tags: ["Users"],
         summary: "Chi tiết user theo ID",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { "200": { description: "user" } },
       },
     },
@@ -276,12 +416,31 @@ const swaggerDocument = {
         summary: "Tìm kiếm khóa học (public)",
         parameters: [
           { name: "keyword", in: "query", schema: { type: "string" } },
-          { name: "category", in: "query", description: "Category ID", schema: { type: "string" } },
-          { name: "level", in: "query", schema: { type: "string", enum: ["Beginner", "Intermediate", "Advanced"] } },
+          {
+            name: "category",
+            in: "query",
+            description: "Category ID",
+            schema: { type: "string" },
+          },
+          {
+            name: "level",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["Beginner", "Intermediate", "Advanced"],
+            },
+          },
           { name: "minPrice", in: "query", schema: { type: "number" } },
           { name: "maxPrice", in: "query", schema: { type: "number" } },
           { name: "minRating", in: "query", schema: { type: "number" } },
-          { name: "sortBy", in: "query", schema: { type: "string", enum: ["priceAsc", "priceDesc", "rating", "popular"] } },
+          {
+            name: "sortBy",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["priceAsc", "priceDesc", "rating", "popular"],
+            },
+          },
           { name: "page", in: "query", schema: { type: "integer" } },
           { name: "limit", in: "query", schema: { type: "integer" } },
         ],
@@ -293,10 +452,22 @@ const swaggerDocument = {
         tags: ["Courses"],
         summary: "Danh sách khóa học theo category (public)",
         parameters: [
-          { name: "categoryId", in: "path", required: true, schema: { type: "string" } },
+          {
+            name: "categoryId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
           { name: "page", in: "query", schema: { type: "integer" } },
           { name: "limit", in: "query", schema: { type: "integer" } },
-          { name: "sortBy", in: "query", schema: { type: "string", enum: ["priceAsc", "priceDesc", "rating", "popular"] } },
+          {
+            name: "sortBy",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["priceAsc", "priceDesc", "rating", "popular"],
+            },
+          },
         ],
         responses: { "200": { description: "data, pagination" } },
       },
@@ -323,7 +494,10 @@ const swaggerDocument = {
                   title: { type: "string" },
                   description: { type: "string" },
                   categoryId: { type: "string" },
-                  level: { type: "string", enum: ["Beginner", "Intermediate", "Advanced"] },
+                  level: {
+                    type: "string",
+                    enum: ["Beginner", "Intermediate", "Advanced"],
+                  },
                 },
               },
             },
@@ -337,8 +511,21 @@ const swaggerDocument = {
         tags: ["Courses"],
         summary: "Cập nhật khóa học (Instructor)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "courseId", in: "path", required: true, schema: { type: "string" } }],
-        requestBody: { content: { "application/json": { schema: { type: "object" } } } },
+        parameters: [
+          {
+            name: "courseId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { type: "object" },
+            },
+          },
+        },
         responses: { "200": { description: "OK" } },
       },
     },
@@ -347,7 +534,14 @@ const swaggerDocument = {
         tags: ["Courses"],
         summary: "Submit khóa học duyệt (Instructor)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "courseId", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "courseId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { "200": { description: "OK" } },
       },
     },
@@ -364,7 +558,14 @@ const swaggerDocument = {
         tags: ["Courses"],
         summary: "Duyệt khóa học (Admin)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "courseId", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "courseId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { "200": { description: "OK" } },
       },
     },
@@ -373,7 +574,14 @@ const swaggerDocument = {
         tags: ["Courses"],
         summary: "Từ chối khóa học (Admin)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "courseId", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "courseId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { "200": { description: "OK" } },
       },
     },
@@ -382,7 +590,14 @@ const swaggerDocument = {
         tags: ["Courses"],
         summary: "Danh sách lessons (đã enroll)",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "courseId", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "courseId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { "200": { description: "lessons" } },
       },
     },
@@ -410,7 +625,14 @@ const swaggerDocument = {
         tags: ["Enrollments"],
         summary: "Đánh dấu hoàn thành lesson",
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: "courseId", in: "path", required: true, schema: { type: "string" } }],
+        parameters: [
+          {
+            name: "courseId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         requestBody: {
           content: {
             "application/json": {
@@ -499,7 +721,10 @@ const swaggerDocument = {
               schema: {
                 type: "object",
                 properties: {
-                  images: { type: "array", items: { type: "string", format: "binary" } },
+                  images: {
+                    type: "array",
+                    items: { type: "string", format: "binary" },
+                  },
                 },
               },
             },
@@ -525,6 +750,199 @@ const swaggerDocument = {
           },
         },
         responses: { "200": { description: "OK" } },
+      },
+    },
+
+    /* ========== BLOGS ========== */
+    "/api/blogs/{id}": {
+      put: {
+        tags: ["Blogs"],
+        summary: "Cập nhật bài viết (Instructor)",
+        description:
+          "Instructor chỉ được cập nhật bài viết do chính mình tạo và chưa bị xóa mềm.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID bài viết",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateBlogRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Cập nhật bài viết thành công" },
+          "404": { description: "Không tìm thấy bài viết" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+
+    "/api/blogs/{id}/submit": {
+      patch: {
+        tags: ["Blogs"],
+        summary: "Gửi bài viết chờ duyệt (Instructor)",
+        description:
+          "Instructor gửi bài viết từ draft hoặc rejected sang pending để admin duyệt.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID bài viết",
+          },
+        ],
+        responses: {
+          "200": { description: "Đã gửi bài viết chờ duyệt" },
+          "400": {
+            description: "Bài viết chưa đủ thông tin để gửi duyệt",
+          },
+          "404": { description: "Không tìm thấy bài viết" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+
+    "/api/blogs/admin/manage": {
+      get: {
+        tags: ["Blogs"],
+        summary: "Quản lý bài viết (Admin)",
+        description:
+          "Admin xem danh sách toàn bộ bài viết và lọc theo trạng thái, danh mục, tác giả, từ khóa, trạng thái xóa mềm.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", example: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", example: 10 },
+          },
+          {
+            name: "search",
+            in: "query",
+            schema: { type: "string", example: "node js" },
+          },
+          {
+            name: "status",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["draft", "pending", "approved", "rejected"],
+            },
+          },
+          { name: "category", in: "query", schema: { type: "string" } },
+          { name: "author", in: "query", schema: { type: "string" } },
+          {
+            name: "deleted",
+            in: "query",
+            schema: { type: "boolean", example: false },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Danh sách bài viết",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/BlogListResponse" },
+              },
+            },
+          },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+
+    "/api/blogs/admin/{id}/approve": {
+      patch: {
+        tags: ["Blogs"],
+        summary: "Duyệt bài viết (Admin)",
+        description: "Admin duyệt bài viết đang ở trạng thái pending.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID bài viết",
+          },
+        ],
+        responses: {
+          "200": { description: "Duyệt bài viết thành công" },
+          "400": { description: "Bài viết không ở trạng thái pending" },
+          "404": { description: "Không tìm thấy bài viết" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+
+    "/api/blogs/admin/{id}/reject": {
+      patch: {
+        tags: ["Blogs"],
+        summary: "Từ chối bài viết (Admin)",
+        description: "Admin từ chối bài viết đang ở trạng thái pending.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID bài viết",
+          },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RejectBlogRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Từ chối bài viết thành công" },
+          "400": { description: "Bài viết không ở trạng thái pending" },
+          "404": { description: "Không tìm thấy bài viết" },
+          "500": { description: "Server error" },
+        },
+      },
+    },
+
+    "/api/blogs/admin/{id}": {
+      delete: {
+        tags: ["Blogs"],
+        summary: "Xóa mềm bài viết (Admin)",
+        description:
+          "Admin xóa mềm bài viết bằng cách cập nhật deleted = true.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID bài viết",
+          },
+        ],
+        responses: {
+          "200": { description: "Xóa mềm bài viết thành công" },
+          "404": { description: "Không tìm thấy bài viết" },
+          "500": { description: "Server error" },
+        },
       },
     },
   },
