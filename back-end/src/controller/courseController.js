@@ -390,7 +390,9 @@ exports.getCoursePreview = async (req, res) => {
 };
 
 /* =====================================================
-   GET COURSE DETAIL (Instructor / Admin) – full, có videoUrl + questions
+   GET COURSE DETAIL – full (videoUrl + questions)
+   Admin / Instructor của khóa: vào được luôn.
+   Student: chỉ vào được nếu đã enroll (đã mua khóa).
 ===================================================== */
 exports.getCourseById = async (req, res) => {
   try {
@@ -412,8 +414,18 @@ exports.getCourseById = async (req, res) => {
     const instructorIdStr = course.instructorId?._id?.toString() || course.instructorId?.toString();
     const isInstructor = instructorIdStr && req.user._id.toString() === instructorIdStr;
     const isAdmin = req.user.role === "admin";
-    if (!isInstructor && !isAdmin) {
-      return res.status(403).json({ message: "Chỉ instructor của khóa hoặc admin mới xem được." });
+
+    if (isAdmin || isInstructor) {
+      return res.json({ success: true, data: course });
+    }
+
+    const enrollment = await Enrollment.findOne({
+      userId: req.user._id,
+      courseId: id,
+      paymentStatus: "paid"
+    });
+    if (!enrollment) {
+      return res.status(403).json({ message: "Bạn cần mua khóa học để xem nội dung." });
     }
 
     res.json({ success: true, data: course });
@@ -571,67 +583,6 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
-
-/* =====================================================
-   GET COURSE LESSONS (SECURE - Udemy Style)
-   Curriculum: sections > items (lesson | quiz). Only lesson items returned.
-===================================================== */
-function getLessonItemsFromSections(sections) {
-  const items = [];
-  (sections || []).forEach(sec => {
-    (sec.items || [])
-      .filter(i => i.itemType === "lesson")
-      .forEach(i => items.push({ ...i.toObject?.() || i, orderIndex: i.orderIndex }));
-  });
-  items.sort((a, b) => a.orderIndex - b.orderIndex);
-  return items;
-}
-
-exports.getCourseLessons = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ message: "Invalid course id" });
-    }
-
-    const course = await Course.findOne({
-      _id: courseId,
-      status: "published"
-    })
-      .select("title sections totalDuration")
-      .populate({
-        path: "sections.items.itemId",
-        select: "duration",
-        model: "Lesson"
-      })
-      .lean();
-
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-
-    const lessonItems = getLessonItemsFromSections(course.sections);
-    const lessons = lessonItems.map(item => ({
-      _id: item.itemId?._id || item.itemId,
-      title: item.title,
-      duration: item.itemId?.duration ?? 0,
-      order: item.orderIndex
-    }));
-
-    res.json({
-      success: true,
-      courseId: course._id,
-      title: course.title,
-      totalLessons: lessons.length,
-      totalDuration: course.totalDuration ?? 0,
-      lessons
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
-  }
-};
 
 /* ====================== UPLOAD VIDEO (FE gọi trước, rồi gửi url vào PUT course sections) ====================== */
 exports.uploadVideo = async (req, res) => {

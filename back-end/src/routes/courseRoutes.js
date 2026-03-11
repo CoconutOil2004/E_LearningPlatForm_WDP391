@@ -4,7 +4,6 @@ const router = express.Router();
 const {
   searchCourses,
   getCoursesByCategory,
-  getCourseLessons,
   getCourseById,
   getCoursePreview,
   createCourse,
@@ -18,7 +17,6 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
-const checkEnrollment = require("../middleware/checkEnrollment");
 const uploadVideoMw = require("../middleware/uploadVideo");
 const handleUploadError = uploadVideoMw.handleUploadError;
 
@@ -44,8 +42,5 @@ router.put("/:courseId/reject", protect, authorize("admin"), rejectCourse);
 
 router.get("/:id/preview", getCoursePreview);
 router.get("/:id", protect, getCourseById);
-
-/* ========================= HỌC VIÊN ĐÃ MUA ========================= */
-router.get("/:courseId/lessons", protect, checkEnrollment, getCourseLessons);
 
 module.exports = router;
