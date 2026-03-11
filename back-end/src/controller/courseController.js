@@ -1,11 +1,33 @@
 const mongoose = require("mongoose");
 const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
+const Lesson = require("../models/Lesson");
+const Quiz = require("../models/Quiz");
 const { validateCategoryId } = require("./categoryController");
+const { cloudinary } = require("../config/cloudinary");
 
 /** Enum level dùng cho validation (trùng với Course schema). FE có thể gọi GET /api/courses/levels để lấy. */
 const LEVEL_ENUM = ["Beginner", "Intermediate", "Advanced"];
 exports.LEVEL_ENUM = LEVEL_ENUM;
+
+/** Upload buffer video lên Cloudinary, trả về { videoUrl, publicId, duration } */
+function uploadVideoToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { resource_type: "video", folder: "elearning-videos" },
+      (err, result) => {
+        if (err) return reject(err);
+        const duration = result?.duration ? Math.round(Number(result.duration)) : 0;
+        resolve({
+          videoUrl: result.secure_url,
+          publicId: result.public_id,
+          duration
+        });
+      }
+    );
+    uploadStream.end(buffer);
+  });
+}
 
 /* =====================================================
    SEARCH COURSES (Udemy Style)
@@ -209,9 +231,7 @@ exports.createCourse = async (req, res) => {
       });
     }
 
-    const courseId = "C" + Date.now();
     const course = await Course.create({
-      courseId,
       title: trimmedTitle,
       description: (description || "").trim(),
       category: categoryValidation.category._id,
@@ -239,12 +259,107 @@ exports.createCourse = async (req, res) => {
 };
 
 /* =====================================================
-   UPDATE COURSE – validates categoryId if provided
+   GET COURSE PREVIEW (public) – syllabus only, không trả videoUrl
+   Chỉ khóa published. Cho người chưa enroll xem cấu trúc khóa.
+===================================================== */
+exports.getCoursePreview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findOne({ _id: id, status: "published" })
+      .select("title description price level rating enrollmentCount totalDuration category instructorId sections")
+      .populate("category", "name slug description")
+      .populate("instructorId", "fullname")
+      .populate({ path: "sections.items.itemId", select: "title duration" })
+      .lean();
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    const sections = (course.sections || []).map(sec => ({
+      _id: sec._id,
+      title: sec.title,
+      items: (sec.items || []).map(it => {
+        const item = { ...it };
+        if (it.itemId) {
+          if (it.itemType === "lesson") {
+            item.itemId = { _id: it.itemId._id, title: it.itemId.title, duration: it.itemId.duration ?? 0 };
+          } else {
+            item.itemId = { _id: it.itemId._id, title: it.itemId.title };
+          }
+        }
+        return item;
+      })
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        _id: course._id,
+        title: course.title,
+        description: course.description,
+        price: course.price,
+        level: course.level,
+        rating: course.rating,
+        enrollmentCount: course.enrollmentCount,
+        totalDuration: course.totalDuration,
+        category: course.category,
+        instructorId: course.instructorId,
+        sections
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =====================================================
+   GET COURSE DETAIL (Instructor / Admin) – full, có videoUrl + questions
+===================================================== */
+exports.getCourseById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(id)
+      .populate("category", "name slug description")
+      .populate("instructorId", "fullname email")
+      .populate({ path: "sections.items.itemId" })
+      .lean();
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    const instructorIdStr = course.instructorId?._id?.toString() || course.instructorId?.toString();
+    const isInstructor = instructorIdStr && req.user._id.toString() === instructorIdStr;
+    const isAdmin = req.user.role === "admin";
+    if (!isInstructor && !isAdmin) {
+      return res.status(403).json({ message: "Chỉ instructor của khóa hoặc admin mới xem được." });
+    }
+
+    res.json({ success: true, data: course });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* =====================================================
+   UPDATE COURSE (CRUD) – nhận cả sections từ FE, đổ vào và lưu
+   Body: title?, description?, categoryId?, level?, price?, status?, sections?
+   sections = [ { title, items: [ { itemType, itemRef, title, orderIndex, itemId?, videoUrl?, duration?, videoPublicId?, questions? } ] } ]
+   Item không có itemId → BE tạo Lesson/Quiz mới. ItemId cũ không còn trong payload → xóa Lesson/Quiz tương ứng.
 ===================================================== */
 exports.updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, categoryId, level, price, status } = req.body;
+    const { title, description, categoryId, level, price, status, sections: bodySections } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course id" });
@@ -275,15 +390,105 @@ exports.updateCourse = async (req, res) => {
       course.status = status;
     }
 
+    const oldItemIds = new Set();
+    (course.sections || []).forEach(sec => {
+      (sec.items || []).forEach(it => {
+        if (it.itemId) oldItemIds.add(it.itemId.toString());
+      });
+    });
+
+    if (Array.isArray(bodySections)) {
+      const newSections = [];
+      const newItemIds = new Set();
+      let totalDuration = 0;
+
+      for (const sec of bodySections) {
+        const sectionTitle = (sec.title && String(sec.title).trim()) || "Section";
+        const newItems = [];
+        const items = Array.isArray(sec.items) ? sec.items : [];
+        let orderIndex = 0;
+
+        for (const it of items) {
+          orderIndex += 1;
+          const itemTitle = (it.title && String(it.title).trim()) || (it.itemType === "quiz" ? "Quiz" : "Bài học");
+          const itemType = it.itemType === "quiz" ? "quiz" : "lesson";
+          const itemRef = itemType === "quiz" ? "Quiz" : "Lesson";
+
+          let itemId = it.itemId && mongoose.Types.ObjectId.isValid(it.itemId) ? new mongoose.Types.ObjectId(it.itemId) : null;
+
+          if (!itemId) {
+            if (itemType === "lesson") {
+              const videoUrl = it.videoUrl && String(it.videoUrl).trim() ? String(it.videoUrl).trim() : "";
+              const lesson = await Lesson.create({
+                title: itemTitle,
+                videoUrl: videoUrl || null,
+                videoPublicId: (it.videoPublicId && String(it.videoPublicId).trim()) || null,
+                duration: Math.max(0, Number(it.duration) || 0),
+                courseId: course._id
+              });
+              itemId = lesson._id;
+              totalDuration += lesson.duration;
+            } else {
+              const questionList = Array.isArray(it.questions) ? it.questions : [];
+              const quiz = await Quiz.create({
+                title: itemTitle,
+                courseId: course._id,
+                questions: questionList
+              });
+              itemId = quiz._id;
+            }
+          } else {
+            const existing = await Lesson.findById(itemId).select("duration").lean();
+            if (existing) totalDuration += existing.duration || 0;
+          }
+
+          newItemIds.add(itemId.toString());
+          newItems.push({
+            itemType,
+            itemRef,
+            itemId,
+            title: itemTitle,
+            orderIndex
+          });
+        }
+
+        newSections.push({ title: sectionTitle, items: newItems });
+      }
+
+      for (const oldId of oldItemIds) {
+        if (newItemIds.has(oldId)) continue;
+        const lesson = await Lesson.findById(oldId).select("videoPublicId").lean();
+        if (lesson) {
+          if (lesson.videoPublicId) {
+            try {
+              await cloudinary.uploader.destroy(lesson.videoPublicId, { resource_type: "video" });
+            } catch (e) {
+              console.warn("Cloudinary delete video failed:", e?.message);
+            }
+          }
+          await Lesson.findByIdAndDelete(oldId);
+        } else {
+          await Quiz.findByIdAndDelete(oldId);
+        }
+      }
+
+      course.sections = newSections;
+      course.totalDuration = totalDuration;
+    }
+
     await course.save();
 
     const populated = await Course.findById(course._id)
       .populate("instructorId", "fullname email")
       .populate("category", "name slug description")
+      .populate({ path: "sections.items.itemId" })
       .lean();
 
     res.json({ success: true, data: populated });
   } catch (err) {
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -347,5 +552,18 @@ exports.getCourseLessons = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+/* ====================== UPLOAD VIDEO (FE gọi trước, rồi gửi url vào add lesson) ====================== */
+exports.uploadVideo = async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: "Cần gửi file video (field: video)." });
+    }
+    const data = await uploadVideoToCloudinary(req.file.buffer);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Upload video thất bại." });
   }
 };
