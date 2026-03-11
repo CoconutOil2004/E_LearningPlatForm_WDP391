@@ -24,6 +24,7 @@ import OTPVerification from "./pages/Auth/OTPVerification";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResendOTP from "./pages/Auth/ResendOTP";
 import StoreRegistration from "./pages/Auth/StoreRegistration";
+import AuthCallback from "./pages/Auth/AuthCallback";
 
 // ─── Public Pages ─────────────────────────────────────────────────────────────
 import HomePage from "./pages/Public/Home/HomePage";
@@ -66,17 +67,22 @@ import AdminLogsPage from "./pages/Admin/Logs/AdminLogsPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    // RootLayout bọc AuthProvider 1 lần duy nhất cho toàn bộ app
     <Route element={<RootLayout />} errorElement={<ErrorPage />}>
-
       {/* Auth Routes */}
-      <Route element={<GuestRoute><AnonymousLayout /></GuestRoute>}>
+      <Route
+        element={
+          <GuestRoute>
+            <AnonymousLayout />
+          </GuestRoute>
+        }
+      >
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/resend-otp" element={<ResendOTP />} />
         <Route path="/store-registration" element={<StoreRegistration />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
       </Route>
 
       {/* Public Routes */}
@@ -115,7 +121,10 @@ const router = createBrowserRouter(
       >
         <Route path="/student/learning/:courseId" element={<LearningPage />} />
         <Route path="/student/quiz/:courseId" element={<QuizPage />} />
-        <Route path="/student/certificate/:courseId" element={<CertificatePage />} />
+        <Route
+          path="/student/certificate/:courseId"
+          element={<CertificatePage />}
+        />
       </Route>
 
       {/* Instructor Routes */}
@@ -128,11 +137,23 @@ const router = createBrowserRouter(
       >
         <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
         <Route path="/instructor/courses" element={<InstructorCoursesPage />} />
-        <Route path="/instructor/courses/create" element={<CreateCoursePage />} />
-        <Route path="/instructor/courses/edit/:id" element={<CreateCoursePage />} />
+        <Route
+          path="/instructor/courses/create"
+          element={<CreateCoursePage />}
+        />
+        <Route
+          path="/instructor/courses/edit/:id"
+          element={<CreateCoursePage />}
+        />
         <Route path="/instructor/revenue" element={<InstructorRevenuePage />} />
-        <Route path="/instructor/students" element={<InstructorStudentsPage />} />
-        <Route path="/instructor/analytics" element={<InstructorAnalyticsPage />} />
+        <Route
+          path="/instructor/students"
+          element={<InstructorStudentsPage />}
+        />
+        <Route
+          path="/instructor/analytics"
+          element={<InstructorAnalyticsPage />}
+        />
         <Route path="/instructor/profile" element={<InstructorProfilePage />} />
       </Route>
 

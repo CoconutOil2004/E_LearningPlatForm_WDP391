@@ -38,10 +38,11 @@ const userSchema = new Schema(
       enum: ["student", "instructor", "admin"],
       default: "student",
     },
+
     watchlist: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Course", // Liên kết đến Model Course
+        ref: "Course",
       },
     ],
 
@@ -53,6 +54,12 @@ const userSchema = new Schema(
     isVerified: { type: Boolean, default: false },
     otp: { type: String },
     otpExpires: { type: Date },
+
+    // Bắt buộc đổi mật khẩu sau khi reset/quên mật khẩu
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true, versionKey: false }
 );
@@ -62,6 +69,7 @@ userSchema.pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) {
     return next();
   }
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
