@@ -200,6 +200,78 @@ exports.searchCourses = async (req, res) => {
 };
 
 /* =====================================================
+   DANH SÁCH KHÓA HỌC THEO CATEGORY (public)
+   GET /api/courses/by-category/:categoryId?page=1&limit=10&sortBy=...
+===================================================== */
+exports.getCoursesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    let { page = 1, limit = 10, sortBy } = req.query;
+
+    if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId không hợp lệ"
+      });
+    }
+
+    page = Math.max(1, parseInt(page, 10) || 1);
+    limit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+
+    const query = {
+      status: "published",
+      category: new mongoose.Types.ObjectId(categoryId)
+    };
+
+    let sortOption = { createdAt: -1 };
+    switch (sortBy) {
+      case "priceAsc":
+        sortOption = { price: 1 };
+        break;
+      case "priceDesc":
+        sortOption = { price: -1 };
+        break;
+      case "rating":
+        sortOption = { rating: -1 };
+        break;
+      case "popular":
+        sortOption = { enrollmentCount: -1 };
+        break;
+      default:
+        break;
+    }
+
+    const [courses, total] = await Promise.all([
+      Course.find(query)
+        .populate("instructorId", "fullname email avatarURL")
+        .populate("category", "name slug description")
+        .sort(sortOption)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Course.countDocuments(query)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: courses,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi server khi lấy danh sách khóa học theo category"
+    });
+  }
+};
+
+/* =====================================================
    CREATE COURSE (Instructor) – Yêu cầu 1
    title bắt buộc max 60, categoryId bắt buộc tồn tại, level enum.
    Mặc định status: draft, price: 0. Response 201 + populate category name.
@@ -374,6 +446,12 @@ exports.updateCourse = async (req, res) => {
       return res.status(403).json({ message: "Not the course instructor" });
     }
 
+    if (["pending", "published"].includes(course.status)) {
+      return res.status(400).json({
+        message: `Cannot update course while it is ${course.status}. Please move it back to draft first.`
+      });
+    }
+
     if (categoryId !== undefined) {
       const categoryValidation = await validateCategoryId(categoryId || null);
       if (!categoryValidation.valid) {
@@ -386,7 +464,7 @@ exports.updateCourse = async (req, res) => {
     if (description !== undefined) course.description = description.trim();
     if (level !== undefined) course.level = level;
     if (price !== undefined) course.price = Number(price);
-    if (status !== undefined && ["draft", "published", "archived"].includes(status)) {
+    if (status !== undefined && ["draft", "pending", "published", "rejected", "archived"].includes(status)) {
       course.status = status;
     }
 
@@ -555,7 +633,7 @@ exports.getCourseLessons = async (req, res) => {
   }
 };
 
-/* ====================== UPLOAD VIDEO (FE gọi trước, rồi gửi url vào add lesson) ====================== */
+/* ====================== UPLOAD VIDEO (FE gọi trước, rồi gửi url vào PUT course sections) ====================== */
 exports.uploadVideo = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
@@ -565,5 +643,136 @@ exports.uploadVideo = async (req, res) => {
     res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ message: err.message || "Upload video thất bại." });
+  }
+};
+
+/* =====================================================
+   SUBMIT COURSE (Instructor)
+===================================================== */
+exports.submitCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.instructorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not the course instructor" });
+    }
+
+    if (!["draft", "rejected"].includes(course.status)) {
+      return res.status(400).json({
+        message: `Cannot submit course with status: ${course.status}`
+      });
+    }
+
+    course.status = "pending";
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Course submitted for review",
+      data: course
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   ADMIN: GET PENDING COURSES
+===================================================== */
+exports.getPendingCourses = async (req, res) => {
+  try {
+    const courses = await Course.find({ status: "pending" })
+      .populate("instructorId", "fullname email")
+      .populate("category", "name")
+      .sort({ updatedAt: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      count: courses.length,
+      data: courses
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   ADMIN: APPROVE COURSE
+===================================================== */
+exports.approveCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.status !== "pending") {
+      return res.status(400).json({
+        message: `Cannot approve course with status: ${course.status}`
+      });
+    }
+
+    course.status = "published";
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Course approved and published",
+      data: course
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* =====================================================
+   ADMIN: REJECT COURSE
+===================================================== */
+exports.rejectCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { reason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.status !== "pending") {
+      return res.status(400).json({
+        message: `Cannot reject course with status: ${course.status}`
+      });
+    }
+
+    course.status = "rejected";
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Course rejected",
+      data: course
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

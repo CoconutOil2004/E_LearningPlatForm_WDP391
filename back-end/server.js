@@ -24,13 +24,20 @@ app.use(
 app.use(passport.initialize());
 app.use(express.json());
 
+/* ================= SWAGGER API DOCS ================= */
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./src/doc/swagger");
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 /* ================= ROUTES ================= */
 app.use("/api/auth", require("./src/routes/authRoutes"));
+app.use("/api/users", require("./src/routes/userRoutes"));
 app.use("/api/courses", require("./src/routes/courseRoutes"));
 app.use("/api/categories", require("./src/routes/categoryRoutes"));
 app.use("/api/images", require("./src/routes/imageRoutes"));
 app.use("/api/payments", require("./src/routes/paymentRoutes"));
 app.use("/api/enrollments", require("./src/routes/enrollmentRoutes"));
+app.use("/api/blogs", require("./src/routes/blogRoutes"));
 /* ========================================== */
 
 const PORT = process.env.PORT || 9999;
