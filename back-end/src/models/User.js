@@ -4,14 +4,14 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
   {
-    googleId: { type: String, unique: true, sparse: true }, // OAuth
+    googleId: { type: String, unique: true, sparse: true },
 
     username: {
       type: String,
       unique: true,
       sparse: true,
       required: function () {
-        return !this.googleId; // bắt buộc nếu không có googleId
+        return !this.googleId;
       },
       trim: true,
     },
@@ -22,14 +22,14 @@ const userSchema = new Schema(
       type: String,
       required: true,
       unique: true,
-      lowercase: true, // chuẩn hóa email
+      lowercase: true,
       trim: true,
     },
 
     password: {
       type: String,
       required: function () {
-        return !this.googleId; // bắt buộc nếu không có googleId
+        return !this.googleId;
       },
     },
 
@@ -50,26 +50,25 @@ const userSchema = new Schema(
 
     action: { type: String, enum: ["lock", "unlock"], default: "unlock" },
 
-    // OTP verification
     isVerified: { type: Boolean, default: false },
     otp: { type: String },
     otpExpires: { type: Date },
 
-    // Bắt buộc đổi mật khẩu sau khi reset/quên mật khẩu
     mustChangePassword: {
       type: Boolean,
       default: false,
     },
+
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
   },
   { timestamps: true, versionKey: false }
 );
 
-// Mã hóa mật khẩu trước khi lưu (chỉ khi có password)
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) {
     return next();
   }
-
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -79,9 +78,8 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// So sánh mật khẩu khi đăng nhập
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  if (!this.password) return false; // user google thì bỏ qua
+  if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 

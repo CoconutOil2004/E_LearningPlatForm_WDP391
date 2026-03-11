@@ -147,7 +147,6 @@ exports.resendOTP = async (req, res) => {
 };
 
 // ------------------ LOGIN ------------------
-// ------------------ LOGIN ------------------
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -224,7 +223,7 @@ exports.googleCallback = async (req, res) => {
 
     const userData = encodeURIComponent(
       JSON.stringify({
-        id: user._id,
+        id: user._id.toString(),
         username: user.username,
         fullname: user.fullname,
         email: user.email,
@@ -245,42 +244,146 @@ exports.googleCallback = async (req, res) => {
   }
 };
 
-
 // ------------------ FORGOT PASSWORD ------------------
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email là bắt buộc" });
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email là bắt buộc",
+      });
+    }
 
     const user = await User.findOne({ email });
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy người dùng" });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
 
-    const newPassword = generateRandomPassword(10);
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
 
-    // Gán trực tiếp để pre("save") tự hash
-    user.password = newPassword;
-    user.mustChangePassword = true;
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetExpires;
     await user.save();
+
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await sendEmail(
       user.email,
-      "Mật khẩu mới của bạn",
-      `Mật khẩu mới của bạn là: ${newPassword}.`,
+      "Đặt lại mật khẩu",
+      `Bạn đã yêu cầu đặt lại mật khẩu.\n\nVui lòng bấm vào link sau để đặt mật khẩu mới:\n${resetLink}\n\nLink sẽ hết hạn sau 15 phút.`
     );
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Mật khẩu mới đã được gửi tới email của bạn",
+      message: "Link đặt lại mật khẩu đã được gửi tới email của bạn",
     });
   } catch (error) {
     logger.error("Lỗi forgotPassword:", error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};
+
+// ------------------ RESET PASSWORD ------------------
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (!token || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Token, mật khẩu mới và xác nhận mật khẩu là bắt buộc",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Xác nhận mật khẩu không khớp",
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+      });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
+    });
+  } catch (error) {
+    logger.error("Lỗi resetPassword:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};
+
+// ------------------ VERIFY RESET TOKEN ------------------
+exports.verifyResetPasswordToken = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Token là bắt buộc",
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Token hợp lệ",
+    });
+  } catch (error) {
+    logger.error("Lỗi verifyResetPasswordToken:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
   }
 };
 
@@ -294,7 +397,7 @@ exports.changeRole = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Vai trò mới là bắt buộc" });
-    if (!["buyer", "seller"].includes(role))
+    if (!["student", "instructor", "admin"].includes(role))
       return res
         .status(400)
         .json({ success: false, message: "Vai trò không hợp lệ" });
