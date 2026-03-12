@@ -1,27 +1,7 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { cardVariants } from "../../utils/helpers";
 import { Badge, Icon, Stars } from "../ui";
-
-/**
- * CourseCard — nhận trực tiếp object course từ BE (không qua normalizeCourse).
- *
- * BE fields dùng:
- *   course._id                          — id khóa học
- *   course.title                        — tên khóa học
- *   course.description                  — mô tả
- *   course.thumbnail                    — ảnh (có thể null)
- *   course.price                        — giá (number, 0 = free)
- *   course.level                        — "Beginner" | "Intermediate" | "Advanced"
- *   course.rating                       — số (0–5)
- *   course.enrollmentCount              — số học viên
- *   course.totalDuration                — giây (number)
- *   course.status                       — "draft"|"pending"|"published"|...
- *   course.isEnrolled                   — boolean (từ searchCourses khi có token)
- *   course.category._id / .name         — populate từ BE
- *   course.instructorId._id / .fullname / .email  — populate từ BE
- *   course.sections                     — array sections (để đếm số lesson)
- */
 
 const fmtDuration = (secs) => {
   if (!secs) return null;
@@ -44,6 +24,7 @@ const CourseCard = ({
   onWishlist,
   onEnroll,
 }) => {
+  const navigate = useNavigate();
   const thumbnail =
     course.thumbnail ||
     "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop";
@@ -54,6 +35,19 @@ const CourseCard = ({
   const duration = fmtDuration(course.totalDuration);
   const isFree = course.price === 0;
 
+  const goToDetail = () => navigate(`/courses/${course._id}`);
+
+  const handleEnrollClick = (e) => {
+    e.stopPropagation();
+    if (onEnroll) onEnroll(course);
+    else navigate(`/courses/${course._id}`);
+  };
+
+  const handleWishlistClick = (e) => {
+    e.stopPropagation();
+    if (onWishlist) onWishlist(course._id);
+  };
+
   return (
     <motion.div
       variants={cardVariants}
@@ -62,21 +56,20 @@ const CourseCard = ({
       whileHover="hover"
       className="overflow-hidden bg-white border cursor-pointer rounded-2xl border-border group"
       style={{ boxShadow: "var(--shadow-md)" }}
+      onClick={goToDetail}
     >
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
-        <Link to={`/courses/${course._id}`}>
-          <img
-            src={thumbnail}
-            alt={course.title}
-            className="object-cover w-full transition-transform duration-500 h-44 group-hover:scale-105"
-          />
-        </Link>
+        <img
+          src={thumbnail}
+          alt={course.title}
+          className="object-cover w-full transition-transform duration-500 h-44 group-hover:scale-105"
+        />
 
         {/* Hover overlay */}
         <div className="absolute inset-0 flex items-end p-3 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/40 to-transparent group-hover:opacity-100">
           <button
-            onClick={() => onEnroll(course)}
+            onClick={handleEnrollClick}
             className="flex items-center justify-center w-full gap-2 py-2 text-sm font-bold text-white rounded-xl"
             style={{ background: "var(--color-primary)" }}
           >
@@ -98,18 +91,20 @@ const CourseCard = ({
         )}
 
         {/* Wishlist */}
-        <button
-          onClick={() => onWishlist(course._id)}
-          className="absolute p-2 transition-colors top-3 right-3 bg-white/90 rounded-xl hover:bg-white"
-        >
-          <Icon
-            name="heart"
-            size={16}
-            color={
-              isWishlisted ? "var(--color-danger)" : "var(--text-disabled)"
-            }
-          />
-        </button>
+        {onWishlist && (
+          <button
+            onClick={handleWishlistClick}
+            className="absolute p-2 transition-colors top-3 right-3 bg-white/90 rounded-xl hover:bg-white"
+          >
+            <Icon
+              name="heart"
+              size={16}
+              color={
+                isWishlisted ? "var(--color-danger)" : "var(--text-disabled)"
+              }
+            />
+          </button>
+        )}
       </div>
 
       {/* Info */}
@@ -119,11 +114,9 @@ const CourseCard = ({
           <Badge color="gray">{course.level}</Badge>
         </div>
 
-        <Link to={`/courses/${course._id}`}>
-          <h3 className="mb-1 text-sm font-bold leading-snug transition-colors text-heading line-clamp-2 hover:text-primary">
-            {course.title}
-          </h3>
-        </Link>
+        <h3 className="mb-1 text-sm font-bold leading-snug transition-colors text-heading line-clamp-2 hover:text-primary">
+          {course.title}
+        </h3>
 
         <p className="mb-3 text-xs text-muted">{instructorName}</p>
 

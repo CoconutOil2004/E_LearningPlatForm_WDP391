@@ -93,22 +93,24 @@ class CourseService {
   }
 
   // ─── GET /api/courses/:id ──────────────────────────────────────────────────
-  // Cần auth. Admin/Instructor-sở-hữu: vào thẳng.
-  // Student: cần paymentStatus = "paid". Trả 403 nếu chưa enroll.
-  // itemId đầy đủ kể cả videoUrl, videoPublicId
-  // → Course (full)
+  // optionalAuth: Guest/unenrolled → preview data + isEnrolled:false
+  //               Admin/Instructor/Enrolled → full data + isEnrolled:true
+  // KHÔNG còn throw 401/403 — an toàn gọi không cần auth
   getCourseDetail(id) {
-    return api.get(`/courses/${id}`).then((r) => r.data?.data ?? null);
+    return api.get(`/courses/${id}`).then((r) => ({
+      course: r.data?.data ?? null,
+      isEnrolled: r.data?.isEnrolled ?? false,
+    }));
   }
 
   // ─── POST /api/courses ────────────────────────────────────────────────────
   // Instructor only. Body: { title (max 60, required), description,
-  //                          categoryId (required), level (required) }
+  //                          categoryId (required), level (required), language? }
   // BE tự set: status="draft", price=0
   // → Course (populated category.name, instructorId.fullname/email)
-  createCourse({ title, description, categoryId, level }) {
+  createCourse({ title, description, categoryId, level, language }) {
     return api
-      .post("/courses", { title, description, categoryId, level })
+      .post("/courses", { title, description, categoryId, level, language })
       .then((r) => r.data?.data ?? null);
   }
 
@@ -225,3 +227,6 @@ class CourseService {
 }
 
 export default new CourseService();
+
+// Re-export for convenience
+export { CourseService };
