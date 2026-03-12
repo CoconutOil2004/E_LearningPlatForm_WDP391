@@ -1,34 +1,28 @@
-// services/emailService.js
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
-// Debug environment variables (chỉ dùng khi phát triển, xóa trước production)
-console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '[REDACTED]' : 'undefined');
-
-// Tạo transporter SMTP
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // TLS
+  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+  port: Number(process.env.EMAIL_PORT) || 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false, // Cho phép self-signed certificate
-  },
 });
 
-// Hàm gửi email
-const sendEmail = async (to, subject, text, html = null) => {
+const sendEmail = async ({ to, subject, text = "", html = "" }) => {
   try {
+    if (!to) {
+      throw new Error("No recipients defined");
+    }
+
     const mailOptions = {
       from: `"Tran Anh Blue" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-      html, // Nếu có HTML, sẽ dùng HTML body
+      html,
     };
 
     const info = await transporter.sendMail(mailOptions);
