@@ -5,65 +5,66 @@ import {
 } from "react-router-dom";
 
 // ─── Layouts ─────────────────────────────────────────────────────────────────
-import RootLayout from "./layouts/RootLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import AnonymousLayout from "./layouts/AnonymousLayout";
 import InstructorLayout from "./layouts/InstructorLayout";
 import PublicLayout from "./layouts/PublicLayout";
+import RootLayout from "./layouts/RootLayout";
 
 // ─── Route Guards ─────────────────────────────────────────────────────────────
-import { ProtectedRoute, GuestRoute } from "./routes/ProtectedRoute";
+import { GuestRoute, ProtectedRoute } from "./routes/ProtectedRoute";
 
 // ─── Error ───────────────────────────────────────────────────────────────────
 import ErrorPage from "./pages/ErrorPage";
 
 // ─── Auth Pages ───────────────────────────────────────────────────────────────
+import AuthCallback from "./pages/Auth/AuthCallback";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import OTPVerification from "./pages/Auth/OTPVerification";
+import ResendOTP from "./pages/Auth/ResendOTP";
 import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
-import OTPVerification from "./pages/Auth/OTPVerification";
-import ForgotPassword from "./pages/Auth/ForgotPassword";
-import ResendOTP from "./pages/Auth/ResendOTP";
 import StoreRegistration from "./pages/Auth/StoreRegistration";
-import AuthCallback from "./pages/Auth/AuthCallback";
 
 // ─── Public Pages ─────────────────────────────────────────────────────────────
-import HomePage from "./pages/Public/Home/HomePage";
-import CoursesPage from "./pages/Public/Courses/CoursesPage";
-import CourseDetailPage from "./pages/Public/CourseDetail/CourseDetailPage";
-import SearchPage from "./pages/Public/Search/SearchPage";
 import AboutPage from "./pages/Public/About/AboutPage";
 import ContactPage from "./pages/Public/Contact/ContactPage";
+import CourseDetailPage from "./pages/Public/CourseDetail/CourseDetailPage";
+import CoursesPage from "./pages/Public/Courses/CoursesPage";
+import HomePage from "./pages/Public/Home/HomePage";
+import SearchPage from "./pages/Public/Search/SearchPage";
 
 // ─── Student Pages ────────────────────────────────────────────────────────────
-import StudentDashboard from "./pages/Student/Dashboard/StudentDashboard";
-import MyCoursesPage from "./pages/Student/MyCourses/MyCoursesPage";
-import LearningPage from "./pages/Student/Learning/LearningPage";
-import QuizPage from "./pages/Student/Quiz/QuizPage";
 import CertificatePage from "./pages/Student/Certificate/CertificatePage";
-import WishlistPage from "./pages/Student/Wishlist/WishlistPage";
-import LearningProgressPage from "./pages/Student/Progress/LearningProgressPage";
+import StudentDashboard from "./pages/Student/Dashboard/StudentDashboard";
+import LearningPage from "./pages/Student/Learning/LearningPage";
+import MyCoursesPage from "./pages/Student/MyCourses/MyCoursesPage";
 import StudentProfilePage from "./pages/Student/Profile/StudentProfilePage";
+import LearningProgressPage from "./pages/Student/Progress/LearningProgressPage";
+import QuizPage from "./pages/Student/Quiz/QuizPage";
 import StudentSettingsPage from "./pages/Student/Settings/StudentSettingsPage";
+import WishlistPage from "./pages/Student/Wishlist/WishlistPage";
 
 // ─── Instructor Pages ─────────────────────────────────────────────────────────
-import InstructorDashboard from "./pages/Instructor/Dashboard/InstructorDashboard";
+import InstructorAnalyticsPage from "./pages/Instructor/Analytics/InstructorAnalyticsPage";
 import InstructorCoursesPage from "./pages/Instructor/Courses/InstructorCoursesPage";
 import CreateCoursePage from "./pages/Instructor/CreateCourse/CreateCoursePage";
+import InstructorDashboard from "./pages/Instructor/Dashboard/InstructorDashboard";
+import InstructorProfilePage from "./pages/Instructor/Profile/InstructorProfilePage";
 import InstructorRevenuePage from "./pages/Instructor/Revenue/InstructorRevenuePage";
 import InstructorStudentsPage from "./pages/Instructor/Students/InstructorStudentsPage";
-import InstructorAnalyticsPage from "./pages/Instructor/Analytics/InstructorAnalyticsPage";
-import InstructorProfilePage from "./pages/Instructor/Profile/InstructorProfilePage";
 
 // ─── Admin Pages ──────────────────────────────────────────────────────────────
-import AdminDashboard from "./pages/Admin/Dashboard/AdminDashboard";
-import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
-import AdminCoursesPage from "./pages/Admin/Courses/AdminCoursesPage";
-import AdminApprovalPage from "./pages/Admin/Approval/AdminApprovalPage";
 import AdminAnalyticsPage from "./pages/Admin/Analytics/AdminAnalyticsPage";
-import AdminRevenuePage from "./pages/Admin/Revenue/AdminRevenuePage";
-import AdminReportsPage from "./pages/Admin/Reports/AdminReportsPage";
-import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
+import AdminApprovalPage from "./pages/Admin/Approval/AdminApprovalPage";
+import AdminCoursesPage from "./pages/Admin/Courses/AdminCoursesPage";
+import AdminDashboard from "./pages/Admin/Dashboard/AdminDashboard";
 import AdminLogsPage from "./pages/Admin/Logs/AdminLogsPage";
+import AdminReportsPage from "./pages/Admin/Reports/AdminReportsPage";
+import AdminRevenuePage from "./pages/Admin/Revenue/AdminRevenuePage";
+import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
+import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -83,6 +84,7 @@ const router = createBrowserRouter(
         <Route path="/resend-otp" element={<ResendOTP />} />
         <Route path="/store-registration" element={<StoreRegistration />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
       {/* Public Routes */}
