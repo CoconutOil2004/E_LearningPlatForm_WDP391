@@ -4,7 +4,7 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   DeleteOutlined,
-  InboxOutlined,
+  PictureOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
   SaveOutlined,
@@ -14,37 +14,38 @@ import {
 import {
   Alert,
   Button,
-  Card,
   Col,
   Collapse,
   Form,
   Input,
   InputNumber,
-  message,
   Progress,
   Row,
   Select,
   Space,
   Tag,
   Typography,
+  Upload,
+  message,
 } from "antd";
+import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  INSTRUCTOR_COLORS,
+  INSTRUCTOR_STATUS_CONFIG,
+} from "../../../../src/styles/instructorTheme";
 import CourseService from "../../../services/api/CourseService";
 import { ROUTES } from "../../../utils/constants";
+import { pageVariants } from "../../../utils/helpers";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
-const LANGUAGES = ["Tiếng Việt", "English", "Japanese", "Chinese", "Korean"];
-const STATUS_COLORS = {
-  published: "success",
-  pending: "warning",
-  rejected: "error",
-  draft: "default",
-};
+// Updated the languages, though these often align with what your API expects
+const LANGUAGES = ["English", "Vietnamese", "Japanese", "Chinese", "Korean"];
 
 // ─── Video Upload Cell ────────────────────────────────────────────────────────
 const VideoUploadCell = ({ lesson, onUploaded }) => {
@@ -60,30 +61,36 @@ const VideoUploadCell = ({ lesson, onUploaded }) => {
       const res = await CourseService.uploadVideo(file, setProgress);
       if (res) onUploaded(res);
     } catch {
-      message.error("Upload video thất bại");
+      message.error("Failed to upload video");
     } finally {
       setUploading(false);
       setProgress(0);
+      e.target.value = ""; // Reset input để có thể chọn lại file cũ nếu cần
     }
   };
 
+  // Trạng thái: Đã tải video thành công
   if (lesson.videoUrl)
     return (
-      <Space>
-        <CheckCircleOutlined style={{ color: "#10b981" }} />
-        <Text style={{ color: "#10b981", fontSize: 12 }}>Đã tải video</Text>
-        <Button
-          size="small"
-          type="text"
-          danger
-          icon={<CloseOutlined />}
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200 shrink-0">
+        <CheckCircleOutlined className="text-green-500" />
+        <span className="text-xs font-semibold text-green-600">
+          Video uploaded
+        </span>
+        <button
+          type="button"
+          className="flex items-center justify-center w-5 h-5 ml-1 text-red-400 transition-colors rounded hover:text-red-600 hover:bg-red-100"
           onClick={() => onUploaded(null)}
-        />
-      </Space>
+        >
+          <CloseOutlined className="text-[10px]" />
+        </button>
+      </div>
     );
 
+  // Trạng thái: Đang chờ tải hoặc đang tải
   return (
-    <div>
+    <div className="flex items-center shrink-0">
+      {/* Ẩn tuyệt đối thẻ input mặc định */}
       <input
         ref={inputRef}
         type="file"
@@ -91,18 +98,24 @@ const VideoUploadCell = ({ lesson, onUploaded }) => {
         style={{ display: "none" }}
         onChange={handleFile}
       />
+
       {uploading ? (
-        <div style={{ width: 120 }}>
-          <Progress percent={progress} size="small" />
+        <div className="flex items-center w-32 px-2">
+          <Progress
+            percent={progress}
+            size="small"
+            strokeColor={INSTRUCTOR_COLORS.primary}
+            className="m-0"
+          />
         </div>
       ) : (
-        <Button
-          size="small"
-          icon={<VideoCameraOutlined />}
+        <button
+          type="button"
           onClick={() => inputRef.current?.click()}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-purple-600 transition-colors border border-purple-200 rounded-lg bg-purple-50 hover:bg-purple-100 hover:border-purple-300"
         >
-          Tải video
-        </Button>
+          <VideoCameraOutlined /> Upload video
+        </button>
       )}
     </div>
   );
@@ -120,55 +133,48 @@ const QuestionEditor = ({ question, onChange, onRemove }) => {
     onChange({ ...question, options: [...(question.options || []), ""] });
 
   return (
-    <Card
-      size="small"
-      style={{ marginBottom: 8, background: "#fafafa" }}
-      extra={
-        <Button
-          size="small"
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={onRemove}
-        />
-      }
-    >
-      <Input
-        placeholder="Câu hỏi"
-        value={question.text} // SỬA Ở ĐÂY: đổi từ question.question thành question.text
-        onChange={(e) => onChange({ ...question, text: e.target.value })} // SỬA Ở ĐÂY: đổi question thành text
-        style={{ marginBottom: 8 }}
+    <div className="relative p-4 mb-3 bg-white border border-gray-200 rounded-xl group">
+      <Button
+        size="small"
+        type="text"
+        danger
+        className="absolute transition-opacity opacity-0 top-2 right-2 group-hover:opacity-100"
+        icon={<DeleteOutlined />}
+        onClick={onRemove}
       />
-      <div style={{ marginLeft: 12 }}>
+      <Input
+        placeholder="Enter question content..."
+        value={question.text}
+        onChange={(e) => onChange({ ...question, text: e.target.value })}
+        className="mb-4 font-medium"
+        variant="filled"
+      />
+      <div className="pl-2 space-y-2 border-l-2 border-purple-100">
         {(question.options || []).map((opt, oi) => (
-          <div
-            key={oi}
-            style={{
-              display: "flex",
-              gap: 8,
-              marginBottom: 6,
-              alignItems: "center",
-            }}
-          >
-            <Button
-              size="small"
-              // SỬA Ở ĐÂY: đổi correctAnswerIndex thành correctAnswer
-              type={question.correctAnswer === oi ? "primary" : "default"}
+          <div key={oi} className="flex items-center gap-2">
+            <button
+              type="button"
               onClick={() => onChange({ ...question, correctAnswer: oi })}
-              style={{ minWidth: 30, padding: "0 6px" }}
+              className={`w-8 h-8 rounded-lg text-sm font-bold transition-all ${
+                question.correctAnswer === oi
+                  ? "bg-purple-500 text-white shadow-md shadow-purple-200"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
             >
               {oi + 1}
-            </Button>
+            </button>
             <Input
-              size="small"
-              placeholder={`Đáp án ${oi + 1}`}
+              placeholder={`Option ${oi + 1}`}
               value={opt}
               onChange={(e) => updateOption(oi, e.target.value)}
+              className="flex-1"
             />
-            {/* SỬA Ở ĐÂY: đổi correctAnswerIndex thành correctAnswer */}
             {question.correctAnswer === oi && (
-              <Tag color="success" style={{ margin: 0 }}>
-                ✓ Đúng
+              <Tag
+                color="purple"
+                className="m-0 font-semibold text-purple-600 border-none bg-purple-50"
+              >
+                ✓ Correct Answer
               </Tag>
             )}
           </div>
@@ -178,48 +184,38 @@ const QuestionEditor = ({ question, onChange, onRemove }) => {
           type="dashed"
           icon={<PlusOutlined />}
           onClick={addOption}
-          style={{ marginTop: 4 }}
+          className="mt-2 text-purple-500 border-purple-200 hover:border-purple-400 hover:text-purple-600"
         >
-          Thêm đáp án
+          Add option
         </Button>
       </div>
-    </Card>
+    </div>
   );
 };
 
 // ─── Section Editor ───────────────────────────────────────────────────────────
 const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
-  const addLesson = () =>
-    onChange({
-      ...section,
-      items: [
-        ...section.items,
-        {
-          _uid: Date.now(),
-          itemType: "lesson",
-          title: "",
-          videoUrl: "",
-          videoPublicId: "",
-          duration: 0,
-          itemId: null,
-        },
-      ],
-    });
-
-  const addQuiz = () =>
-    onChange({
-      ...section,
-      items: [
-        ...section.items,
-        {
-          _uid: Date.now() + 1,
-          itemType: "quiz",
-          title: "Quiz",
-          questions: [],
-          itemId: null,
-        },
-      ],
-    });
+  const addItem = (type) => {
+    const newItem =
+      type === "lesson"
+        ? {
+            _uid: Date.now(),
+            itemType: "lesson",
+            title: "",
+            videoUrl: "",
+            videoPublicId: "",
+            duration: 0,
+            itemId: null,
+          }
+        : {
+            _uid: Date.now() + 1,
+            itemType: "quiz",
+            title: "Quiz",
+            questions: [],
+            itemId: null,
+          };
+    onChange({ ...section, items: [...section.items, newItem] });
+  };
 
   const updateItem = (li, patch) =>
     onChange({
@@ -232,83 +228,78 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
   const removeItem = (li) =>
     onChange({ ...section, items: section.items.filter((_, i) => i !== li) });
 
-  const addQuestion = (li) => {
-    const item = section.items[li];
-    updateItem(li, {
-      questions: [
-        ...(item.questions || []),
-        { question: "", options: ["", ""], correctAnswerIndex: 0 },
-      ],
-    });
-  };
-
-  const updateQuestion = (li, qi, patch) => {
-    const item = section.items[li];
-    const questions = (item.questions || []).map((q, i) =>
-      i === qi ? patch : q,
-    );
-    updateItem(li, { questions });
-  };
-
-  const removeQuestion = (li, qi) => {
-    const item = section.items[li];
-    updateItem(li, {
-      questions: (item.questions || []).filter((_, i) => i !== qi),
-    });
+  const questionActions = {
+    add: (li) => {
+      const item = section.items[li];
+      updateItem(li, {
+        questions: [
+          ...(item.questions || []),
+          { text: "", options: ["", ""], correctAnswer: 0 },
+        ],
+      });
+    },
+    update: (li, qi, patch) => {
+      const item = section.items[li];
+      updateItem(li, {
+        questions: (item.questions || []).map((q, i) => (i === qi ? patch : q)),
+      });
+    },
+    remove: (li, qi) => {
+      const item = section.items[li];
+      updateItem(li, {
+        questions: (item.questions || []).filter((_, i) => i !== qi),
+      });
+    },
   };
 
   return (
-    <Card
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Tag color="blue">{idx + 1}</Tag>
-          <Input
-            value={section.title}
-            onChange={(e) => onChange({ ...section, title: e.target.value })}
-            placeholder="Tên section"
-            bordered={false}
-            style={{ fontWeight: 600, padding: 0, flex: 1 }}
-            disabled={isLocked}
-          />
+    <div className="relative p-5 mb-6 transition-colors bg-white border border-gray-100 shadow-sm rounded-2xl group/section hover:border-purple-200">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center justify-center w-8 h-8 font-bold text-purple-700 bg-purple-100 rounded-lg shrink-0">
+          {idx + 1}
         </div>
-      }
-      extra={
-        !isLocked && (
+        <Input
+          value={section.title}
+          onChange={(e) => onChange({ ...section, title: e.target.value })}
+          placeholder="Enter section title..."
+          className="px-0 text-lg font-bold border-none shadow-none focus:ring-0"
+          disabled={isLocked}
+        />
+        {!isLocked && (
           <Button
-            size="small"
             type="text"
             danger
             icon={<DeleteOutlined />}
             onClick={onRemove}
+            className="transition-opacity opacity-0 group-hover/section:opacity-100"
           />
-        )
-      }
-      style={{ marginBottom: 16, borderRadius: 12 }}
-    >
-      <div style={{ paddingLeft: 16 }}>
+        )}
+      </div>
+
+      <div className="pl-4 ml-4 space-y-3 border-l-2 border-gray-100">
         {section.items.map((item, li) => (
-          <div key={item._uid ?? item.itemId ?? li}>
+          <div
+            key={item._uid ?? item.itemId ?? li}
+            className="relative group/item"
+          >
             {item.itemType === "lesson" ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 12px",
-                  background: "#f8fafc",
-                  borderRadius: 8,
-                  marginBottom: 8,
-                }}
-              >
-                <VideoCameraOutlined style={{ color: "#667eea" }} />
+              <div className="relative flex items-center gap-3 p-3 transition-all bg-white border border-gray-100 shadow-sm group/item rounded-xl hover:border-purple-200 hover:shadow-md">
+                {/* Icon bên trái */}
+                <div className="flex items-center justify-center w-8 h-8 text-purple-500 rounded-lg bg-purple-50 shrink-0">
+                  <VideoCameraOutlined />
+                </div>
+
+                {/* Input nhập tên bài học */}
                 <Input
                   value={item.title}
                   onChange={(e) => updateItem(li, { title: e.target.value })}
-                  placeholder="Tên bài học"
-                  bordered={false}
-                  style={{ flex: 1 }}
+                  placeholder="Lesson title..."
+                  variant="borderless"
+                  className="flex-1 px-0 font-medium bg-transparent focus:ring-0"
                   disabled={isLocked}
                 />
+
+                {/* Nút Upload Video */}
                 {!isLocked && (
                   <VideoUploadCell
                     lesson={item}
@@ -328,46 +319,49 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                     }}
                   />
                 )}
+
+                {/* Nút Xóa (Thùng rác) */}
                 {!isLocked && (
                   <Button
-                    size="small"
                     type="text"
                     danger
                     icon={<DeleteOutlined />}
                     onClick={() => removeItem(li)}
+                    className="flex items-center justify-center w-8 h-8 transition-opacity opacity-0 shrink-0 group-hover/item:opacity-100 hover:bg-red-50"
                   />
                 )}
               </div>
             ) : (
               <Collapse
-                style={{ marginBottom: 8, borderRadius: 8 }}
+                className="overflow-hidden border-gray-100 bg-gray-50 rounded-xl"
+                expandIconPosition="end"
                 items={[
                   {
                     key: "1",
                     label: (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <QuestionCircleOutlined style={{ color: "#8B5CF6" }} />
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 text-pink-500 bg-white rounded-lg shadow-sm">
+                          <QuestionCircleOutlined />
+                        </div>
                         <Input
                           value={item.title}
                           onChange={(e) =>
                             updateItem(li, { title: e.target.value })
                           }
-                          placeholder="Tên quiz"
-                          bordered={false}
-                          style={{ flex: 1 }}
+                          placeholder="Quiz title..."
+                          variant="borderless"
+                          className="flex-1 font-medium"
                           disabled={isLocked}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <Tag color="purple">Quiz</Tag>
+                        <Tag
+                          color="pink"
+                          className="font-semibold text-pink-600 border-none rounded-md bg-pink-50"
+                        >
+                          Quiz
+                        </Tag>
                         {!isLocked && (
                           <Button
-                            size="small"
                             type="text"
                             danger
                             icon={<DeleteOutlined />}
@@ -375,28 +369,31 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                               e.stopPropagation();
                               removeItem(li);
                             }}
+                            className="opacity-0 group-hover/item:opacity-100"
                           />
                         )}
                       </div>
                     ),
                     children: (
-                      <div>
+                      <div className="p-2 bg-gray-50/50 rounded-b-xl">
                         {(item.questions || []).map((q, qi) => (
                           <QuestionEditor
                             key={qi}
                             question={q}
-                            onChange={(patch) => updateQuestion(li, qi, patch)}
-                            onRemove={() => removeQuestion(li, qi)}
+                            onChange={(patch) =>
+                              questionActions.update(li, qi, patch)
+                            }
+                            onRemove={() => questionActions.remove(li, qi)}
                           />
                         ))}
                         {!isLocked && (
                           <Button
-                            size="small"
                             type="dashed"
                             icon={<PlusOutlined />}
-                            onClick={() => addQuestion(li)}
+                            onClick={() => questionActions.add(li)}
+                            className="w-full mt-2 text-purple-600 border-purple-200 bg-purple-50/50 hover:bg-purple-100"
                           >
-                            Thêm câu hỏi
+                            Add question
                           </Button>
                         )}
                       </div>
@@ -409,31 +406,29 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
         ))}
 
         {!isLocked && (
-          <Space style={{ marginTop: 8 }}>
-            <Button
-              size="small"
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={addLesson}
+          <Space className="pt-3">
+            <button
+              type="button"
+              onClick={() => addItem("lesson")}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm hover:border-purple-300 hover:text-purple-600"
             >
-              Thêm bài học
-            </Button>
-            <Button
-              size="small"
-              type="dashed"
-              icon={<QuestionCircleOutlined />}
-              onClick={addQuiz}
+              <VideoCameraOutlined /> Add Lesson
+            </button>
+            <button
+              type="button"
+              onClick={() => addItem("quiz")}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm hover:border-pink-300 hover:text-pink-600"
             >
-              Thêm quiz
-            </Button>
+              <QuestionCircleOutlined /> Add Quiz
+            </button>
           </Space>
         )}
       </div>
-    </Card>
+    </div>
   );
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 const CreateCoursePage = () => {
   const { id: editId } = useParams();
   const navigate = useNavigate();
@@ -449,6 +444,8 @@ const CreateCoursePage = () => {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   const isLocked = ["pending", "published"].includes(status);
+  const currentStatus =
+    INSTRUCTOR_STATUS_CONFIG[status] || INSTRUCTOR_STATUS_CONFIG.draft;
 
   useEffect(() => {
     CourseService.getCategories()
@@ -467,7 +464,7 @@ const CreateCoursePage = () => {
           categoryId: c.category?._id ?? c.category ?? "",
           level: c.level ?? "Beginner",
           price: c.price ?? 0,
-          language: c.language ?? "Tiếng Việt",
+          language: c.language ?? "English",
           thumbnail: c.thumbnail ?? "",
         });
         setThumbnailUrl(c.thumbnail ?? "");
@@ -487,8 +484,8 @@ const CreateCoursePage = () => {
         }));
         setSections(rebuilt);
       })
-      .catch(() => message.error("Không thể tải khóa học"));
-  }, [editId]);
+      .catch(() => message.error("Failed to load course"));
+  }, [editId, form]);
 
   const addSection = () =>
     setSections((prev) => [...prev, { title: "", items: [] }]);
@@ -505,7 +502,7 @@ const CreateCoursePage = () => {
         itemRef: it.itemType === "quiz" ? "Quiz" : "Lesson",
         title:
           it.title ||
-          (it.itemType === "quiz" ? `Quiz ${ii + 1}` : `Bài ${ii + 1}`),
+          (it.itemType === "quiz" ? `Quiz ${ii + 1}` : `Lesson ${ii + 1}`),
         orderIndex: ii + 1,
         ...(it.itemId && { itemId: it.itemId }),
         ...(it.itemType === "lesson" && {
@@ -525,9 +522,9 @@ const CreateCoursePage = () => {
         description: values.description,
         categoryId: values.categoryId,
         level: values.level,
-        language: values.language || "Tiếng Việt",
+        language: values.language || "English",
       });
-      if (!created) throw new Error("Tạo khóa học thất bại");
+      if (!created) throw new Error("Failed to create course");
       id = created._id;
       setCourseId(id);
     }
@@ -549,10 +546,10 @@ const CreateCoursePage = () => {
       const values = await form.validateFields();
       setSaving(true);
       await saveAndGetId(values);
-      message.success("Lưu nháp thành công!");
+      message.success("Draft saved successfully!");
     } catch (err) {
-      if (err?.errorFields) return; // validation
-      message.error(err?.message || "Lưu thất bại");
+      if (err?.errorFields) return;
+      message.error(err?.message || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -561,304 +558,375 @@ const CreateCoursePage = () => {
   const handleSubmitForReview = async () => {
     try {
       const values = await form.validateFields();
+
+      if (!values.thumbnail && !thumbnailUrl) {
+        message.warning(
+          "Please upload a Thumbnail before submitting for review!",
+        );
+        return;
+      }
+      if (sections.length === 0) {
+        message.warning("Course must have at least one section!");
+        return;
+      }
+
       setSubmitting(true);
       const id = await saveAndGetId(values);
       await CourseService.submitCourse(id);
-      message.success("Đã gửi khóa học để xét duyệt!");
+      message.success("Course submitted for review!");
       setStatus("pending");
       navigate(ROUTES.INSTRUCTOR_COURSES);
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err?.message || "Gửi thất bại");
+      message.error(err?.message || "Failed to submit");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          marginBottom: 28,
-        }}
-      >
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)}
-        />
-        <div style={{ flex: 1 }}>
-          <Title level={3} style={{ margin: 0 }}>
-            {isEdit ? "Chỉnh sửa khóa học" : "Tạo khóa học mới"}
-          </Title>
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="pb-20"
+    >
+      <div className="max-w-5xl px-6 py-10 mx-auto">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)}
+              className="flex items-center justify-center w-10 h-10 transition-all bg-white border border-gray-200 shadow-sm rounded-xl hover:border-purple-300 hover:text-purple-600"
+            >
+              <ArrowLeftOutlined />
+            </button>
+            <div>
+              <Title level={2} className="m-0 font-black text-gray-900">
+                {isEdit ? "Edit Course" : "Create New Course"}
+              </Title>
+              <Text type="secondary">Build your course curriculum</Text>
+            </div>
+          </div>
+
+          {status && (
+            <div
+              className="px-4 py-2 text-sm font-bold border shadow-sm rounded-xl"
+              style={{
+                backgroundColor: currentStatus.bg,
+                color: currentStatus.text,
+                borderColor: currentStatus.border,
+              }}
+            >
+              {currentStatus.label}
+            </div>
+          )}
         </div>
-        {status && (
-          <Tag
-            color={STATUS_COLORS[status] || "default"}
-            style={{ textTransform: "capitalize", fontSize: 13 }}
-          >
-            {status}
-          </Tag>
+
+        {isLocked && (
+          <Alert
+            message={`Course is currently "${currentStatus.label}" — content cannot be edited at this time.`}
+            type="warning"
+            showIcon
+            className="mb-6 rounded-xl border-amber-200 bg-amber-50"
+          />
         )}
-      </div>
 
-      {isLocked && (
-        <Alert
-          message={`Khóa học đang ở trạng thái "${status}" — không thể chỉnh sửa.`}
-          type="warning"
-          showIcon
-          style={{ marginBottom: 24, borderRadius: 10 }}
-        />
-      )}
-
-      <Form form={form} layout="vertical" disabled={isLocked}>
-        {/* ── Course Info ─── */}
-        <Card
-          title="Thông tin khóa học"
-          style={{ borderRadius: 16, marginBottom: 20 }}
+        <Form
+          form={form}
+          layout="vertical"
+          disabled={isLocked}
+          requiredMark={false}
         >
-          <Row gutter={[16, 0]}>
-            <Col xs={24}>
-              <Form.Item
-                name="title"
-                label="Tiêu đề"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tiêu đề" },
-                  { max: 60, message: "Tối đa 60 ký tự" },
-                ]}
-              >
-                <Input
-                  placeholder="Tiêu đề khóa học (tối đa 60 ký tự)"
-                  showCount
-                  maxLength={60}
-                />
-              </Form.Item>
-            </Col>
+          {/* ── Basic Information ── */}
+          <div className="p-8 mb-8 bg-white border border-gray-100 shadow-sm rounded-2xl">
+            <h2 className="flex items-center gap-2 mb-6 text-xl font-bold text-gray-900">
+              <BookOutlined style={{ color: INSTRUCTOR_COLORS.primary }} />{" "}
+              Basic Information
+            </h2>
+            <Row gutter={[24, 16]}>
+              <Col xs={24}>
+                <Form.Item
+                  name="title"
+                  label={
+                    <span className="font-semibold text-gray-700">
+                      Course Title
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: "Please enter a title" },
+                    { max: 60, message: "Maximum 60 characters" },
+                  ]}
+                >
+                  <Input
+                    placeholder="Enter title..."
+                    size="large"
+                    className="rounded-lg"
+                    showCount
+                    maxLength={60}
+                  />
+                </Form.Item>
+              </Col>
 
-            <Col xs={24}>
-              <Form.Item name="description" label="Mô tả">
-                <TextArea
-                  rows={4}
-                  placeholder="Học viên sẽ học được gì trong khóa này?"
-                />
-              </Form.Item>
-            </Col>
+              <Col xs={24}>
+                <Form.Item
+                  name="description"
+                  label={
+                    <span className="font-semibold text-gray-700">
+                      Course Description
+                    </span>
+                  }
+                >
+                  <TextArea
+                    rows={4}
+                    className="rounded-lg"
+                    placeholder="What will students learn?"
+                  />
+                </Form.Item>
+              </Col>
 
-            <Col xs={24} sm={8}>
-              <Form.Item
-                name="categoryId"
-                label="Danh mục"
-                rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  {categories.map((c) => (
-                    <Option key={c._id} value={c._id}>
-                      {c.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item
+                  name="categoryId"
+                  label={
+                    <span className="font-semibold text-gray-700">
+                      Category
+                    </span>
+                  }
+                  rules={[{ required: true, message: "Select category" }]}
+                >
+                  <Select size="large" placeholder="Select category">
+                    {categories.map((c) => (
+                      <Option key={c._id} value={c._id}>
+                        {c.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
 
-            <Col xs={24} sm={8}>
-              <Form.Item
-                name="level"
-                label="Cấp độ"
-                rules={[{ required: true, message: "Vui lòng chọn cấp độ" }]}
-                initialValue="Beginner"
-              >
-                <Select>
-                  {LEVELS.map((l) => (
-                    <Option key={l} value={l}>
-                      {l}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item
+                  name="level"
+                  label={
+                    <span className="font-semibold text-gray-700">Level</span>
+                  }
+                  initialValue="Beginner"
+                >
+                  <Select size="large">
+                    {LEVELS.map((l) => (
+                      <Option key={l} value={l}>
+                        {l}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
 
-            <Col xs={24} sm={8}>
-              <Form.Item
-                name="language"
-                label="Ngôn ngữ"
-                initialValue="Tiếng Việt"
-              >
-                <Select>
-                  {LANGUAGES.map((l) => (
-                    <Option key={l} value={l}>
-                      {l}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item
+                  name="language"
+                  label={
+                    <span className="font-semibold text-gray-700">
+                      Language
+                    </span>
+                  }
+                  initialValue="English"
+                >
+                  <Select size="large">
+                    {LANGUAGES.map((l) => (
+                      <Option key={l} value={l}>
+                        {l}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
 
-            <Col xs={24} sm={12}>
-              <Form.Item name="price" label="Giá (USD)" initialValue={0}>
-                <InputNumber
-                  min={0}
-                  step={0.01}
-                  style={{ width: "100%" }}
-                  placeholder="0 = Miễn phí"
-                  addonBefore="$"
-                />
-              </Form.Item>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                0 = Miễn phí
-              </Text>
-            </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="price"
+                  label={
+                    <span className="font-semibold text-gray-700">
+                      Price (USD)
+                    </span>
+                  }
+                  initialValue={0}
+                >
+                  <InputNumber
+                    min={0}
+                    step={0.01}
+                    size="large"
+                    className="w-full rounded-lg"
+                    addonBefore="$"
+                  />
+                </Form.Item>
+                <Text type="secondary" className="text-xs italic">
+                  Enter 0 for free.
+                </Text>
+              </Col>
 
-            <Col xs={24} sm={12}>
-              <Form.Item name="thumbnail" label="Ảnh bìa (thumbnail)">
-                <Input
-                  placeholder="https://... hoặc tải ảnh lên"
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                />
-              </Form.Item>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 8,
-                }}
-              >
-                <input
-                  type="file"
+              {/* Upload Thumbnail */}
+              <Col xs={24} sm={12}>
+                <Form.Item name="thumbnail" className="hidden">
+                  <Input />
+                </Form.Item>
+                <div className="mb-2 font-semibold text-gray-700">
+                  Course Thumbnail
+                </div>
+
+                <Upload
                   accept="image/*"
-                  style={{ display: "none" }}
-                  id="thumbnail-upload"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const formData = new FormData();
-                    formData.append("image", file);
+                  listType="picture-card" // Hiển thị dạng thẻ ảnh vuông (chuẩn Ant Design)
+                  maxCount={1}
+                  disabled={isLocked}
+                  // Đồng bộ danh sách ảnh với state thumbnailUrl
+                  fileList={
+                    thumbnailUrl
+                      ? [
+                          {
+                            uid: "-1",
+                            name: "thumbnail.png",
+                            status: "done",
+                            url: thumbnailUrl,
+                          },
+                        ]
+                      : []
+                  }
+                  // Xử lý logic tải ảnh lên server
+                  customRequest={async ({ file, onSuccess, onError }) => {
                     try {
-                      const { api } = await import("../../../services/index");
-                      const res = await api.post("/images/upload", formData, {
-                        headers: { "Content-Type": "multipart/form-data" },
-                      });
-                      const url =
-                        res.data?.data?.secure_url || res.data?.data?.url;
+                      const uploaded = await CourseService.uploadImages(file);
+                      const url = uploaded[0]?.url || uploaded[0]?.secure_url;
+
                       if (url) {
                         form.setFieldsValue({ thumbnail: url });
                         setThumbnailUrl(url);
-                        message.success("Tải ảnh thành công");
+                        onSuccess("ok"); // Báo cho Antd biết đã upload thành công
+                        message.success("Image uploaded successfully");
+                      } else {
+                        throw new Error("No URL returned from server");
                       }
-                    } catch {
-                      message.error("Tải ảnh thất bại");
+                    } catch (error) {
+                      onError(error); // Báo cho Antd hiển thị trạng thái lỗi màu đỏ
+                      message.error("Failed to upload image");
                     }
-                    e.target.value = "";
                   }}
-                />
-                <Button
-                  size="small"
-                  icon={<InboxOutlined />}
-                  onClick={() =>
-                    document.getElementById("thumbnail-upload").click()
-                  }
-                  disabled={isLocked}
+                  // Khi người dùng bấm nút xóa (thùng rác)
+                  onRemove={() => {
+                    form.setFieldsValue({ thumbnail: "" });
+                    setThumbnailUrl("");
+                  }}
+                  // Khi người dùng bấm nút xem trước (con mắt)
+                  onPreview={(file) => {
+                    window.open(file.url || file.thumbUrl, "_blank");
+                  }}
                 >
-                  Tải ảnh lên
-                </Button>
-              </div>
-              {thumbnailUrl && (
-                <div style={{ marginTop: 4, marginBottom: 8 }}>
-                  <img
-                    src={thumbnailUrl}
-                    alt="thumbnail preview"
-                    style={{
-                      width: "100%",
-                      maxHeight: 150,
-                      objectFit: "cover",
-                      borderRadius: 8,
-                    }}
-                    onError={() => setThumbnailUrl("")}
-                  />
-                </div>
-              )}
-            </Col>
-          </Row>
-        </Card>
+                  {/* Nút upload hiển thị khi chưa có ảnh */}
+                  {!thumbnailUrl && (
+                    <div className="flex flex-col items-center justify-center p-2 text-purple-500 transition-colors hover:text-purple-600">
+                      <PictureOutlined className="mb-2 text-3xl text-purple-400" />
+                      <div className="text-sm font-semibold">Upload Image</div>
+                      <div className="mt-1 text-xs font-normal text-gray-400">
+                        JPG / PNG
+                      </div>
+                    </div>
+                  )}
+                </Upload>
+              </Col>
+            </Row>
+          </div>
 
-        {/* ── Curriculum ─── */}
-        <Card
-          title="Chương trình học"
-          style={{ borderRadius: 16, marginBottom: 20 }}
-          extra={
-            !isLocked && (
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={addSection}
-              >
-                Thêm section
-              </Button>
-            )
-          }
-        >
-          {sections.length === 0 ? (
-            <div
+          {/* ── Curriculum ── */}
+          <div className="p-8 mb-8 bg-white border border-gray-100 shadow-sm rounded-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="flex items-center gap-2 m-0 text-xl font-bold text-gray-900">
+                <VideoCameraOutlined
+                  style={{ color: INSTRUCTOR_COLORS.accent }}
+                />{" "}
+                Curriculum
+              </h2>
+              {!isLocked && (
+                <button
+                  type="button"
+                  onClick={addSection}
+                  className="flex items-center gap-2 px-4 py-2 font-bold text-purple-600 transition-colors bg-purple-50 rounded-xl hover:bg-purple-100"
+                >
+                  <PlusOutlined /> Add new section
+                </button>
+              )}
+            </div>
+
+            {sections.length === 0 ? (
+              <div className="py-16 text-center border-2 border-gray-200 border-dashed rounded-2xl bg-gray-50">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full shadow-sm">
+                  <BookOutlined className="text-2xl text-gray-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-700">
+                  No content yet
+                </h3>
+                <p className="mt-1 text-gray-500">
+                  Start by adding your first section.
+                </p>
+                {!isLocked && (
+                  <Button
+                    type="primary"
+                    className="mt-4 border-none rounded-lg"
+                    style={{ background: INSTRUCTOR_COLORS.primary }}
+                    icon={<PlusOutlined />}
+                    onClick={addSection}
+                  >
+                    Add Section
+                  </Button>
+                )}
+              </div>
+            ) : (
+              sections.map((sec, idx) => (
+                <SectionEditor
+                  key={idx}
+                  section={sec}
+                  idx={idx}
+                  onChange={(updated) => updateSection(idx, updated)}
+                  onRemove={() => removeSection(idx)}
+                  isLocked={isLocked}
+                />
+              ))
+            )}
+          </div>
+        </Form>
+
+        {/* ── Actions Footer ── */}
+        {!isLocked && (
+          <div className="sticky flex items-center justify-end gap-4 p-4 border border-gray-200 shadow-lg bottom-6 bg-white/80 backdrop-blur-md rounded-2xl">
+            <Button
+              size="large"
+              icon={<SaveOutlined />}
+              loading={saving}
+              onClick={handleSaveDraft}
+              className="px-6 font-semibold text-gray-700 border-gray-300 rounded-xl hover:text-purple-600 hover:border-purple-300"
+            >
+              Save Draft
+            </Button>
+            <button
+              onClick={handleSubmitForReview}
+              disabled={submitting}
+              className="flex items-center gap-2 px-8 py-3 font-bold text-white transition-all transform shadow-lg rounded-xl hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                textAlign: "center",
-                padding: "32px 0",
-                color: "#9ca3af",
+                background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
               }}
             >
-              <BookOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-              <div>
-                Chưa có section. Nhấn "Thêm section" để bắt đầu xây dựng chương
-                trình học.
-              </div>
-            </div>
-          ) : (
-            sections.map((sec, idx) => (
-              <SectionEditor
-                key={idx}
-                section={sec}
-                idx={idx}
-                onChange={(updated) => updateSection(idx, updated)}
-                onRemove={() => removeSection(idx)}
-                isLocked={isLocked}
-              />
-            ))
-          )}
-        </Card>
-      </Form>
-
-      {/* ── Actions ─── */}
-      {!isLocked && (
-        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-          <Button
-            size="large"
-            icon={<SaveOutlined />}
-            loading={saving}
-            onClick={handleSaveDraft}
-            style={{ borderRadius: 12, minWidth: 140 }}
-          >
-            Lưu nháp
-          </Button>
-          <Button
-            type="primary"
-            size="large"
-            icon={<SendOutlined />}
-            loading={submitting}
-            onClick={handleSubmitForReview}
-            style={{
-              borderRadius: 12,
-              minWidth: 180,
-              background: "linear-gradient(135deg,#667eea,#764ba2)",
-              border: "none",
-            }}
-          >
-            Gửi xét duyệt
-          </Button>
-        </div>
-      )}
-    </div>
+              {submitting ? (
+                <SaveOutlined className="animate-spin" />
+              ) : (
+                <SendOutlined />
+              )}
+              Submit for Review
+            </button>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 

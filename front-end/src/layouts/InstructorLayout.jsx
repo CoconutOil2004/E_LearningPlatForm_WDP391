@@ -9,7 +9,8 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Layout, Tooltip, Typography } from "antd";
+import { Tooltip } from "antd";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import {
   Outlet,
@@ -20,219 +21,37 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
 import { ROUTES } from "../utils/constants";
-
-const { Sider, Content } = Layout;
-const { Text } = Typography;
+import { cn } from "../utils/helpers";
 
 const NAV_ITEMS = [
   {
     icon: <HomeOutlined />,
     label: "Dashboard",
-    key: ROUTES.INSTRUCTOR_DASHBOARD,
+    path: ROUTES.INSTRUCTOR_DASHBOARD,
   },
   {
     icon: <BookOutlined />,
     label: "My Courses",
-    key: ROUTES.INSTRUCTOR_COURSES,
+    path: ROUTES.INSTRUCTOR_COURSES,
   },
-  // {
-  //   icon: <PlusCircleOutlined />,
-  //   label: "Create Course",
-  //   key: ROUTES.CREATE_COURSE,
-  // },
   {
     icon: <DollarOutlined />,
     label: "Revenue",
-    key: ROUTES.INSTRUCTOR_REVENUE,
+    path: ROUTES.INSTRUCTOR_REVENUE,
   },
   {
     icon: <TeamOutlined />,
     label: "Students",
-    key: ROUTES.INSTRUCTOR_STUDENTS,
+    path: ROUTES.INSTRUCTOR_STUDENTS,
   },
   {
     icon: <BarChartOutlined />,
     label: "Analytics",
-    key: ROUTES.INSTRUCTOR_ANALYTICS,
+    path: ROUTES.INSTRUCTOR_ANALYTICS,
   },
-  { icon: <UserOutlined />, label: "Profile", key: ROUTES.INSTRUCTOR_PROFILE },
+  { icon: <UserOutlined />, label: "Profile", path: ROUTES.INSTRUCTOR_PROFILE },
 ];
 
-// ── Inline styles ────────────────────────────────────────────────────────────
-const S = {
-  sider: {
-    height: "100vh",
-    position: "sticky",
-    top: 0,
-    background: "#ffffff",
-    borderRight: "1px solid #f0f0f0",
-  },
-  // Bọc nội dung để xử lý flex layout cho Antd Sider
-  siderInner: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-  },
-  logoWrap: {
-    display: "flex",
-    alignItems: "center",
-    height: 68,
-    padding: "0 18px",
-    borderBottom: "1px solid #f0f0f0",
-    gap: 12,
-    flexShrink: 0,
-  },
-  logoIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    boxShadow: "0 4px 14px rgba(99,102,241,0.25)",
-  },
-  brandText: {
-    fontWeight: 800,
-    fontSize: 17,
-    whiteSpace: "nowrap",
-    flex: 1,
-    overflow: "hidden",
-    background: "linear-gradient(90deg, #4f46e5, #9333ea)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    letterSpacing: "-0.3px",
-  },
-  // Khối này giãn ra đẩy nút toggle xuống dưới cùng
-  menuContainer: {
-    flex: 1,
-    overflowY: "auto",
-    overflowX: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  },
-  nav: {
-    padding: "14px 10px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-  navLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: "0.1em",
-    color: "#9ca3af",
-    padding: "8px 12px 4px",
-    textTransform: "uppercase",
-  },
-  userWrap: {
-    padding: "10px 12px",
-    borderTop: "1px solid #f0f0f0",
-    flexShrink: 0,
-  },
-  toggleWrap: {
-    padding: "12px",
-    borderTop: "1px solid #f0f0f0",
-    flexShrink: 0,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#ffffff",
-  },
-};
-
-// ── NavItem component ────────────────────────────────────────────────────────
-const NavItem = ({ item, active, collapsed, onClick }) => {
-  const btn = (
-    <button
-      onClick={onClick}
-      title={collapsed ? item.label : undefined}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 11,
-        width: "100%",
-        padding: collapsed ? "11px 0" : "10px 14px",
-        justifyContent: collapsed ? "center" : "flex-start",
-        borderRadius: 11,
-        border: "none",
-        cursor: "pointer",
-        transition: "all 0.18s ease",
-        fontFamily: "inherit",
-        background: active
-          ? "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1))"
-          : "transparent",
-        boxShadow: active ? "inset 0 0 0 1px rgba(99,102,241,0.2)" : "none",
-        color: active ? "#4f46e5" : "#4b5563",
-        position: "relative",
-        overflow: "hidden",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = "#f3f4f6";
-          e.currentTarget.style.color = "#111827";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = "#4b5563";
-        }
-      }}
-    >
-      {active && (
-        <span
-          style={{
-            position: "absolute",
-            left: 0,
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: 3,
-            height: "60%",
-            borderRadius: "0 3px 3px 0",
-            background: "linear-gradient(180deg, #6366f1, #8b5cf6)",
-          }}
-        />
-      )}
-      <span
-        style={{
-          fontSize: 17,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: active ? "#6366f1" : "inherit",
-          transition: "filter 0.2s",
-          flexShrink: 0,
-        }}
-      >
-        {item.icon}
-      </span>
-      {!collapsed && (
-        <span
-          style={{
-            fontSize: 13.5,
-            fontWeight: active ? 600 : 500,
-            whiteSpace: "nowrap",
-            letterSpacing: "-0.1px",
-          }}
-        >
-          {item.label}
-        </span>
-      )}
-    </button>
-  );
-
-  return collapsed ? (
-    <Tooltip title={item.label} placement="right">
-      {btn}
-    </Tooltip>
-  ) : (
-    btn
-  );
-};
-
-// ── Layout ───────────────────────────────────────────────────────────────────
 const InstructorLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -243,134 +62,121 @@ const InstructorLayout = () => {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <Layout
-      style={{
-        minHeight: "100vh",
-        fontFamily: "'Inter', system-ui, sans-serif",
-        background: "#f9fafb",
-      }}
-    >
+    <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">
       <ScrollRestoration />
 
-      {/* ── Sidebar ── */}
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        width={232}
-        collapsedWidth={68}
-        style={S.sider}
-        theme="light"
+      {/* ── Sidebar (Framer Motion + Tailwind) ── */}
+      <motion.aside
+        animate={{ width: collapsed ? 80 : 240 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="relative z-30 flex flex-col h-screen bg-white border-r border-gray-100 shadow-xl shrink-0"
       >
-        <div style={S.siderInner}>
-          {/* Logo row */}
-          <div style={S.logoWrap}>
-            <div style={S.logoIcon}>
-              <BookOutlined style={{ color: "white", fontSize: 18 }} />
-            </div>
-            {!collapsed && <span style={S.brandText}>EduFlow</span>}
+        {/* Header / Logo */}
+        <div className="flex items-center gap-3 px-6 h-[72px] border-b border-gray-50 shrink-0">
+          <div className="flex items-center justify-center w-10 h-10 shadow-lg rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30 shrink-0">
+            <BookOutlined className="text-[18px] text-white" />
           </div>
+          {!collapsed && (
+            <span className="text-[17px] font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 truncate">
+              EduFlow
+            </span>
+          )}
+        </div>
 
-          {/* Wrapper cho menu và nút logout (đẩy khối này giãn ra) */}
-          <div style={S.menuContainer}>
-            <nav style={S.nav}>
-              {!collapsed && <p style={S.navLabel}>Main Menu</p>}
-              {NAV_ITEMS.map((item) => (
-                <NavItem
-                  key={item.key}
-                  item={item}
-                  active={isActive(item.key)}
-                  collapsed={collapsed}
-                  onClick={() => navigate(item.key)}
-                />
-              ))}
-            </nav>
+        {/* Navigation */}
+        <nav className="flex flex-col flex-1 gap-1.5 p-4 overflow-y-auto no-scrollbar">
+          {!collapsed && (
+            <p className="px-3 pb-2 text-[10px] font-bold tracking-widest text-gray-400 uppercase">
+              Main Menu
+            </p>
+          )}
 
-            <div style={S.userWrap}>
-              <Tooltip title={collapsed ? "Logout" : ""} placement="right">
-                <button
-                  onClick={logout}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: collapsed ? "center" : "flex-start",
-                    gap: 10,
-                    width: "100%",
-                    padding: collapsed ? "10px 0" : "9px 14px",
-                    borderRadius: 10,
-                    border: "none",
-                    background: "transparent",
-                    color: "#ef4444",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: 13.5,
-                    fontWeight: 500,
-                    transition: "all 0.18s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(239,68,68,0.1)";
-                    e.currentTarget.style.color = "#dc2626";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#ef4444";
-                  }}
-                >
-                  <LogoutOutlined style={{ fontSize: 16 }} />
-                  {!collapsed && <span>Logout</span>}
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-
-          {/* Nút Toggle cố định dưới cùng */}
-          <div style={S.toggleWrap}>
-            <Tooltip
-              title={collapsed ? "Mở rộng" : "Thu gọn"}
-              placement="right"
-            >
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.path);
+            const btn = (
               <button
-                onClick={() => setCollapsed(!collapsed)}
-                style={{
-                  width: "100%",
-                  padding: "8px 0",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  background: "transparent",
-                  border: "none",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  color: "#9ca3af",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#111827";
-                  e.currentTarget.style.background = "#f3f4f6";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#9ca3af";
-                  e.currentTarget.style.background = "transparent";
-                }}
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full group relative overflow-hidden",
+                  active
+                    ? "bg-gradient-to-br from-indigo-500/10 to-purple-500/10 text-indigo-600 ring-1 ring-inset ring-indigo-500/20 font-semibold"
+                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium",
+                )}
               >
-                {collapsed ? (
-                  <MenuUnfoldOutlined style={{ fontSize: 16 }} />
-                ) : (
-                  <MenuFoldOutlined style={{ fontSize: 16 }} />
+                {/* Active Indicator Line */}
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-3/5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-r-full" />
+                )}
+
+                {/* Icon */}
+                <span
+                  className={cn(
+                    "text-[17px] shrink-0 flex items-center justify-center w-6 transition-colors duration-200",
+                    active
+                      ? "text-indigo-600"
+                      : "text-gray-400 group-hover:text-gray-600",
+                  )}
+                >
+                  {item.icon}
+                </span>
+
+                {/* Label */}
+                {!collapsed && (
+                  <span className="text-[13.5px] truncate tracking-tight">
+                    {item.label}
+                  </span>
                 )}
               </button>
-            </Tooltip>
-          </div>
-        </div>
-      </Sider>
+            );
 
-      {/* ── Main ── */}
-      <Layout style={{ background: "#f9fafb" }}>
-        <Content style={{ overflow: "auto" }}>
+            return collapsed ? (
+              <Tooltip key={item.path} title={item.label} placement="right">
+                {btn}
+              </Tooltip>
+            ) : (
+              btn
+            );
+          })}
+        </nav>
+
+        {/* Footer Actions */}
+        <div className="flex flex-col gap-2 p-4 bg-white border-t border-gray-100 shrink-0">
+          <Tooltip title={collapsed ? "Logout" : ""} placement="right">
+            <button
+              onClick={logout}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 text-[13.5px] font-medium text-red-500 transition-colors rounded-xl hover:bg-red-50 hover:text-red-600 w-full",
+                collapsed && "justify-center",
+              )}
+            >
+              <LogoutOutlined className="text-[16px] shrink-0" />
+              {!collapsed && <span className="truncate">Logout</span>}
+            </button>
+          </Tooltip>
+
+          <Tooltip title={collapsed ? "Mở rộng" : "Thu gọn"} placement="right">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="flex items-center justify-center w-full py-2.5 text-gray-400 transition-colors rounded-xl hover:bg-gray-50 hover:text-gray-900 mt-1"
+            >
+              {collapsed ? (
+                <MenuUnfoldOutlined className="text-[16px]" />
+              ) : (
+                <MenuFoldOutlined className="text-[16px]" />
+              )}
+            </button>
+          </Tooltip>
+        </div>
+      </motion.aside>
+
+      {/* ── Main Content Area ── */}
+      <main className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="min-h-full">
           <Outlet />
-        </Content>
-      </Layout>
-    </Layout>
+        </div>
+      </main>
+    </div>
   );
 };
 

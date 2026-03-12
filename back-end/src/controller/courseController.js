@@ -500,9 +500,9 @@ exports.updateCourse = async (req, res) => {
     ) {
       course.status = status;
     }
-    if (thumbnail !== undefined) {
-      course.thumbnail = (thumbnail && String(thumbnail).trim()) || null;
-    }
+    // if (thumbnail !== undefined) {
+    //   course.thumbnail = (thumbnail && String(thumbnail).trim()) || null;
+    // }
 
     const oldItemIds = new Set();
     (course.sections || []).forEach((sec) => {
