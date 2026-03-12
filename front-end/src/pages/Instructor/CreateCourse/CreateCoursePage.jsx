@@ -558,18 +558,6 @@ const CreateCoursePage = () => {
   const handleSubmitForReview = async () => {
     try {
       const values = await form.validateFields();
-
-      if (!values.thumbnail && !thumbnailUrl) {
-        message.warning(
-          "Please upload a Thumbnail before submitting for review!",
-        );
-        return;
-      }
-      if (sections.length === 0) {
-        message.warning("Course must have at least one section!");
-        return;
-      }
-
       setSubmitting(true);
       const id = await saveAndGetId(values);
       await CourseService.submitCourse(id);

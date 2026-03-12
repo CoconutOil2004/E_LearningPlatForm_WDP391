@@ -1,13 +1,13 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { Icon, Badge } from "../../ui";
-import { cn, getInitials } from "../../../utils/helpers";
-import { ROUTES } from "../../../utils/constants";
-import useAuthStore from "../../../store/slices/authStore";
-import useNotificationStore from "../../../store/slices/notificationStore";
-import useCourseStore from "../../../store/slices/courseStore";
 import { useAuth } from "../../../contexts/AuthContext";
+import useAuthStore from "../../../store/slices/authStore";
+import useCourseStore from "../../../store/slices/courseStore";
+import useNotificationStore from "../../../store/slices/notificationStore";
+import { ROUTES } from "../../../utils/constants";
+import { cn, getInitials } from "../../../utils/helpers";
+import { Icon } from "../../ui";
 
 // ─── Avatar Dropdown ──────────────────────────────────────────────────────────
 const AvatarDropdown = ({ user }) => {
@@ -15,19 +15,44 @@ const AvatarDropdown = ({ user }) => {
   const ref = useRef(null);
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { role } = useAuthStore();
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const items = [
-    { icon: "user", label: "Profile", path: ROUTES.STUDENT_PROFILE },
-    { icon: "book", label: "My Courses", path: ROUTES.MY_COURSES },
-    { icon: "trending", label: "Learning Progress", path: ROUTES.PROGRESS },
-    { icon: "settings", label: "Settings", path: ROUTES.STUDENT_SETTINGS },
-  ];
+  const getItems = () => {
+    if (role === "instructor") {
+      return [
+        {
+          icon: "layoutDashboard",
+          label: "Dashboard",
+          path: ROUTES.INSTRUCTOR_DASHBOARD,
+        },
+      ];
+    }
+    if (role === "admin") {
+      return [
+        {
+          icon: "layoutDashboard",
+          label: "Dashboard",
+          path: ROUTES.ADMIN_DASHBOARD,
+        },
+      ];
+    }
+    return [
+      { icon: "user", label: "Profile", path: ROUTES.STUDENT_PROFILE },
+      { icon: "book", label: "My Courses", path: ROUTES.MY_COURSES },
+      { icon: "trending", label: "Learning Progress", path: ROUTES.PROGRESS },
+      { icon: "settings", label: "Settings", path: ROUTES.STUDENT_SETTINGS },
+    ];
+  };
+
+  const items = getItems();
 
   return (
     <div ref={ref} className="relative">
@@ -35,13 +60,13 @@ const AvatarDropdown = ({ user }) => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 p-1 rounded-xl hover:bg-primary/10 transition-colors"
+        className="flex items-center gap-2 p-1 transition-colors rounded-xl hover:bg-primary/10"
       >
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+          className="flex items-center justify-center text-sm font-bold text-white w-9 h-9 rounded-xl"
           style={{ background: "var(--gradient-brand)" }}
         >
-          {getInitials(user?.name || "S")}
+          {getInitials(user?.username || "S")}
         </div>
         <Icon name="chevronDown" size={16} color="var(--text-muted)" />
       </motion.button>
@@ -53,12 +78,14 @@ const AvatarDropdown = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.18 }}
-            className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-border overflow-hidden z-50"
+            className="absolute right-0 z-50 w-56 mt-2 overflow-hidden bg-white border top-full rounded-2xl border-border"
             style={{ boxShadow: "var(--shadow-lg)" }}
           >
             <div className="p-4 border-b border-border">
-              <p className="font-bold text-sm text-heading">{user?.name || "Student"}</p>
-              <p className="text-xs text-muted truncate">{user?.email}</p>
+              <p className="text-sm font-bold text-heading">
+                {user?.username || "Student"}
+              </p>
+              <p className="text-xs truncate text-muted">{user?.email}</p>
             </div>
             {items.map((item, i) => (
               <motion.button
@@ -66,8 +93,11 @@ const AvatarDropdown = ({ user }) => {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => { navigate(item.path); setOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primary/10 transition-colors text-sm font-medium text-body hover:text-primary"
+                onClick={() => {
+                  navigate(item.path);
+                  setOpen(false);
+                }}
+                className="flex items-center w-full gap-3 px-4 py-3 text-sm font-medium transition-colors hover:bg-primary/10 text-body hover:text-primary"
               >
                 <Icon name={item.icon} size={17} />
                 {item.label}
@@ -75,10 +105,14 @@ const AvatarDropdown = ({ user }) => {
             ))}
             <div className="border-t border-border">
               <button
-                onClick={() => { logout(); setOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-danger/10 transition-colors text-sm font-medium text-danger"
+                onClick={() => {
+                  logout();
+                  setOpen(false);
+                }}
+                className="flex items-center w-full gap-3 px-4 py-3 text-sm font-medium transition-colors hover:bg-danger/10 text-danger"
               >
-                <Icon name="logout" size={17} />Logout
+                <Icon name="logout" size={17} />
+                Logout
               </button>
             </div>
           </motion.div>
@@ -96,7 +130,9 @@ const NotifDropdown = () => {
   const unread = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -105,7 +141,7 @@ const NotifDropdown = () => {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-xl hover:bg-subtle transition-colors"
+        className="relative p-2 transition-colors rounded-xl hover:bg-subtle"
       >
         <Icon name="bell" size={22} color="var(--text-body)" />
         {unread > 0 && (
@@ -120,22 +156,28 @@ const NotifDropdown = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl border border-border overflow-hidden z-50"
+            className="absolute right-0 z-50 mt-2 overflow-hidden bg-white border top-full w-80 rounded-2xl border-border"
             style={{ boxShadow: "var(--shadow-lg)" }}
           >
-            <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-bold text-heading">Notifications</h3>
-              <button onClick={markAllRead} className="text-xs text-primary font-medium hover:underline">
+              <button
+                onClick={markAllRead}
+                className="text-xs font-medium text-primary hover:underline"
+              >
                 Mark all read
               </button>
             </div>
             {notifications.map((n) => (
               <div
                 key={n.id}
-                className={cn("p-4 border-b border-border hover:bg-subtle transition-colors", !n.read && "bg-indigo-50/40")}
+                className={cn(
+                  "p-4 border-b border-border hover:bg-subtle transition-colors",
+                  !n.read && "bg-indigo-50/40",
+                )}
               >
-                <p className="text-sm text-body font-medium">{n.text}</p>
-                <p className="text-xs text-disabled mt-1">{n.time}</p>
+                <p className="text-sm font-medium text-body">{n.text}</p>
+                <p className="mt-1 text-xs text-disabled">{n.time}</p>
               </div>
             ))}
           </motion.div>
@@ -153,33 +195,46 @@ const Header = () => {
 
   return (
     <header
-      className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-border"
+      className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur-md border-border"
       style={{ boxShadow: "var(--shadow-sm)" }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-4 h-16">
+      <div className="flex items-center h-16 gap-4 px-4 mx-auto max-w-7xl sm:px-6">
         {/* Logo */}
-        <Link to={ROUTES.HOME} className="flex items-center gap-2 font-black text-xl shrink-0">
+        <Link
+          to={ROUTES.HOME}
+          className="flex items-center gap-2 text-xl font-black shrink-0"
+        >
           <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            className="flex items-center justify-center w-8 h-8 rounded-xl"
             style={{ background: "var(--gradient-brand)" }}
           >
             <Icon name="book" size={18} color="white" />
           </div>
           <span
             className="hidden sm:block"
-            style={{ background: "var(--gradient-brand)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+            style={{
+              background: "var(--gradient-brand)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
           >
             EduFlow
           </span>
         </Link>
 
         {/* Nav links */}
-        <nav className="hidden md:flex flex-1 items-center justify-center gap-1">
-          <Link to={ROUTES.COURSES} className="px-4 py-2 rounded-xl text-sm font-semibold text-muted hover:text-primary hover:bg-primary/10 transition-colors">
+        <nav className="items-center justify-center flex-1 hidden gap-1 md:flex">
+          <Link
+            to={ROUTES.COURSES}
+            className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
+          >
             Browse
           </Link>
           {isAuthenticated && role === "student" && (
-            <Link to={ROUTES.MY_COURSES} className="px-4 py-2 rounded-xl text-sm font-semibold text-muted hover:text-primary hover:bg-primary/10 transition-colors">
+            <Link
+              to={ROUTES.MY_COURSES}
+              className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
+            >
               My Learning
             </Link>
           )}
@@ -190,7 +245,10 @@ const Header = () => {
           {isAuthenticated ? (
             <>
               {/* Wishlist */}
-              <Link to={ROUTES.WISHLIST} className="relative p-2 rounded-xl hover:bg-subtle transition-colors">
+              <Link
+                to={ROUTES.WISHLIST}
+                className="relative p-2 transition-colors rounded-xl hover:bg-subtle"
+              >
                 <Icon name="heart" size={22} color="var(--text-body)" />
                 {wishlistIds.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -205,7 +263,7 @@ const Header = () => {
             <>
               <Link
                 to={ROUTES.LOGIN}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-body hover:bg-subtle transition-colors"
+                className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-body hover:bg-subtle"
               >
                 Login
               </Link>

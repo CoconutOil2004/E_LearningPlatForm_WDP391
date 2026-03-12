@@ -1,3 +1,25 @@
+import {
+  BarChartOutlined,
+  BookOutlined,
+  CheckSquareOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  HomeOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SafetyCertificateOutlined,
+  SettingOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import {
+  Avatar,
+  ConfigProvider,
+  Layout,
+  Menu,
+  Tooltip,
+  Typography,
+} from "antd";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -6,24 +28,52 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { Icon } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
+import { adminTheme, COLOR } from "../styles/adminTheme";
 import { ROUTES } from "../utils/constants";
-import { cn } from "../utils/helpers";
+
+const { Sider, Content } = Layout;
+const { Text } = Typography;
+
+const SIDEBAR_BG = "#003B5C";
+const SIDEBAR_W = 220;
+const COLLAPSED_W = 64;
 
 const NAV_ITEMS = [
-  { icon: "home", label: "Dashboard", path: ROUTES.ADMIN_DASHBOARD },
-  { icon: "users", label: "User Management", path: ROUTES.ADMIN_USERS },
-  { icon: "book", label: "Course Management", path: ROUTES.ADMIN_COURSES },
-  { icon: "check", label: "Course Approval", path: ROUTES.ADMIN_APPROVAL },
-  { icon: "chart", label: "Analytics", path: ROUTES.ADMIN_ANALYTICS },
-  { icon: "dollar", label: "Revenue", path: ROUTES.ADMIN_REVENUE },
-  { icon: "note", label: "Reports", path: ROUTES.ADMIN_REPORTS },
-  { icon: "settings", label: "Settings", path: ROUTES.ADMIN_SETTINGS },
-  { icon: "shield", label: "Logs", path: ROUTES.ADMIN_LOGS },
+  { key: ROUTES.ADMIN_DASHBOARD, icon: <HomeOutlined />, label: "Dashboard" },
+  { key: ROUTES.ADMIN_USERS, icon: <TeamOutlined />, label: "User Management" },
+  { key: ROUTES.ADMIN_COURSES, icon: <BookOutlined />, label: "My Courses" },
+  {
+    key: ROUTES.ADMIN_APPROVAL,
+    icon: <CheckSquareOutlined />,
+    label: "Course Approval",
+  },
+  {
+    key: ROUTES.ADMIN_ANALYTICS,
+    icon: <BarChartOutlined />,
+    label: "Analytics",
+  },
+  { key: ROUTES.ADMIN_REVENUE, icon: <DollarOutlined />, label: "Revenue" },
+  { key: ROUTES.ADMIN_REPORTS, icon: <FileTextOutlined />, label: "Reports" },
+  { key: ROUTES.ADMIN_SETTINGS, icon: <SettingOutlined />, label: "Settings" },
+  {
+    key: ROUTES.ADMIN_LOGS,
+    icon: <SafetyCertificateOutlined />,
+    label: "Operations Hub",
+  },
 ];
 
+// ─── helpers ──────────────────────────────────────────────────────────────────
+const initials = (name = "") =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "A";
+
+// ─── AdminLayout ──────────────────────────────────────────────────────────────
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
@@ -31,125 +81,294 @@ const AdminLayout = () => {
   const { user } = useAuthStore();
   const { logout } = useAuth();
 
-  const isActive = (path) => location.pathname.startsWith(path);
+  // Highlight menu item khớp với path hiện tại
+  const selectedKey =
+    NAV_ITEMS.find((item) => location.pathname.startsWith(item.key))?.key ??
+    ROUTES.ADMIN_DASHBOARD;
+
+  const menuItems = NAV_ITEMS.map((item) => ({
+    key: item.key,
+    icon: item.icon,
+    label: item.label,
+  }));
 
   return (
-    <div
-      className="flex h-screen overflow-hidden"
-      style={{
-        background: "var(--bg-page)",
-        fontFamily: "'Inter', system-ui, sans-serif",
+    <ConfigProvider
+      theme={{
+        ...adminTheme,
+        components: {
+          ...adminTheme.components,
+          Menu: {
+            darkItemBg: "transparent",
+            darkItemHoverBg: "rgba(255,255,255,0.06)",
+            darkItemSelectedBg: "rgba(255,255,255,0.10)",
+            darkItemSelectedColor: "#00BFA5",
+            darkItemColor: "rgba(255,255,255,0.65)",
+            darkItemHoverColor: "#ffffff",
+            itemHeight: 40,
+            iconSize: 17,
+          },
+        },
       }}
     >
-      <ScrollRestoration />
-
-      {/* ── Sidebar Arctic Tech (Bản thu gọn không cuộn) ─────────────────── */}
-      <motion.aside
-        animate={{ width: collapsed ? 64 : 220 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="relative z-30 flex flex-col h-screen overflow-hidden border-r shadow-2xl shrink-0"
-        style={{
-          backgroundColor: "var(--admin-sidebar-bg)",
-          borderColor: "var(--admin-sidebar-border)",
-        }}
-      >
-        {/* Header: Thu nhỏ chiều cao từ 20 xuống 14 */}
-        <div className="flex items-center gap-2 px-4 border-b h-14 border-white/5 bg-black/10">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#00BFA5] shrink-0">
-            <Icon name="terminal" size={16} color="white" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-black text-white uppercase truncate">
-                EduFlow
-              </span>
-              <span className="text-[8px] font-medium text-blue-200/50 tracking-tighter">
-                Admin Hub
-              </span>
-            </div>
-          )}
-          {/* <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1 ml-auto text-white/40 hover:text-white"
+      <Layout style={{ minHeight: "100vh" }}>
+        {/* ── Sidebar ────────────────────────────────────────────────────── */}
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          width={SIDEBAR_W}
+          collapsedWidth={COLLAPSED_W}
+          trigger={null} // custom trigger below
+          style={{
+            background: SIDEBAR_BG,
+            borderRight: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "2px 0 12px rgba(0,0,0,0.18)",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+          }}
+        >
+          {/* Wrapper Flexbox ĐỂ ĐẨY FOOTER XUỐNG DƯỚI CÙNG */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }}
           >
-            <Icon name={collapsed ? "chevronRight" : "menu"} size={16} />
-          </button> */}
-        </div>
-
-        {/* Nav: Giảm gap và padding để không tràn màn hình */}
-        <nav className="flex flex-col flex-1 gap-0.5 p-2 overflow-y-auto no-scrollbar">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-[13px] font-semibold w-full group",
-                  active
-                    ? "bg-white/10 text-[#00BFA5] shadow-sm"
-                    : "text-white/70 hover:bg-white/5 hover:text-white",
-                )}
-                title={collapsed ? item.label : undefined}
+            {/* Logo */}
+            <div
+              style={{
+                height: 56,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: collapsed ? "0 20px" : "0 20px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(0,0,0,0.12)",
+                flexShrink: 0,
+              }}
+            >
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: "#00BFA5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  fontSize: 16,
+                  fontWeight: 900,
+                  color: "white",
+                  letterSpacing: "-1px",
+                }}
               >
-                <div
-                  className={cn(
-                    "shrink-0",
-                    active
-                      ? "text-[#00BFA5]"
-                      : "text-white/30 group-hover:text-white",
-                  )}
+                E
+              </div>
+              {!collapsed && (
+                <motion.div
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
                 >
-                  <Icon name={item.icon} size={18} color="currentColor" />
-                </div>
-                {!collapsed && (
-                  <span className="truncate whitespace-nowrap">
-                    {item.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Footer: Thiết kế siêu gọn */}
-        <div className="p-2 border-t border-white/5 bg-black/10">
-          {!collapsed && (
-            <div className="flex items-center gap-2 px-2 py-2 mb-1 rounded-xl bg-white/5">
-              <div className="w-8 h-8 rounded-full border border-[#00BFA5] overflow-hidden shrink-0 shadow-md">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqOvN8u67iE2_2ownYCUc4wNKJFwYHkWblBFQukroYkILvPq4C19VD_2Fl43UZqGtZL69zgYx7O55PqkChk0_7KRGEP0-0h4WyWdVs4VBgGhWNp3ChRKkucBoLapp0-1ugUbvi1kJvbSemo1BKOIdPUeNuAFHm4D1h7QZD7jSmst-uxFOd96IDEZOav3dqp19NGNM-aXn52Mw_CCKnYdyfMAo8H8ICfmPfv_KXBHwFCncEyXbqSDxgtF92izv8RYCUqiVr_UcIKwP3"
-                  alt="Admin"
-                  className="object-cover w-full h-full"
-                />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[12px] font-bold text-white truncate leading-tight">
-                  {user?.fullname || "Admin"}
-                </p>
-                <p className="text-[9px] text-blue-300/70 uppercase truncate">
-                  Admin
-                </p>
-              </div>
+                  <div style={{ lineHeight: 1.1 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 900,
+                        color: "white",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      EduFlow
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: "rgba(147,197,253,0.5)",
+                        textTransform: "uppercase",
+                        letterSpacing: 1,
+                      }}
+                    >
+                      Admin Hub
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
-          )}
-          <button
-            onClick={logout}
-            className="flex items-center w-full gap-2.5 px-3 py-2 text-[12px] font-bold text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-          >
-            <Icon name="logout" size={18} />
-            {!collapsed && <span>Logout</span>}
-          </button>
-        </div>
-      </motion.aside>
 
-      {/* ── Main Content Area ─────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto bg-[#F5F7FA]">
-        <div className="p-6">
+            {/* Navigation - Sử dụng flex: 1 để chiếm hết khoảng trống ở giữa */}
+            <div style={{ flex: 1, overflow: "hidden auto" }}>
+              <Menu
+                mode="inline"
+                theme="dark"
+                selectedKeys={[selectedKey]}
+                items={menuItems}
+                onClick={({ key }) => navigate(key)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: "8px 4px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+                inlineCollapsed={collapsed}
+              />
+            </div>
+
+            {/* Footer: user info + collapse toggle + logout */}
+            <div
+              style={{
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(0,0,0,0.12)",
+                padding: "8px",
+                flexShrink: 0,
+              }}
+            >
+              {/* User info */}
+              {!collapsed && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.05)",
+                    marginBottom: 6,
+                  }}
+                >
+                  <Avatar
+                    size={32}
+                    src={user?.avatar}
+                    style={{
+                      background: `linear-gradient(135deg, ${COLOR.teal}, ${COLOR.ocean})`,
+                      fontWeight: 900,
+                      fontSize: 12,
+                      flexShrink: 0,
+                      border: "2px solid #00BFA5",
+                    }}
+                  >
+                    {!user?.avatar && initials(user?.fullname || "Admin")}
+                  </Avatar>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "white",
+                        lineHeight: 1.2,
+                      }}
+                      className="truncate"
+                    >
+                      {user?.fullname || "Admin"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: "rgba(147,197,253,0.6)",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.8,
+                      }}
+                    >
+                      Admin
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Collapse toggle */}
+              <Tooltip
+                title={collapsed ? "Expand sidebar" : ""}
+                placement="right"
+              >
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    gap: 8,
+                    width: "100%",
+                    padding: collapsed ? "8px 0" : "8px 10px",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: 8,
+                    color: "rgba(255,255,255,0.4)",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "white")}
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "rgba(255,255,255,0.4)")
+                  }
+                >
+                  {collapsed ? (
+                    <MenuUnfoldOutlined style={{ fontSize: 17 }} />
+                  ) : (
+                    <MenuFoldOutlined style={{ fontSize: 17 }} />
+                  )}
+                  {!collapsed && <span>Collapse</span>}
+                </button>
+              </Tooltip>
+
+              {/* Logout */}
+              <Tooltip title={collapsed ? "Logout" : ""} placement="right">
+                <button
+                  onClick={logout}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    gap: 8,
+                    width: "100%",
+                    padding: collapsed ? "8px 0" : "8px 10px",
+                    background: "transparent",
+                    border: "none",
+                    borderRadius: 8,
+                    color: "rgba(248,113,113,0.75)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#f87171")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "rgba(248,113,113,0.75)")
+                  }
+                >
+                  <LogoutOutlined style={{ fontSize: 17 }} />
+                  {!collapsed && <span>Logout</span>}
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+        </Sider>
+
+        {/* ── Main Content ────────────────────────────────────────────────── */}
+        <Content
+          style={{
+            background: "#F5F7FA",
+            overflowY: "auto",
+            minHeight: "100vh",
+          }}
+        >
+          <ScrollRestoration />
           <Outlet />
-        </div>
-      </main>
-    </div>
+        </Content>
+      </Layout>
+    </ConfigProvider>
   );
 };
 
