@@ -36,14 +36,14 @@ export const AuthProvider = ({ children }) => {
       const res = await AuthService.login({ email, password });
       const user = res.user || { name: "User", email, role: "student" };
       setCredentials(user, res.token);
-      toast.success("Đăng nhập thành công!");
+      toast.success("Signed in successfully!");
       const role = user.role;
       if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD);
       else if (role === "instructor") navigate(ROUTES.INSTRUCTOR_DASHBOARD);
       else navigate(ROUTES.STUDENT_DASHBOARD);
       return { success: true };
     } catch (error) {
-      const msg = error.message || "Đăng nhập thất bại";
+      const msg = error.message || "Sign in failed";
       toast.error(msg);
       return { success: false, message: msg };
     }
@@ -53,12 +53,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await AuthService.register(data);
       toast.success(
-        res.message || "Đăng ký thành công! Vui lòng xác thực email.",
+        res.message || "Registration successful! Please verify your email.",
       );
       navigate(`${ROUTES.VERIFY_OTP}?email=${encodeURIComponent(data.email)}`);
       return { success: true };
     } catch (error) {
-      const msg = error.message || "Đăng ký thất bại";
+      const msg = error.message || "Registration failed";
       toast.error(msg);
       return { success: false, message: msg };
     }
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
       // ignore server errors
     } finally {
       storeLogout();
-      toast.success("Đã đăng xuất");
+      toast.success("Signed out");
       navigate(ROUTES.HOME);
     }
   };

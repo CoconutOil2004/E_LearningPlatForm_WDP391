@@ -150,13 +150,6 @@ const Header = () => {
   const { isAuthenticated, user, role } = useAuthStore();
   const { wishlistIds } = useCourseStore();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-
-  const handleSearch = (e) => {
-    if (e.key === "Enter" && search.trim()) {
-      navigate(`${ROUTES.SEARCH}?q=${encodeURIComponent(search.trim())}`);
-    }
-  };
 
   return (
     <header
@@ -180,20 +173,8 @@ const Header = () => {
           </span>
         </Link>
 
-        {/* Search */}
-        <div className="flex-1 max-w-md relative hidden sm:block">
-          <Icon name="search" size={17} color="var(--text-disabled)" className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleSearch}
-            placeholder="Search courses, instructors..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-subtle border-2 border-transparent text-sm focus:outline-none focus:border-primary/60 focus:bg-white transition-all"
-          />
-        </div>
-
         {/* Nav links */}
-        <nav className="hidden md:flex items-center gap-1 ml-2">
+        <nav className="hidden md:flex flex-1 items-center justify-center gap-1">
           <Link to={ROUTES.COURSES} className="px-4 py-2 rounded-xl text-sm font-semibold text-muted hover:text-primary hover:bg-primary/10 transition-colors">
             Browse
           </Link>
@@ -205,7 +186,7 @@ const Header = () => {
         </nav>
 
         {/* Right section */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
               {/* Wishlist */}

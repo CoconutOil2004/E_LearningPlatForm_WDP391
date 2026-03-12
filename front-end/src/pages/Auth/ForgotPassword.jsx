@@ -35,7 +35,7 @@ const ForgotPassword = () => {
     try {
       const res = await AuthenService.forgotPassword(email);
       toast.success(
-        res.message || "Mật khẩu mới đã được gửi tới email của bạn.",
+        res.message || "A new password has been sent to your email.",
       );
       setSent(true);
       setTimeout(() => navigate("/signin"), 3000);
@@ -43,7 +43,7 @@ const ForgotPassword = () => {
       toast.error(
         error.response?.data?.message ||
           error.message ||
-          "Có lỗi xảy ra, vui lòng thử lại.",
+          "Something went wrong, please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -92,10 +92,10 @@ const ForgotPassword = () => {
             className="text-4xl font-black"
             style={{ color: "var(--text-heading)" }}
           >
-            Quên mật khẩu
+            Forgot password
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Nhập email và chúng tôi sẽ gửi mật khẩu mới cho bạn.
+            Enter your email and we will send you a new password.
           </p>
         </div>
 
@@ -111,26 +111,26 @@ const ForgotPassword = () => {
                 className="mb-2 text-lg font-bold"
                 style={{ color: "var(--text-heading)" }}
               >
-                Đã gửi!
+                Email sent!
               </h3>
               <p
                 className="mb-4 text-sm"
                 style={{ color: "var(--text-muted)" }}
               >
-                Vui lòng kiểm tra email{" "}
+                Please check{" "}
                 <strong style={{ color: "var(--color-primary)" }}>
                   {email}
                 </strong>{" "}
-                để lấy mật khẩu mới.
+                for your new password.
               </p>
               <p className="text-xs" style={{ color: "var(--text-disabled)" }}>
-                Đang chuyển về trang đăng nhập...
+                Redirecting to sign-in page...
               </p>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="auth-label">Địa chỉ Email</label>
+                <label className="auth-label">Email address</label>
                 <input
                   type="email"
                   value={email}
@@ -150,10 +150,10 @@ const ForgotPassword = () => {
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Spinner />
-                    Đang gửi...
+                    Sending...
                   </span>
                 ) : (
-                  "Gửi mật khẩu mới"
+                  "Send new password"
                 )}
               </motion.button>
             </form>
@@ -163,9 +163,9 @@ const ForgotPassword = () => {
             className="mt-6 text-xs text-center"
             style={{ color: "var(--text-muted)" }}
           >
-            Nhớ mật khẩu rồi?{" "}
+            Remember your password?{" "}
             <Link to="/signin" className="auth-link">
-              Đăng nhập
+              Sign in
             </Link>
           </p>
         </div>

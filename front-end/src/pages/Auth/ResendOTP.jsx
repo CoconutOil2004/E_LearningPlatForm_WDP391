@@ -22,19 +22,19 @@ const ResendOTP = ({ email, onResend }) => {
 
     setResendLoading(true);
     try {
-      const res = await axios.post("${API_BASE_URL}/api/resend-otp", { email });
+      const res = await axios.post(`${API_BASE_URL}/api/resend-otp`, { email });
 
-      console.log("Resend response:", res.data); // debug
+      console.log("Resend response:", res.data);
       if (res.data.success) {
-        toast.success(res.data.message || "OTP mới đã được gửi tới email của bạn");
-        setResendCooldown(30); // cooldown 30s
-        onResend && onResend(); // callback để reset OTP inputs
+        toast.success(res.data.message || "A new OTP has been sent to your email");
+        setResendCooldown(30);
+        onResend && onResend();
       } else {
-        toast.error(res.data.message || "Gửi lại OTP thất bại");
+        toast.error(res.data.message || "Failed to resend OTP");
       }
     } catch (err) {
       console.error("Resend error:", err.response?.data);
-      toast.error(err.response?.data?.message || "Gửi lại OTP thất bại");
+      toast.error(err.response?.data?.message || "Failed to resend OTP");
     } finally {
       setResendLoading(false);
     }
@@ -50,10 +50,10 @@ const ResendOTP = ({ email, onResend }) => {
       }`}
     >
       {resendLoading
-        ? "Đang gửi lại..."
+        ? "Sending again..."
         : resendCooldown > 0
-        ? `Gửi lại OTP (${resendCooldown}s)`
-        : "Gửi lại OTP"}
+        ? `Resend OTP (${resendCooldown}s)`
+        : "Resend OTP"}
     </button>
   );
 };

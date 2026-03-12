@@ -117,14 +117,14 @@ const SignIn = () => {
         password: formData.password,
       });
       setCredentials(response.user, response.token);
-      toast.success("Đăng nhập thành công!");
+      toast.success("Signed in successfully!");
       if (response.user?.role === "admin") navigate("/admin/dashboard");
       else if (response.user?.role === "instructor")
         navigate("/instructor/dashboard");
       else navigate("/");
     } catch (error) {
       toast.error(
-        error.response?.data?.message || error.message || "Đăng nhập thất bại",
+        error.response?.data?.message || error.message || "Sign in failed",
       );
     } finally {
       setIsLoading(false);
@@ -132,7 +132,10 @@ const SignIn = () => {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden">
+    <div
+      className="relative flex items-center justify-center min-h-screen px-4 overflow-hidden"
+      style={{ background: "var(--gradient-hero)" }}
+    >
       {/* Floating blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
@@ -183,17 +186,17 @@ const SignIn = () => {
             className="text-4xl font-black"
             style={{ color: "var(--text-heading)" }}
           >
-            Chào mừng trở lại
+            Welcome back
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Tiếp tục hành trình học tập của bạn
+            Continue your learning journey
           </p>
 
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Admin: admin@gmail.com/abc@123
+            Admin: admin@gmail.com / abc@123
           </p>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Instructor: instructor@gmail.com/abc@123
+            Instructor: instructor@gmail.com / abc@123
           </p>
         </div>
 
@@ -214,7 +217,7 @@ const SignIn = () => {
             </div>
 
             <div>
-              <label className="auth-label">Mật khẩu</label>
+              <label className="auth-label">Password</label>
               <div className="relative">
                 <input
                   name="password"
@@ -254,11 +257,11 @@ const SignIn = () => {
                   className="text-xs"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Ghi nhớ
+                  Remember me
                 </span>
               </label>
               <Link to="/forgot-password" className="text-xs auth-link">
-                Quên mật khẩu?
+                Forgot password?
               </Link>
             </div>
 
@@ -271,10 +274,10 @@ const SignIn = () => {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Spinner />
-                  Đang đăng nhập...
+                  Signing in...
                 </span>
               ) : (
-                "Đăng nhập"
+                "Sign in"
               )}
             </motion.button>
           </form>
@@ -285,7 +288,7 @@ const SignIn = () => {
               style={{ background: "var(--border-default)" }}
             />
             <span className="text-xs" style={{ color: "var(--text-disabled)" }}>
-              hoặc
+              or
             </span>
             <div
               className="flex-1 h-px"
@@ -307,9 +310,9 @@ const SignIn = () => {
             className="mt-6 text-xs text-center"
             style={{ color: "var(--text-muted)" }}
           >
-            Chưa có tài khoản?{" "}
+            Don't have an account?{" "}
             <Link to="/signup" className="auth-link">
-              Đăng ký ngay
+              Sign up
             </Link>
           </p>
         </div>

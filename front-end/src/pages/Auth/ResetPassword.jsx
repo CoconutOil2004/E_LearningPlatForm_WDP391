@@ -62,7 +62,7 @@ const EyeIcon = ({ off }) =>
   );
 
 /* ─── Password strength ─────────────────────────────────────────────────── */
-const getStrength = (pw) => {
+  const getStrength = (pw) => {
   if (!pw) return { score: 0, label: "", color: "" };
   let score = 0;
   if (pw.length >= 8) score++;
@@ -70,11 +70,11 @@ const getStrength = (pw) => {
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
   const map = [
-    { label: "Rất yếu", color: "#ef4444" },
-    { label: "Yếu", color: "#f97316" },
-    { label: "Trung bình", color: "#eab308" },
-    { label: "Mạnh", color: "#22c55e" },
-    { label: "Rất mạnh", color: "#16a34a" },
+    { label: "Very weak", color: "#ef4444" },
+    { label: "Weak", color: "#f97316" },
+    { label: "Fair", color: "#eab308" },
+    { label: "Strong", color: "#22c55e" },
+    { label: "Very strong", color: "#16a34a" },
   ];
   return { score, ...map[score] };
 };
@@ -101,25 +101,25 @@ const ResetPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp.");
+      toast.error("Password confirmation does not match.");
       return;
     }
     if (password.length < 8) {
-      toast.error("Mật khẩu phải có ít nhất 8 ký tự.");
+      toast.error("Password must be at least 8 characters.");
       return;
     }
 
     setIsLoading(true);
     try {
       const res = await AuthenService.resetPassword(token, password);
-      toast.success(res?.message || "Đặt lại mật khẩu thành công!");
+      toast.success(res?.message || "Password has been reset successfully!");
       setDone(true);
       setTimeout(() => navigate("/signin"), 3000);
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
           error.message ||
-          "Link đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu lại.",
+          "The link has expired or is invalid. Please request a new one.",
       );
     } finally {
       setIsLoading(false);
@@ -170,10 +170,10 @@ const ResetPassword = () => {
             className="text-4xl font-black"
             style={{ color: "var(--text-heading)" }}
           >
-            Đặt mật khẩu mới
+            Set a new password
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Tạo mật khẩu mạnh để bảo vệ tài khoản của bạn.
+            Create a strong password to keep your account secure.
           </p>
         </div>
 
@@ -192,19 +192,19 @@ const ResetPassword = () => {
                   className="mb-2 text-lg font-bold"
                   style={{ color: "var(--text-heading)" }}
                 >
-                  Link không hợp lệ
+                  Invalid link
                 </h3>
                 <p
                   className="mb-5 text-sm"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Không tìm thấy token đặt lại mật khẩu. Vui lòng yêu cầu lại.
+                  Reset token not found. Please request a new password reset email.
                 </p>
                 <Link
                   to="/forgot-password"
                   className="inline-block text-center auth-btn-submit"
                 >
-                  Quên mật khẩu
+                  Forgot password
                 </Link>
               </motion.div>
             )}
@@ -222,20 +222,19 @@ const ResetPassword = () => {
                   className="mb-2 text-lg font-bold"
                   style={{ color: "var(--text-heading)" }}
                 >
-                  Thành công!
+                  Success!
                 </h3>
                 <p
                   className="mb-4 text-sm"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Mật khẩu của bạn đã được cập nhật. Đang chuyển về trang đăng
-                  nhập…
+                  Your password has been updated. Redirecting to the sign-in page…
                 </p>
                 <p
                   className="text-xs"
                   style={{ color: "var(--text-disabled)" }}
                 >
-                  Tự động chuyển sau 3 giây
+                  You will be redirected automatically in 3 seconds
                 </p>
               </motion.div>
             )}
@@ -251,7 +250,7 @@ const ResetPassword = () => {
               >
                 {/* New password */}
                 <div>
-                  <label className="auth-label">Mật khẩu mới</label>
+                  <label className="auth-label">New password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -259,7 +258,7 @@ const ResetPassword = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       className="pr-10 auth-input"
-                      placeholder="Tối thiểu 8 ký tự"
+                      placeholder="At least 8 characters"
                     />
                     <button
                       type="button"
@@ -301,7 +300,7 @@ const ResetPassword = () => {
 
                 {/* Confirm password */}
                 <div>
-                  <label className="auth-label">Xác nhận mật khẩu</label>
+                  <label className="auth-label">Confirm password</label>
                   <div className="relative">
                     <input
                       type={showConfirm ? "text" : "password"}
@@ -309,7 +308,7 @@ const ResetPassword = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
                       className="pr-10 auth-input"
-                      placeholder="Nhập lại mật khẩu mới"
+                      placeholder="Re-enter your new password"
                       style={{
                         borderColor:
                           confirmPassword && confirmPassword !== password
@@ -335,7 +334,7 @@ const ResetPassword = () => {
                       className="mt-1 text-xs"
                       style={{ color: "#ef4444" }}
                     >
-                      Mật khẩu không khớp
+                      Passwords do not match
                     </motion.p>
                   )}
                   {confirmPassword && confirmPassword === password && (
@@ -345,7 +344,7 @@ const ResetPassword = () => {
                       className="mt-1 text-xs"
                       style={{ color: "#22c55e" }}
                     >
-                      ✓ Mật khẩu khớp
+                      ✓ Passwords match
                     </motion.p>
                   )}
                 </div>
@@ -359,10 +358,10 @@ const ResetPassword = () => {
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <Spinner />
-                      Đang xử lý...
+                      Processing...
                     </span>
                   ) : (
-                    "Đặt mật khẩu mới"
+                    "Set new password"
                   )}
                 </motion.button>
               </motion.form>
@@ -373,9 +372,9 @@ const ResetPassword = () => {
             className="mt-6 text-xs text-center"
             style={{ color: "var(--text-muted)" }}
           >
-            Nhớ mật khẩu rồi?{" "}
+            Remember your password?{" "}
             <Link to="/signin" className="auth-link">
-              Đăng nhập
+              Sign in
             </Link>
           </p>
         </div>
