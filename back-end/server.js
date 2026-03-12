@@ -34,7 +34,7 @@ app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/users", require("./src/routes/userRoutes"));
 app.use("/api/courses", require("./src/routes/courseRoutes"));
 app.use("/api/categories", require("./src/routes/categoryRoutes"));
-app.use("/api/images", require("./src/routes/imageRoutes"));
+app.use("/api/upload", require("./src/routes/uploadRoutes"));
 app.use("/api/payments", require("./src/routes/paymentRoutes"));
 app.use("/api/enrollments", require("./src/routes/enrollmentRoutes"));
 app.use("/api/blogs", require("./src/routes/blogRoutes"));

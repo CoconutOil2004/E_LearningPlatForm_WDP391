@@ -691,30 +691,12 @@ const swaggerDocument = {
       },
     },
 
-    /* ========== IMAGES ========== */
-    "/api/images/upload": {
+    /* ========== UPLOAD (Cloudinary: ảnh + video) ========== */
+    "/api/upload/images": {
       post: {
-        tags: ["Images"],
-        summary: "Upload 1 ảnh (multipart/form-data, field: image)",
-        requestBody: {
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  image: { type: "string", format: "binary" },
-                },
-              },
-            },
-          },
-        },
-        responses: { "200": { description: "url" } },
-      },
-    },
-    "/api/images/upload-multiple": {
-      post: {
-        tags: ["Images"],
-        summary: "Upload nhiều ảnh (field: images)",
+        tags: ["Upload"],
+        summary: "Upload nhiều ảnh (multipart, field: images, tối đa 10)",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           content: {
             "multipart/form-data": {
@@ -730,20 +712,21 @@ const swaggerDocument = {
             },
           },
         },
-        responses: { "200": { description: "urls" } },
+        responses: { "200": { description: "data: [ { url, publicId }, ... ]" } },
       },
     },
-    "/api/images/delete": {
-      delete: {
-        tags: ["Images"],
-        summary: "Xóa ảnh",
+    "/api/upload/video": {
+      post: {
+        tags: ["Upload"],
+        summary: "Upload 1 video (multipart, field: video)",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           content: {
-            "application/json": {
+            "multipart/form-data": {
               schema: {
                 type: "object",
                 properties: {
-                  publicId: { type: "string" },
+                  video: { type: "string", format: "binary" },
                 },
               },
             },

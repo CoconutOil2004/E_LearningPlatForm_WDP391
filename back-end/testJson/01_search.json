@@ -1,0 +1,21 @@
+{
+  "method": "GET",
+  "basePath": "/api/courses",
+  "path": "/search",
+  "fullEndpoint": "/api/courses/search",
+  "protect": false,
+  "description": "Tìm kiếm & lọc khóa học. Chỉ trả về khóa status: published.",
+  "queryParams": {
+    "keyword": "string (optional) – full-text search title, description",
+    "category": "string (optional) – ObjectId của Category",
+    "level": "string (optional) – Beginner | Intermediate | Advanced",
+    "minPrice": "number (optional)",
+    "maxPrice": "number (optional)",
+    "minRating": "number (optional)",
+    "sortBy": "string (optional) – priceAsc | priceDesc | rating | popular",
+    "page": "number (optional, default 1)",
+    "limit": "number (optional, default 10, max 50)",
+    "myCourses": "string (optional) – 'true' để chỉ lấy khóa user đã mua (cần đăng nhập)"
+  },
+  "exampleRequest": "GET /api/courses/search?keyword=react&level=Beginner&page=1&limit=10"
+}

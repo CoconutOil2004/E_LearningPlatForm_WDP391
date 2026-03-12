@@ -1,0 +1,58 @@
+{
+  "method": "GET",
+  "basePath": "/api/courses",
+  "path": "/:id/preview",
+  "fullEndpoint": "/api/courses/:id/preview",
+  "protect": false,
+  "description": "Xem trước khóa (syllabus). Cho người chưa enroll / khách. Chỉ khóa status published. Trả về thông tin cơ bản course + cấu trúc sections (lesson + quiz) với các trường cơ bản: không có videoUrl, không cho xem video – chỉ biết syllabus (tên chương, tên bài, thứ tự, duration).",
+  "pathParams": {
+    "id": "ObjectId của course"
+  },
+  "queryParams": null,
+  "exampleRequest": "GET /api/courses/507f1f77bcf86cd799439011/preview",
+  "exampleResponse": {
+    "success": true,
+    "data": {
+      "_id": "507f1f77bcf86cd799439011",
+      "title": "Khóa học React",
+      "description": "...",
+      "price": 199000,
+      "level": "Beginner",
+      "rating": 4.5,
+      "enrollmentCount": 120,
+      "totalDuration": 3600,
+      "category": { "_id": "...", "name": "Development", "slug": "development" },
+      "instructorId": { "_id": "...", "fullname": "Nguyễn Văn A" },
+      "sections": [
+        {
+          "_id": "...",
+          "title": "Chương 1: Giới thiệu",
+          "items": [
+            {
+              "itemType": "lesson",
+              "itemRef": "Lesson",
+              "itemId": { "_id": "...", "title": "Bài 1", "duration": 300 },
+              "title": "Bài 1",
+              "orderIndex": 1
+            },
+            {
+              "itemType": "lesson",
+              "itemRef": "Lesson",
+              "itemId": { "_id": "...", "title": "Bài 2", "duration": 400 },
+              "title": "Bài 2",
+              "orderIndex": 2
+            },
+            {
+              "itemType": "quiz",
+              "itemRef": "Quiz",
+              "itemId": { "_id": "...", "title": "Quiz 1" },
+              "title": "Quiz 1",
+              "orderIndex": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "notes": "Preview chỉ trả trường cơ bản: lesson có title, duration (không có videoUrl). Quiz có title (không trả questions). Mục đích: biết syllabus, không xem video."
+}

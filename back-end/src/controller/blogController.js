@@ -13,10 +13,44 @@ const normalizeBoolean = (value) => {
   return undefined;
 };
 
+const parseImages = (images) => {
+  if (images === undefined || images === null) return undefined;
+
+  if (Array.isArray(images)) {
+    return images.filter((item) => typeof item === "string" && item.trim() !== "");
+  }
+
+  if (typeof images === "string") {
+    // Nếu frontend gửi JSON string
+    try {
+      const parsed = JSON.parse(images);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => typeof item === "string" && item.trim() !== "");
+      }
+    } catch (_) {
+      // Nếu chỉ là 1 string URL đơn lẻ
+      if (images.trim() !== "") {
+        return [images.trim()];
+      }
+    }
+  }
+
+  return [];
+};
+
 // Instructor tạo bài viết
 const createBlog = async (req, res) => {
   try {
-    const { title, summary, category, content, status } = req.body;
+    const {
+      title,
+      summary,
+      category,
+      content,
+      status,
+      thumbnail,
+      images,
+    } = req.body;
+
     const authorId = req.user.id;
 
     if (!title || !summary || !category || !content) {
@@ -44,6 +78,8 @@ const createBlog = async (req, res) => {
     const allowedInstructorStatus = ["draft", "pending"];
     const finalStatus = allowedInstructorStatus.includes(status) ? status : "draft";
 
+    const parsedImages = parseImages(images);
+
     const blog = await Blog.create({
       title: title.trim(),
       summary: summary.trim(),
@@ -51,6 +87,8 @@ const createBlog = async (req, res) => {
       content: content.trim(),
       status: finalStatus,
       author: authorId,
+      thumbnail: thumbnail ? thumbnail.trim() : "",
+      images: parsedImages || [],
     });
 
     return res.status(201).json({
@@ -72,7 +110,15 @@ const updateOwnBlog = async (req, res) => {
   try {
     const { id } = req.params;
     const instructorId = req.user.id;
-    const { title, summary, category, content, status } = req.body;
+    const {
+      title,
+      summary,
+      category,
+      content,
+      status,
+      thumbnail,
+      images,
+    } = req.body;
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({
@@ -116,6 +162,14 @@ const updateOwnBlog = async (req, res) => {
     if (title !== undefined) blog.title = title.trim();
     if (summary !== undefined) blog.summary = summary.trim();
     if (content !== undefined) blog.content = content.trim();
+
+    if (thumbnail !== undefined) {
+      blog.thumbnail = thumbnail ? thumbnail.trim() : "";
+    }
+
+    if (images !== undefined) {
+      blog.images = parseImages(images);
+    }
 
     // Instructor chỉ được sửa status về draft hoặc pending
     if (status !== undefined) {

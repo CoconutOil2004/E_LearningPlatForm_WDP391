@@ -8,7 +8,6 @@ const {
   getCoursePreview,
   createCourse,
   updateCourse,
-  uploadVideo,
   submitCourse,
   getInstructorCourses,
   getPendingCourses,
@@ -18,8 +17,6 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
-const uploadVideoMw = require("../middleware/uploadVideo");
-const handleUploadError = uploadVideoMw.handleUploadError;
 
 /* ========================= PUBLIC ========================= */
 router.get("/search", searchCourses);
@@ -40,14 +37,6 @@ router.post("/", protect, authorize("instructor"), createCourse);
 ``;
 router.put("/:courseId", protect, authorize("instructor"), updateCourse);
 router.put("/:courseId/submit", protect, authorize("instructor"), submitCourse);
-
-router.post(
-  "/upload-video",
-  protect,
-  uploadVideoMw,
-  handleUploadError,
-  uploadVideo,
-);
 
 /* ========================= ADMIN (trước /:id để không match nhầm) ========================= */
 router.get("/admin/pending", protect, authorize("admin"), getPendingCourses);

@@ -1,0 +1,51 @@
+{
+  "method": "PUT",
+  "basePath": "/api/courses",
+  "path": "/:courseId",
+  "fullEndpoint": "/api/courses/:courseId",
+  "protect": true,
+  "headers": {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json"
+  },
+  "description": "Cập nhật khóa (CRUD). Chỉ instructor. Gửi field nào thì cập nhật field đó. Nếu gửi 'sections' thì BE thay toàn bộ curriculum: item có itemId = giữ; item không có itemId → BE tạo Lesson (nếu có videoUrl) hoặc Quiz (nếu có questions) và gán itemId. Lesson/Quiz cũ không còn trong sections mới sẽ bị xóa.",
+  "pathParams": {
+    "courseId": "ObjectId của course"
+  },
+  "body": {
+    "title": "string, optional",
+    "description": "string, optional",
+    "categoryId": "string | null, optional",
+    "level": "string, optional – Beginner | Intermediate | Advanced",
+    "price": "number, optional",
+    "status": "string, optional – draft | published | archived",
+    "thumbnail": "string, optional – URL ảnh (từ POST /api/upload/images), null nếu bỏ ảnh",
+    "sections": "array, optional – [ { title, items: [ ... ] } ]. Item không itemId + lesson → cần videoUrl (FE gọi POST /api/upload/video trước). Item không itemId + quiz → cần questions (array)."
+  },
+  "exampleBody": {
+    "title": "New title",
+    "description": "New description",
+    "categoryId": "507f1f77bcf86cd799439011",
+    "level": "Intermediate",
+    "price": 99,
+    "status": "draft"
+  },
+  "exampleBodyWithSections": {
+    "title": "Khóa full stack",
+    "sections": [
+      {
+        "title": "Chương 1",
+        "items": [
+          { "itemType": "lesson", "itemRef": "Lesson", "title": "Bài 1", "orderIndex": 1, "videoUrl": "https://res.cloudinary.com/.../video.mp4", "duration": 120, "videoPublicId": "xyz" },
+          { "itemType": "quiz", "itemRef": "Quiz", "title": "Quiz 1", "orderIndex": 2, "questions": [] }
+        ]
+      },
+      {
+        "title": "Chương 2",
+        "items": [
+          { "itemType": "lesson", "itemRef": "Lesson", "title": "Bài 2", "orderIndex": 1, "itemId": "507f1f77bcf86cd799439012" }
+        ]
+      }
+    ]
+  }
+}

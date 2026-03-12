@@ -1,0 +1,30 @@
+{
+  "method": "POST",
+  "basePath": "/api/courses",
+  "path": "/",
+  "fullEndpoint": "/api/courses/",
+  "protect": true,
+  "headers": {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json"
+  },
+  "description": "Tạo khóa học mới. Mặc định status: draft, price: 0.",
+  "body": {
+    "title": "string, bắt buộc, max 60 ký tự",
+    "description": "string, optional",
+    "categoryId": "string, bắt buộc – ObjectId tồn tại trong Category",
+    "level": "string, bắt buộc – Beginner | Intermediate | Advanced",
+    "thumbnail": "string, optional – URL ảnh (từ POST /api/upload/images), mặc định null"
+  },
+  "exampleBody": {
+    "title": "Learn Photoshop CS6 from Scratch",
+    "description": "From zero to hero",
+    "categoryId": "507f1f77bcf86cd799439011",
+    "level": "Beginner",
+    "thumbnail": null
+  },
+  "exampleResponse": {
+    "success": true,
+    "data": { "_id": "...", "title": "...", "thumbnail": null, "category": { "name": "..." }, "level": "Beginner", "status": "draft", "price": 0 }
+  }
+}

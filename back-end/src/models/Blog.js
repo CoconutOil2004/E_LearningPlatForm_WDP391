@@ -19,6 +19,20 @@ const blogSchema = new mongoose.Schema(
       required: [true, "Nội dung bài viết là bắt buộc"],
       trim: true,
     },
+
+    // 1 ảnh đại diện
+    thumbnail: {
+      type: String,
+      default: "",
+    },
+
+    // nhiều ảnh chi tiết
+    images: [
+      {
+        type: String,
+      },
+    ],
+
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
