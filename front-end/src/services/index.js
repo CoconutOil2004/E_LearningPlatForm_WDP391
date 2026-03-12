@@ -66,11 +66,27 @@ api.interceptors.response.use(
       }
     } else if (error.response && error.response.status === 403) {
       const responseData = error.response.data || {};
+      const requestUrl = originalRequest?.url || "";
+
       // Nếu tài khoản chưa xác thực OTP → điều hướng về trang verify-otp
       if (responseData.email) {
         window.location.href = `/verify-otp?email=${encodeURIComponent(responseData.email)}`;
+      } else if (
+        // Các URL course/enrollment → để component tự xử lý, KHÔNG redirect toàn cục
+        requestUrl.includes("/courses/") ||
+        requestUrl.includes("/enrollments/") ||
+        requestUrl.includes("/lessons/") ||
+        // Hoặc message liên quan đến enrollment
+        (responseData.message &&
+          (responseData.message.includes("mua") ||
+            responseData.message.includes("khóa học") ||
+            responseData.message.includes("enroll") ||
+            responseData.message.includes("purchase") ||
+            responseData.message.includes("course")))
+      ) {
+        // Để component tự bắt và xử lý
       } else {
-        // Các trường hợp 403 khác (không có quyền) → trang lỗi
+        // Các trường hợp 403 thực sự không có quyền → trang lỗi
         const errorMessage =
           responseData.message ||
           "You do not have permission to access this resource.";

@@ -27,6 +27,17 @@ class PaymentService {
       return [];
     }
   }
+
+  /* Enroll free course
+   * POST /api/enrollments/enroll-free
+   * Body: { courseId }
+   * Response: { success, message, data: { enrollmentId, courseId, paymentStatus, ... } }
+   */
+  enrollFreeCourse(courseId) {
+    return api
+      .post("/enrollments/enroll-free", { courseId })
+      .then((r) => r.data);
+  }
 }
 
 export default new PaymentService();

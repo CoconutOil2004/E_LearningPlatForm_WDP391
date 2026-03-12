@@ -1,6 +1,7 @@
 import {
   createBrowserRouter,
   createRoutesFromElements,
+  Outlet,
   Route,
 } from "react-router-dom";
 
@@ -117,7 +118,7 @@ const router = createBrowserRouter(
       <Route
         element={
           <ProtectedRoute requiredRoles={["student", "instructor", "admin"]}>
-            <></>
+            <Outlet />
           </ProtectedRoute>
         }
       >

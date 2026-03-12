@@ -16,7 +16,7 @@ const {
   rejectCourse,
 } = require("../controller/courseController");
 
-const { protect, optionalAuth } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
 const uploadVideoMw = require("../middleware/uploadVideo");
 const handleUploadError = uploadVideoMw.handleUploadError;
@@ -37,6 +37,7 @@ router.get(
   getInstructorCourses,
 );
 router.post("/", protect, authorize("instructor"), createCourse);
+``;
 router.put("/:courseId", protect, authorize("instructor"), updateCourse);
 router.put("/:courseId/submit", protect, authorize("instructor"), submitCourse);
 
@@ -54,6 +55,6 @@ router.put("/:courseId/approve", protect, authorize("admin"), approveCourse);
 router.put("/:courseId/reject", protect, authorize("admin"), rejectCourse);
 
 router.get("/:id/preview", getCoursePreview);
-router.get("/:id", optionalAuth, getCourseById);
+router.get("/:id", protect, getCourseById);
 
 module.exports = router;

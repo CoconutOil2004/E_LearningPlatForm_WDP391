@@ -206,10 +206,11 @@ const LearningPage = () => {
     setCurrentLesson,
     lessonProgress,
     saveQuizScore,
+    enrolledCourseIds, // BƯỚC 1: Lấy enrolledCourseIds từ store
   } = useCourseStore();
 
   const [course, setCourse] = useState(null);
-  const [flatItems, setFlatItems] = useState([]); // all lesson+quiz flat
+  const [flatItems, setFlatItems] = useState([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -217,12 +218,27 @@ const LearningPage = () => {
   useEffect(() => {
     if (!courseId) return;
     CourseService.getCourseDetail(courseId)
-      .then((data) => {
+      // Đổi tên isEnrolled của server thành serverEnrolled để dễ phân biệt
+      .then(({ course: data, isEnrolled: serverEnrolled }) => {
         if (!data) {
           message.error("Không tìm thấy khóa học");
           navigate(ROUTES.MY_COURSES);
           return;
         }
+
+        // BƯỚC 2: Kiểm tra enroll dựa vào store HOẶC server
+        const hasEnrolled =
+          enrolledCourseIds.includes(courseId) || serverEnrolled;
+
+        // Nếu chưa enroll → redirect về trang mua
+        if (!hasEnrolled) {
+          message.warning(
+            "Bạn chưa đăng ký khóa học này. Vui lòng mua để tiếp tục.",
+          );
+          navigate(`/courses/${courseId}`);
+          return;
+        }
+
         setCourse(data);
         // Build flat list of ALL items (lessons + quizzes)
         const flat = [];
@@ -240,15 +256,20 @@ const LearningPage = () => {
         if (saved != null) setActiveIdx(saved);
       })
       .catch((err) => {
-        if (err?.response?.status === 403) {
-          message.error("Bạn chưa đăng ký khóa học này");
-          navigate(ROUTES.MY_COURSES);
+        const status = err?.response?.status;
+        if (status === 403 || status === 401) {
+          // BE cũ trả 403 → student chưa mua → redirect về trang detail để mua
+          message.warning(
+            "Bạn chưa đăng ký khóa học này. Vui lòng mua để tiếp tục.",
+          );
+          navigate(`/courses/${courseId}`);
         } else {
           message.error("Không thể tải khóa học");
+          navigate(ROUTES.MY_COURSES);
         }
       })
       .finally(() => setLoading(false));
-  }, [courseId]);
+  }, [courseId, enrolledCourseIds, navigate, lessonProgress]);
 
   const completed = lessonProgress[courseId]?.completedLessons ?? [];
   const lessonItems = flatItems.filter((i) => i.itemType === "lesson");

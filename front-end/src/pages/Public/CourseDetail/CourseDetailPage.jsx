@@ -101,31 +101,44 @@ const CourseDetailPage = () => {
   }, [isAuthenticated, id]);
 
   // ── Load course data ───────────────────────────────────────────────────────
+  // Compatible với cả BE mới (optionalAuth) lẫn BE cũ (protect + 403 cho unenrolled)
   useEffect(() => {
     if (!id) return;
     setLoading(true);
 
     const load = async () => {
       try {
-        // GET /api/courses/:id dùng optionalAuth — hoạt động với cả guest lẫn logged-in user
-        // BE tự quyết định trả full hay preview tùy enrollment status
         const { course: data, isEnrolled: serverEnrolled } =
           await CourseService.getCourseDetail(id);
         if (!data) throw new Error("Not found");
         setCourse(data);
-        console.log(data);
-        // Nếu BE xác nhận đã enroll → cập nhật store
         if (serverEnrolled && data._id) {
           const courseIdStr = data._id.toString();
-          // Merge vào enrolledCourseIds hiện tại (tránh duplicate)
           const current = useCourseStore.getState().enrolledCourseIds ?? [];
           if (!current.includes(courseIdStr)) {
             setEnrolledCourseIds([...current, courseIdStr]);
           }
         }
-      } catch {
-        message.error("Không tìm thấy khóa học");
-        navigate(ROUTES.COURSES);
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 403 || status === 401) {
+          // BE cũ: student chưa enroll hoặc guest → fallback về preview public
+          try {
+            const preview = await CourseService.getCoursePreview(id);
+            if (preview) {
+              setCourse(preview);
+            } else {
+              message.error("Không tìm thấy khóa học");
+              navigate(ROUTES.COURSES);
+            }
+          } catch {
+            message.error("Không tìm thấy khóa học");
+            navigate(ROUTES.COURSES);
+          }
+        } else {
+          message.error("Không tìm thấy khóa học");
+          navigate(ROUTES.COURSES);
+        }
       } finally {
         setLoading(false);
       }
@@ -180,46 +193,82 @@ const CourseDetailPage = () => {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleBuy = async () => {
+    // 1. Kiểm tra đăng nhập
     if (!isAuthenticated) {
       message.info("Vui lòng đăng nhập để tiếp tục");
       navigate(ROUTES.LOGIN);
       return;
     }
+
+    // 2. XỬ LÝ KHÓA HỌC FREE
     if (isFree) {
+      setPaying(true);
       try {
-        // Free course: create a paid enrollment directly via payment with amount=0
-        const res = await PaymentService.createPayment(course._id, "vnpay");
-        // For free courses backend may enroll directly or return paymentUrl
-        if (res?.paymentUrl) {
-          window.location.href = res.paymentUrl;
-        } else {
+        // ✅ GỌI API ENROLL-FREE
+        const res = await PaymentService.enrollFreeCourse(course._id);
+
+        if (res?.success) {
+          // Cập nhật local state
           enroll(courseId);
-          message.success("Đăng ký thành công!");
+
+          // Refresh danh sách enrolled courses từ server
+          try {
+            const ids = await PaymentService.getEnrolledCourseIds();
+            setEnrolledCourseIds(ids);
+          } catch (err) {
+            console.warn("Failed to refresh enrolled courses:", err);
+          }
+
+          // Hiển thị thông báo thành công
+          message.success("Đăng ký khóa học miễn phí thành công!");
+
+          // Navigate đến trang học
           navigate(`/student/learning/${course._id}`);
+        } else {
+          message.error(res?.message || "Đăng ký thất bại. Vui lòng thử lại.");
         }
-      } catch {
-        // Fallback: just enroll locally for free courses
-        enroll(courseId);
-        message.success("Đăng ký thành công!");
-        navigate(`/student/learning/${course._id}`);
+      } catch (err) {
+        console.error("Enroll free course error:", err);
+
+        // Xử lý các loại lỗi cụ thể
+        const errorMessage = err?.response?.data?.message || err?.message;
+
+        if (err?.response?.status === 400) {
+          // Course không phải FREE hoặc đã enroll
+          message.warning(errorMessage || "Không thể đăng ký khóa học này");
+        } else if (err?.response?.status === 404) {
+          message.error("Không tìm thấy khóa học");
+        } else {
+          message.error(errorMessage || "Có lỗi xảy ra khi đăng ký khóa học");
+        }
+      } finally {
+        setPaying(false);
       }
       return;
     }
-    // Paid → VNPay
+
+    // 3. XỬ LÝ KHÓA HỌC TRẢ PHÍ → VNPAY
     setPaying(true);
     try {
       const res = await PaymentService.createPayment(course._id, "vnpay");
+
       if (res?.paymentUrl) {
+        // Redirect đến VNPay payment gateway
         window.location.href = res.paymentUrl;
       } else {
-        message.error("Không thể tạo đơn thanh toán");
+        message.error("Không thể tạo đơn thanh toán. Vui lòng thử lại.");
       }
     } catch (err) {
-      message.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Lỗi thanh toán, vui lòng thử lại",
-      );
+      console.error("Create payment error:", err);
+
+      const errorMessage = err?.response?.data?.message || err?.message;
+
+      if (err?.response?.status === 400) {
+        // Đã mua khóa học hoặc lỗi validation
+        message.warning(errorMessage || "Không thể tạo đơn thanh toán");
+      } else {
+        message.error(errorMessage || "Có lỗi xảy ra khi tạo đơn thanh toán");
+      }
     } finally {
       setPaying(false);
     }
@@ -528,7 +577,7 @@ const CourseDetailPage = () => {
                           type="secondary"
                           style={{ display: "block", fontSize: 13 }}
                         >
-                          {(course.price * 1.4).toFixed(2)}VND
+                          ${(course.price * 1.4).toFixed(2)}
                         </Text>
                       )}
                       <Title
@@ -540,7 +589,7 @@ const CourseDetailPage = () => {
                           WebkitTextFillColor: "transparent",
                         }}
                       >
-                        {isFree ? "Miễn phí" : `${course.price}`}VND
+                        {isFree ? "Miễn phí" : `$${course.price}`}
                       </Title>
                     </>
                   )}

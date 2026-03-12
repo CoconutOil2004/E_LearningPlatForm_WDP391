@@ -135,8 +135,8 @@ const QuestionEditor = ({ question, onChange, onRemove }) => {
     >
       <Input
         placeholder="Câu hỏi"
-        value={question.question}
-        onChange={(e) => onChange({ ...question, question: e.target.value })}
+        value={question.text} // SỬA Ở ĐÂY: đổi từ question.question thành question.text
+        onChange={(e) => onChange({ ...question, text: e.target.value })} // SỬA Ở ĐÂY: đổi question thành text
         style={{ marginBottom: 8 }}
       />
       <div style={{ marginLeft: 12 }}>
@@ -152,8 +152,9 @@ const QuestionEditor = ({ question, onChange, onRemove }) => {
           >
             <Button
               size="small"
-              type={question.correctAnswerIndex === oi ? "primary" : "default"}
-              onClick={() => onChange({ ...question, correctAnswerIndex: oi })}
+              // SỬA Ở ĐÂY: đổi correctAnswerIndex thành correctAnswer
+              type={question.correctAnswer === oi ? "primary" : "default"}
+              onClick={() => onChange({ ...question, correctAnswer: oi })}
               style={{ minWidth: 30, padding: "0 6px" }}
             >
               {oi + 1}
@@ -164,7 +165,8 @@ const QuestionEditor = ({ question, onChange, onRemove }) => {
               value={opt}
               onChange={(e) => updateOption(oi, e.target.value)}
             />
-            {question.correctAnswerIndex === oi && (
+            {/* SỬA Ở ĐÂY: đổi correctAnswerIndex thành correctAnswer */}
+            {question.correctAnswer === oi && (
               <Tag color="success" style={{ margin: 0 }}>
                 ✓ Đúng
               </Tag>
@@ -457,7 +459,7 @@ const CreateCoursePage = () => {
   useEffect(() => {
     if (!editId) return;
     CourseService.getCourseDetail(editId)
-      .then((c) => {
+      .then(({ course: c }) => {
         if (!c) return;
         form.setFieldsValue({
           title: c.title ?? "",

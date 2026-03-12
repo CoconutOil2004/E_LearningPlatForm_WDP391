@@ -93,13 +93,13 @@ class CourseService {
   }
 
   // ─── GET /api/courses/:id ──────────────────────────────────────────────────
-  // optionalAuth: Guest/unenrolled → preview data + isEnrolled:false
-  //               Admin/Instructor/Enrolled → full data + isEnrolled:true
-  // KHÔNG còn throw 401/403 — an toàn gọi không cần auth
+  // BE mới (optionalAuth): trả { data: course, isEnrolled: bool } cho mọi user
+  // BE cũ (protect):  enrolled/admin/instructor → { data: course }
+  //                   unenrolled → 403 (component tự catch và gọi getCoursePreview)
   getCourseDetail(id) {
     return api.get(`/courses/${id}`).then((r) => ({
       course: r.data?.data ?? null,
-      isEnrolled: r.data?.isEnrolled ?? false,
+      isEnrolled: r.data?.isEnrolled ?? true, // BE cũ không trả isEnrolled → assume true (đã pass protect)
     }));
   }
 
