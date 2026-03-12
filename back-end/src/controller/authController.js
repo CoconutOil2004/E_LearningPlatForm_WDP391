@@ -264,24 +264,27 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+    const newPassword = generateRandomPassword(10);
 
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = resetExpires;
+    // Gán trực tiếp để pre-save tự hash
+    user.password = newPassword;
+    user.mustChangePassword = true;
+
+    // Nếu trước đó có reset token thì xóa luôn
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
     await user.save();
-
-    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await sendEmail(
       user.email,
-      "Đặt lại mật khẩu",
-      `Bạn đã yêu cầu đặt lại mật khẩu.\n\nVui lòng bấm vào link sau để đặt mật khẩu mới:\n${resetLink}\n\nLink sẽ hết hạn sau 15 phút.`
+      "Mật khẩu mới của bạn",
+      `Mật khẩu tạm thời của bạn là: ${newPassword}\n\nVui lòng đăng nhập bằng mật khẩu này và đổi lại mật khẩu mới ngay sau khi vào hệ thống.`
     );
 
     return res.json({
       success: true,
-      message: "Link đặt lại mật khẩu đã được gửi tới email của bạn",
+      message: "Mật khẩu tạm thời đã được gửi tới email của bạn",
     });
   } catch (error) {
     logger.error("Lỗi forgotPassword:", error);
