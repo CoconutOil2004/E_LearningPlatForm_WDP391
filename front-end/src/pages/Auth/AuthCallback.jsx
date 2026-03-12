@@ -12,23 +12,44 @@ const AuthCallback = () => {
     const token = params.get("token");
     const userParam = params.get("user");
 
-    if (!token) {
+    if (!token || !userParam) {
       navigate("/signin?error=google_failed", { replace: true });
       return;
     }
 
     try {
-      // BE đã gửi user đầy đủ, dùng trực tiếp thay vì decode token
-      const user = userParam ? JSON.parse(decodeURIComponent(userParam)) : null;
+      const user = JSON.parse(decodeURIComponent(userParam));
+
+      if (!user || !user.role) {
+        navigate("/signin?error=google_failed", { replace: true });
+        return;
+      }
 
       dispatch(setCredentials({ user, token }));
 
-      // Redirect theo role
-      if (user?.role === "admin") navigate("/admin", { replace: true });
-      else if (user?.role === "instructor")
-        navigate("/overview", { replace: true });
-      else navigate("/", { replace: true });
-    } catch {
+      if (user.mustChangePassword) {
+        navigate("/change-password-required", { replace: true });
+        return;
+      }
+
+      if (user.role === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+        return;
+      }
+
+      if (user.role === "instructor") {
+        navigate("/instructor/dashboard", { replace: true });
+        return;
+      }
+
+      if (user.role === "student") {
+        navigate("/", { replace: true });
+        return;
+      }
+
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Google callback parse error:", error);
       navigate("/signin?error=google_failed", { replace: true });
     }
   }, [dispatch, navigate]);

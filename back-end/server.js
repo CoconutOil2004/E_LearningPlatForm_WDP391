@@ -26,8 +26,8 @@ app.use(express.json());
 
 /* ================= SWAGGER API DOCS ================= */
 const swaggerUi = require("swagger-ui-express");
-const swaggerDocument = require("./src/doc/swagger");
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// const swaggerDocument = require("./src/doc/swagger");
+// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 /* ================= ROUTES ================= */
 app.use("/api/auth", require("./src/routes/authRoutes"));

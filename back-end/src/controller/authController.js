@@ -185,7 +185,6 @@ exports.login = async (req, res) => {
       { expiresIn: "1d" },
     );
 
-    // ✅ TRẢ ĐẦY ĐỦ THÔNG TIN USER
     res.json({
       success: true,
       token,
@@ -196,6 +195,7 @@ exports.login = async (req, res) => {
         email: user.email,
         avatarURL: user.avatarURL,
         role: user.role,
+        mustChangePassword: user.mustChangePassword, // thêm dòng này
       },
     });
   } catch (error) {
@@ -209,6 +209,12 @@ exports.googleCallback = async (req, res) => {
   try {
     const user = req.user;
 
+    if (!user) {
+      return res.redirect(
+        `${process.env.CLIENT_URL}/signin?error=google_failed`
+      );
+    }
+
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -217,21 +223,24 @@ exports.googleCallback = async (req, res) => {
 
     const userData = encodeURIComponent(
       JSON.stringify({
-        id: user._id,
+        id: user._id.toString(),
         username: user.username,
         fullname: user.fullname,
         email: user.email,
         avatarURL: user.avatarURL,
         role: user.role,
+        mustChangePassword: user.mustChangePassword || false,
       }),
     );
 
-    res.redirect(
+    return res.redirect(
       `${process.env.CLIENT_URL}/auth/callback?token=${token}&user=${userData}`,
     );
   } catch (err) {
     console.error("Google login error:", err);
-    res.status(500).json({ message: "Google login failed" });
+    return res.redirect(
+      `${process.env.CLIENT_URL}/signin?error=google_login_failed`
+    );
   }
 };
 
@@ -239,33 +248,142 @@ exports.googleCallback = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email là bắt buộc" });
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email là bắt buộc",
+      });
+    }
 
     const user = await User.findOne({ email });
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy người dùng" });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
 
-    const newPassword = generateRandomPassword(10);
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.updateOne({ _id: user._id }, { password: hashedPassword });
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetExpires;
+    await user.save();
+
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
     await sendEmail(
       user.email,
-      "Mật khẩu mới của bạn",
-      `Mật khẩu mới của bạn là: ${newPassword}`,
+      "Đặt lại mật khẩu",
+      `Bạn đã yêu cầu đặt lại mật khẩu.\n\nVui lòng bấm vào link sau để đặt mật khẩu mới:\n${resetLink}\n\nLink sẽ hết hạn sau 15 phút.`
     );
-    res.json({
+
+    return res.json({
       success: true,
-      message: "Mật khẩu mới đã được gửi tới email của bạn",
+      message: "Link đặt lại mật khẩu đã được gửi tới email của bạn",
     });
   } catch (error) {
     logger.error("Lỗi forgotPassword:", error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};
+
+// ------------------ RESET PASSWORD ------------------
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (!token || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Token, mật khẩu mới và xác nhận mật khẩu là bắt buộc",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Xác nhận mật khẩu không khớp",
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+      });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
+    });
+  } catch (error) {
+    logger.error("Lỗi resetPassword:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};
+
+// ------------------ VERIFY RESET TOKEN ------------------
+exports.verifyResetPasswordToken = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Token là bắt buộc",
+      });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Token hợp lệ",
+    });
+  } catch (error) {
+    logger.error("Lỗi verifyResetPasswordToken:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
   }
 };
 
@@ -279,7 +397,7 @@ exports.changeRole = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Vai trò mới là bắt buộc" });
-    if (!["buyer", "seller"].includes(role))
+    if (!["student", "instructor", "admin"].includes(role))
       return res
         .status(400)
         .json({ success: false, message: "Vai trò không hợp lệ" });
@@ -397,11 +515,85 @@ exports.updatePassword = async (req, res) => {
         .json({ success: false, message: "Current password is incorrect" });
 
     user.password = newPassword;
+    user.mustChangePassword = false; // thêm dòng này
     await user.save();
 
     res.json({ success: true, message: "Password updated successfully" });
   } catch (error) {
     logger.error("Error updating password:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// ------------------ CHANGE PASSWORD REQUIRED ------------------
+exports.changePasswordRequired = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Vui lòng nhập đầy đủ mật khẩu hiện tại, mật khẩu mới và xác nhận mật khẩu",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới phải có ít nhất 6 ký tự",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Xác nhận mật khẩu không khớp",
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới không được trùng với mật khẩu hiện tại",
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (!user.mustChangePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Tài khoản này không bị yêu cầu đổi mật khẩu bắt buộc",
+      });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu hiện tại không đúng",
+      });
+    }
+
+    user.password = newPassword; // pre-save sẽ tự hash
+    user.mustChangePassword = false;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Đổi mật khẩu thành công",
+      data: {
+        mustChangePassword: false,
+      },
+    });
+  } catch (error) {
+    logger.error("Error changing required password:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
