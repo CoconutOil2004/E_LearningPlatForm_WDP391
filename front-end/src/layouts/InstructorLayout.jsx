@@ -6,7 +6,6 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  PlusCircleOutlined,
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -36,11 +35,11 @@ const NAV_ITEMS = [
     label: "My Courses",
     key: ROUTES.INSTRUCTOR_COURSES,
   },
-  {
-    icon: <PlusCircleOutlined />,
-    label: "Create Course",
-    key: ROUTES.CREATE_COURSE,
-  },
+  // {
+  //   icon: <PlusCircleOutlined />,
+  //   label: "Create Course",
+  //   key: ROUTES.CREATE_COURSE,
+  // },
   {
     icon: <DollarOutlined />,
     label: "Revenue",

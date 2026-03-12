@@ -100,7 +100,7 @@ const router = createBrowserRouter(
       {/* Student Routes */}
       <Route
         element={
-          <ProtectedRoute requiredRoles={["student"]}>
+          <ProtectedRoute requiredRoles={["student", "instructor", "admin"]}>
             <PublicLayout />
           </ProtectedRoute>
         }
@@ -116,7 +116,7 @@ const router = createBrowserRouter(
       {/* Student fullscreen pages */}
       <Route
         element={
-          <ProtectedRoute requiredRoles={["student"]}>
+          <ProtectedRoute requiredRoles={["student", "instructor", "admin"]}>
             <></>
           </ProtectedRoute>
         }

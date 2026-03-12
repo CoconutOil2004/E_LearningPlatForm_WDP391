@@ -10,6 +10,7 @@ const {
   updateCourse,
   uploadVideo,
   submitCourse,
+  getInstructorCourses,
   getPendingCourses,
   approveCourse,
   rejectCourse
@@ -29,6 +30,12 @@ router.get("/levels", (req, res) => {
 });
 
 /* ========================= INSTRUCTOR (protect) ========================= */
+router.get(
+  "/instructor/mine",
+  protect,
+  authorize("instructor"),
+  getInstructorCourses
+);
 router.post("/", protect, authorize("instructor"), createCourse);
 router.put("/:courseId", protect, authorize("instructor"), updateCourse);
 router.put("/:courseId/submit", protect, authorize("instructor"), submitCourse);

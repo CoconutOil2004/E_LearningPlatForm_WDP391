@@ -1,159 +1,226 @@
 import { api } from "../index";
-import { FAKE_COURSES, FAKE_LESSONS, QUIZ_QUESTIONS } from "../../utils/fakeData";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: Normalize BE course object → shape giống FAKE_COURSES để CourseCard
-//         không cần biết đang dùng real hay fake data.
-// ─────────────────────────────────────────────────────────────────────────────
-export const normalizeCourse = (c) => ({
-  // ID — dùng _id (ObjectId string) từ BE
-  id: c._id,
-  _id: c._id,
-
-  title:       c.title       ?? "",
-  description: c.description ?? "",
-  price:       c.price       ?? 0,
-  level:       c.level       ?? "Beginner",
-  rating:      c.rating      ?? 0,
-  status:      c.status      ?? "published",
-  thumbnail:   c.thumbnail   ?? null,
-
-  // FE CourseCard dùng "image" — map từ thumbnail
-  image: c.thumbnail ?? `https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop`,
-
-  // Giảng viên — BE populate instructorId
-  instructor:   c.instructorId?.fullname ?? c.instructorId?.email ?? "Instructor",
-  instructorId: c.instructorId?._id ?? c.instructorId,
-
-  // Category — BE populate: { _id, name, slug }
-  category:   c.category?.name ?? c.category ?? "",
-  categoryId: c.category?._id  ?? c.category,
-
-  // Lượt đăng ký → dùng làm "students"
-  students:        c.enrollmentCount ?? 0,
-  enrollmentCount: c.enrollmentCount ?? 0,
-
-  // Thời lượng (BE lưu giây)
-  totalDuration: c.totalDuration ?? 0,
-  duration:      c.totalDuration
-    ? `${Math.ceil(c.totalDuration / 3600)}h`
-    : "—",
-
-  // FE fake có lessons count — BE không có sẵn, để null
-  lessons: c.lessons ?? null,
-
-  // Bestseller: không có trong BE → tạm dùng enrollmentCount > 100
-  bestseller: (c.enrollmentCount ?? 0) > 100,
-
-  // Flag từ searchCourses (BE trả về isEnrolled khi có token)
-  isEnrolled: c.isEnrolled ?? false,
-
-  createdAt: c.createdAt,
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * CourseService — map 1:1 với courseController.js (BE)
+ *
+ * Response shape BE populate:
+ *   Course:       { _id, title, description, price, status, thumbnail, level,
+ *                   rating, enrollmentCount, totalDuration, createdAt, updatedAt,
+ *                   category:     { _id, name, slug, description },
+ *                   instructorId: { _id, fullname, email, avatarURL? },
+ *                   sections: [{
+ *                     _id, title,
+ *                     items: [{ _id, itemType, title, orderIndex,
+ *                               itemId: Lesson | Quiz }]
+ *                   }],
+ *                   isEnrolled?: boolean  ← chỉ có trong searchCourses }
+ *
+ *   Lesson:  { _id, title, videoUrl, videoPublicId, duration, courseId }
+ *   Quiz:    { _id, title, courseId, questions }
+ *   Preview: itemId chỉ có { _id, title, duration? } — không có videoUrl
+ */
 
 class CourseService {
-
-  // ── REAL API METHODS ────────────────────────────────────────────────────────
-
-  /**
-   * Lấy tất cả categories từ BE.
-   * GET /api/categories
-   * @returns {Promise<Array<{ _id, name, slug, description }>>}
-   */
-  async getCategories() {
-    const res = await api.get("/categories");
-    // BE trả về { success: true, data: [...] }
-    return res.data?.data ?? [];
+  // ─── GET /api/categories ───────────────────────────────────────────────────
+  // → [{ _id, name, slug, description }]
+  getCategories() {
+    return api.get("/categories").then((r) => r.data?.data ?? []);
   }
 
-  /**
-   * Lấy courses theo categoryId.
-   * GET /api/courses/by-category/:categoryId?page=1&limit=10&sortBy=popular
-   *
-   * @param {string} categoryId  - ObjectId string
-   * @param {{ page?, limit?, sortBy? }} params
-   * @returns {Promise<{ courses: Array, pagination: object }>}
-   */
-  async getCoursesByCategory(categoryId, { page = 1, limit = 10, sortBy = "popular" } = {}) {
-    const res = await api.get(`/courses/by-category/${categoryId}`, {
-      params: { page, limit, sortBy },
-    });
-    // BE trả về { success, data: [...], pagination: { page, limit, total, totalPages } }
-    return {
-      courses:    (res.data?.data ?? []).map(normalizeCourse),
-      pagination: res.data?.pagination ?? {},
-    };
+  // ─── GET /api/courses/levels ───────────────────────────────────────────────
+  // → ["Beginner", "Intermediate", "Advanced"]
+  getLevels() {
+    return api.get("/courses/levels").then((r) => r.data?.data ?? []);
   }
 
-  /**
-   * Tìm kiếm + lọc khóa học nâng cao (Udemy style).
-   * GET /api/courses/search?keyword=&category=&level=&minPrice=&maxPrice=&minRating=&sortBy=&page=&limit=
-   *
-   * @param {{ keyword?, category?, level?, minPrice?, maxPrice?, minRating?, sortBy?, page?, limit?, myCourses? }} params
-   */
-  async searchCourses({
+  // ─── GET /api/courses/by-category/:categoryId ─────────────────────────────
+  // Query: page, limit, sortBy (popular|rating|priceAsc|priceDesc)
+  // → { data: Course[], pagination: { page, limit, total, totalPages } }
+  getCoursesByCategory(
+    categoryId,
+    { page = 1, limit = 10, sortBy = "popular" } = {},
+  ) {
+    return api
+      .get(`/courses/by-category/${categoryId}`, {
+        params: { page, limit, sortBy },
+      })
+      .then((r) => ({
+        courses: r.data?.data ?? [],
+        pagination: r.data?.pagination ?? {},
+      }));
+  }
+
+  // ─── GET /api/courses/search ───────────────────────────────────────────────
+  // Query: keyword, category (ObjectId), level, minPrice, maxPrice,
+  //        minRating, sortBy, page, limit, myCourses ("true")
+  // → { data: Course[], total, page, pages }
+  // Course object có thêm isEnrolled: boolean khi gửi token
+  searchCourses({
     keyword,
     category,
     level,
     minPrice,
     maxPrice,
     minRating,
-    sortBy    = "popular",
-    page      = 1,
-    limit     = 10,
+    sortBy = "popular",
+    page = 1,
+    limit = 10,
     myCourses = false,
   } = {}) {
     const params = { sortBy, page, limit };
-    if (keyword)   params.keyword   = keyword;
-    if (category)  params.category  = category;
-    if (level)     params.level     = level;
+    if (keyword) params.keyword = keyword;
+    if (category) params.category = category;
+    if (level) params.level = level;
     if (minPrice != null) params.minPrice = minPrice;
     if (maxPrice != null) params.maxPrice = maxPrice;
     if (minRating != null) params.minRating = minRating;
     if (myCourses) params.myCourses = "true";
 
-    const res = await api.get("/courses/search", { params });
-    return {
-      courses:    (res.data?.data  ?? []).map(normalizeCourse),
-      total:      res.data?.total  ?? 0,
-      page:       res.data?.page   ?? 1,
-      pages:      res.data?.pages  ?? 1,
-    };
+    return api.get("/courses/search", { params }).then((r) => ({
+      courses: r.data?.data ?? [],
+      total: r.data?.total ?? 0,
+      page: r.data?.page ?? 1,
+      pages: r.data?.pages ?? 1,
+    }));
   }
 
-  // ── FAKE / LEGACY METHODS (giữ nguyên để không break code cũ) ──────────────
-
-  /** @deprecated Dùng searchCourses() với real API */
-  async getAllCourses({ category, level, sort } = {}) {
-    await new Promise((r) => setTimeout(r, 400));
-    let courses = [...FAKE_COURSES];
-    if (category && category !== "All") courses = courses.filter((c) => c.category === category);
-    if (level    && level    !== "All") courses = courses.filter((c) => c.level    === level);
-    if (sort === "rating")     courses.sort((a, b) => b.rating  - a.rating);
-    else if (sort === "price-low")  courses.sort((a, b) => a.price   - b.price);
-    else if (sort === "price-high") courses.sort((a, b) => b.price   - a.price);
-    else courses.sort((a, b) => b.students - a.students);
-    return { success: true, data: courses };
+  // ─── GET /api/courses/:id/preview ─────────────────────────────────────────
+  // Public, không cần auth. Chỉ khóa published.
+  // itemId trong sections chỉ có { _id, title, duration } — KHÔNG có videoUrl
+  // → Course (syllabus only)
+  getCoursePreview(id) {
+    return api.get(`/courses/${id}/preview`).then((r) => r.data?.data ?? null);
   }
 
-  /** @deprecated Dùng real API */
-  async getCourseById(id) {
-    await new Promise((r) => setTimeout(r, 200));
-    const course = FAKE_COURSES.find((c) => c.id === Number(id));
-    if (!course) throw new Error("Course not found");
-    return { success: true, data: course };
+  // ─── GET /api/courses/:id ──────────────────────────────────────────────────
+  // Cần auth. Admin/Instructor-sở-hữu: vào thẳng.
+  // Student: cần paymentStatus = "paid". Trả 403 nếu chưa enroll.
+  // itemId đầy đủ kể cả videoUrl, videoPublicId
+  // → Course (full)
+  getCourseDetail(id) {
+    return api.get(`/courses/${id}`).then((r) => r.data?.data ?? null);
   }
 
-  async getLessons(courseId) {
-    await new Promise((r) => setTimeout(r, 200));
-    return { success: true, data: FAKE_LESSONS };
+  // ─── POST /api/courses ────────────────────────────────────────────────────
+  // Instructor only. Body: { title (max 60, required), description,
+  //                          categoryId (required), level (required) }
+  // BE tự set: status="draft", price=0
+  // → Course (populated category.name, instructorId.fullname/email)
+  createCourse({ title, description, categoryId, level }) {
+    return api
+      .post("/courses", { title, description, categoryId, level })
+      .then((r) => r.data?.data ?? null);
   }
 
-  async getQuiz(courseId) {
-    await new Promise((r) => setTimeout(r, 200));
-    return { success: true, data: QUIZ_QUESTIONS };
+  // ─── PUT /api/courses/:courseId ───────────────────────────────────────────
+  // Instructor only, chỉ khi status = "draft" | "rejected"
+  // Body: { title?, description?, categoryId?, level?, price?, status?, sections? }
+  // sections shape: [{ title, items: [{ itemType, title, orderIndex,
+  //   itemId?,           ← có → BE dùng lại; không có → BE tạo mới Lesson/Quiz
+  //   videoUrl?,         ← từ uploadVideo
+  //   videoPublicId?,
+  //   duration?,
+  //   questions?         ← cho quiz
+  // }] }]
+  // → Course (full populated)
+  updateCourse(courseId, payload) {
+    return api
+      .put(`/courses/${courseId}`, payload)
+      .then((r) => r.data?.data ?? null);
+  }
+
+  // ─── POST /api/courses/upload-video ───────────────────────────────────────
+  // Instructor only. multipart/form-data, field: "video"
+  // → { videoUrl, publicId, duration }  (duration tính bằng giây)
+  uploadVideo(file, onProgress) {
+    const form = new FormData();
+    form.append("video", file);
+    return api
+      .post("/courses/upload-video", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: onProgress
+          ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
+          : undefined,
+      })
+      .then((r) => r.data?.data ?? null);
+  }
+
+  // ─── PUT /api/courses/:courseId/submit ────────────────────────────────────
+  // Instructor only. Chỉ khi status = "draft" | "rejected"
+  // → { success, message, data: Course }
+  submitCourse(courseId) {
+    return api.put(`/courses/${courseId}/submit`).then((r) => r.data ?? null);
+  }
+
+  // ─── GET /api/courses/admin/pending ───────────────────────────────────────
+  // Admin only.
+  // → { success, count, data: Course[] }
+  getPendingCourses() {
+    return api.get("/courses/admin/pending").then((r) => r.data?.data ?? []);
+  }
+
+  // ─── GET /api/courses/instructor/mine ─────────────────────────────────────
+  // Instructor only. Lấy toàn bộ khóa học của instructor (kể cả draft/pending/rejected/published)
+  // Query: status? (draft|pending|published|rejected|archived)
+  // → Course[]
+  getInstructorCourses({ status } = {}) {
+    return api
+      .get("/courses/instructor/mine", { params: status ? { status } : {} })
+      .then((r) => r.data?.data ?? []);
+  }
+
+  // ─── PUT /api/courses/:courseId/approve ───────────────────────────────────
+  // Admin only. Chỉ khi status = "pending" → "published"
+  // → { success, message, data: Course }
+  approveCourse(courseId) {
+    return api.put(`/courses/${courseId}/approve`).then((r) => r.data ?? null);
+  }
+
+  // ─── PUT /api/courses/:courseId/reject ────────────────────────────────────
+  // Admin only. Chỉ khi status = "pending" → "rejected"
+  // Body: { reason? }
+  // → { success, message, data: Course }
+  rejectCourse(courseId, reason) {
+    return api
+      .put(`/courses/${courseId}/reject`, { reason })
+      .then((r) => r.data ?? null);
+  }
+
+  // ─── Helpers dùng trong FE ─────────────────────────────────────────────────
+
+  // Student: lấy courses đã mua (myCourses=true, cần token)
+  getMyCourses({ page = 1, limit = 20 } = {}) {
+    return this.searchCourses({ myCourses: true, page, limit });
+  }
+
+  // Extract flat lesson list từ course detail (student đã enroll)
+  getLessonsFromCourse(course) {
+    const lessons = [];
+    for (const section of course?.sections ?? []) {
+      for (const item of section.items ?? []) {
+        if (item.itemType === "lesson" && item.itemId) {
+          lessons.push({
+            ...item.itemId,
+            sectionTitle: section.title,
+            orderIndex: item.orderIndex,
+          });
+        }
+      }
+    }
+    return lessons;
+  }
+
+  // Extract flat quiz list từ course detail (student đã enroll)
+  getQuizzesFromCourse(course) {
+    const quizzes = [];
+    for (const section of course?.sections ?? []) {
+      for (const item of section.items ?? []) {
+        if (item.itemType === "quiz" && item.itemId) {
+          quizzes.push({ ...item.itemId, sectionTitle: section.title });
+        }
+      }
+    }
+    return quizzes;
   }
 }
 

@@ -1,23 +1,22 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CourseCard from "../../../components/common/CourseCard";
 import { Icon } from "../../../components/ui";
-import { FAKE_COURSES } from "../../../utils/fakeData";
-import { pageVariants } from "../../../utils/helpers";
-import { ROUTES } from "../../../utils/constants";
-import useCourseStore from "../../../store/slices/courseStore";
-import useAuthStore from "../../../store/slices/authStore";
 import { useToast } from "../../../contexts/ToastContext";
 import useCategorySection from "../../../hooks/useCategorySection";
+import CourseService from "../../../services/api/CourseService";
+import useAuthStore from "../../../store/slices/authStore";
+import useCourseStore from "../../../store/slices/courseStore";
+import { ROUTES } from "../../../utils/constants";
+import { pageVariants } from "../../../utils/helpers";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-
 const STATS = [
-  { label: "Learners Worldwide", value: "20K+",  delay: 0 },
-  { label: "Expert Courses",     value: "150+",  delay: 0.1 },
-  { label: "Satisfaction Rate",  value: "95%",   delay: 0.2 },
-  { label: "App Store Rating",   value: "4.9/5", delay: 0.3 },
+  { label: "Learners Worldwide", value: "20K+", delay: 0 },
+  { label: "Expert Courses", value: "150+", delay: 0.1 },
+  { label: "Satisfaction Rate", value: "95%", delay: 0.2 },
+  { label: "App Store Rating", value: "4.9/5", delay: 0.3 },
 ];
 
 const TOOLS = [
@@ -87,14 +86,18 @@ const MILESTONES = [
 ];
 
 const SIDEBAR_ITEMS = [
-  { icon: "layout",   label: "Dashboard", route: ROUTES.STUDENT_DASHBOARD, active: true },
-  { icon: "book",     label: "Courses",   route: ROUTES.MY_COURSES },
-  { icon: "trending", label: "Progress",  route: ROUTES.PROGRESS },
-  { icon: "settings", label: "Settings",  route: ROUTES.STUDENT_SETTINGS },
+  {
+    icon: "layout",
+    label: "Dashboard",
+    route: ROUTES.STUDENT_DASHBOARD,
+    active: true,
+  },
+  { icon: "book", label: "Courses", route: ROUTES.MY_COURSES },
+  { icon: "trending", label: "Progress", route: ROUTES.PROGRESS },
+  { icon: "settings", label: "Settings", route: ROUTES.STUDENT_SETTINGS },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
 const AuroraBg = () => (
   <div
     aria-hidden
@@ -103,13 +106,7 @@ const AuroraBg = () => (
       inset: 0,
       zIndex: 0,
       pointerEvents: "none",
-      background: `
-        radial-gradient(circle at 0% 0%,    var(--aurora-tl) 0%, transparent 40%),
-        radial-gradient(circle at 100% 0%,  var(--aurora-tr) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%,  var(--aurora-c)  0%, transparent 70%),
-        radial-gradient(circle at 100% 100%,var(--aurora-br) 0%, transparent 40%),
-        radial-gradient(circle at 0% 100%,  var(--aurora-bl) 0%, transparent 40%)
-      `,
+      background: `radial-gradient(circle at 0% 0%,var(--aurora-tl) 0%,transparent 40%),radial-gradient(circle at 100% 0%,var(--aurora-tr) 0%,transparent 40%),radial-gradient(circle at 50% 50%,var(--aurora-c) 0%,transparent 70%),radial-gradient(circle at 100% 100%,var(--aurora-br) 0%,transparent 40%),radial-gradient(circle at 0% 100%,var(--aurora-bl) 0%,transparent 40%)`,
       filter: "blur(60px)",
       opacity: 0.9,
     }}
@@ -122,53 +119,66 @@ const GlassCard = ({ children, className = "", style = {}, onClick }) => (
   </div>
 );
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
+// ─── Main ─────────────────────────────────────────────────────────────────────
 const HomePage = () => {
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
   const { isAuthenticated, user } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } = useCourseStore();
+  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } =
+    useCourseStore();
   const toast = useToast();
 
   const {
     sections: categorySections,
-    loading:  sectionsLoading,
-    error:    sectionsError,
+    loading: sectionsLoading,
+    error: sectionsError,
   } = useCategorySection({ limit: 4, sortBy: "popular", maxCategories: 5 });
 
+  // Up Next: 2 popular courses từ API
+  const [upNext, setUpNext] = useState([]);
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(timer);
+    CourseService.searchCourses({ sortBy: "popular", limit: 2 })
+      .then((r) => setUpNext(r.courses ?? []))
+      .catch(() => {});
   }, []);
 
   const handleEnroll = (course) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
-    enroll(course.id);
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
+    enroll(course._id);
     toast.success(`Enrolled in "${course.title}"!`);
-    navigate(`/student/learning/${course.id}`);
+    navigate(`/student/learning/${course._id}`);
   };
 
   const handleWishlist = (courseId) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     toggleWishlist(courseId);
     toast.success(
-      wishlistIds.includes(courseId) ? "Removed from wishlist" : "Added to wishlist"
+      wishlistIds.includes(courseId)
+        ? "Removed from wishlist"
+        : "Added to wishlist",
     );
   };
 
   const handleAuthRoute = (route) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     navigate(route);
   };
 
-  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : "U";
+  const userInitial = user?.fullname
+    ? user.fullname.charAt(0).toUpperCase()
+    : (user?.email?.charAt(0).toUpperCase() ?? "U");
 
   return (
     <>
       <AuroraBg />
-
       <motion.div
         variants={pageVariants}
         initial="initial"
@@ -176,10 +186,8 @@ const HomePage = () => {
         exit="exit"
         style={{ position: "relative", zIndex: 1 }}
       >
-
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-        <section className="max-w-7xl mx-auto px-6 pt-24 pb-20 text-center">
-
+        <section className="px-6 pt-24 pb-20 mx-auto text-center max-w-7xl">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,7 +203,8 @@ const HomePage = () => {
             transition={{ delay: 0.15 }}
             className="text-6xl md:text-7xl font-extrabold mb-6 tracking-tighter text-heading leading-[1.1]"
           >
-            Master technology<br />
+            Master technology
+            <br />
             <span className="gradient-text">at your own pace</span>
           </motion.h1>
 
@@ -203,10 +212,11 @@ const HomePage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="max-w-2xl mx-auto text-muted text-lg md:text-xl font-medium leading-relaxed mb-10"
+            className="max-w-2xl mx-auto mb-10 text-lg font-medium leading-relaxed text-muted md:text-xl"
           >
-            World-class curriculum crafted by industry experts. Build real skills,
-            earn globally recognized certificates, and accelerate your career.
+            World-class curriculum crafted by industry experts. Build real
+            skills, earn globally recognized certificates, and accelerate your
+            career.
           </motion.p>
 
           <motion.div
@@ -217,21 +227,24 @@ const HomePage = () => {
           >
             <button
               className="btn-aurora"
-              onClick={() => navigate(isAuthenticated ? ROUTES.STUDENT_DASHBOARD : ROUTES.REGISTER)}
+              onClick={() =>
+                navigate(
+                  isAuthenticated ? ROUTES.STUDENT_DASHBOARD : ROUTES.REGISTER,
+                )
+              }
             >
               {isAuthenticated ? "Go to Dashboard" : "Start Learning Free"}
             </button>
-
             <GlassCard
-              className="px-10 py-4 rounded-2xl font-bold flex items-center gap-3 cursor-pointer hover:bg-white/60 transition-all duration-300"
+              className="flex items-center gap-3 px-10 py-4 font-bold transition-all duration-300 cursor-pointer rounded-2xl hover:bg-white/60"
               onClick={() => navigate(ROUTES.COURSES)}
             >
-              <Icon name="play" size={20} color="var(--color-secondary)" />
+              <Icon name="play" size={20} color="var(--color-secondary)" />{" "}
               Browse Courses
             </GlassCard>
           </motion.div>
 
-          {/* ── Dashboard Preview ──────────────────────────────────────── */}
+          {/* ── Dashboard Preview ────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -240,10 +253,9 @@ const HomePage = () => {
           >
             <div className="absolute inset-0 bg-white/30 blur-3xl -z-10 rounded-[3rem]" />
             <GlassCard className="rounded-[2.5rem] p-4 md:p-8 shadow-2xl overflow-hidden hover:border-primary/20 transition-all duration-300">
-              <div className="flex flex-col md:flex-row gap-8">
-
-                {/* Sidebar */}
-                <nav className="w-full md:w-56 border-r border-border/50 pr-6 hidden lg:block text-left shrink-0">
+              <div className="flex flex-col gap-8 md:flex-row">
+                {/* Sidebar nav */}
+                <nav className="hidden w-full pr-6 text-left border-r md:w-56 border-border/50 lg:block shrink-0">
                   <div className="space-y-1">
                     {SIDEBAR_ITEMS.map((item) => (
                       <button
@@ -258,7 +270,11 @@ const HomePage = () => {
                         <Icon
                           name={item.icon}
                           size={18}
-                          color={item.active ? "var(--color-secondary)" : "currentColor"}
+                          color={
+                            item.active
+                              ? "var(--color-secondary)"
+                              : "currentColor"
+                          }
                         />
                         {item.label}
                       </button>
@@ -266,21 +282,20 @@ const HomePage = () => {
                   </div>
                 </nav>
 
-                {/* Main content */}
+                {/* Main */}
                 <div className="flex-1 text-left">
                   <div className="flex items-center justify-between mb-8">
                     <h3 className="text-3xl font-extrabold tracking-tight text-heading">
                       Learning Hub
                     </h3>
                     <div className="flex items-center gap-4">
-                      <div className="bg-white/60 px-4 py-2 rounded-full text-xs font-bold border border-border">
+                      <div className="px-4 py-2 text-xs font-bold border rounded-full bg-white/60 border-border">
                         76% Complete
                       </div>
                       <button
                         onClick={() => handleAuthRoute(ROUTES.STUDENT_PROFILE)}
-                        className="w-12 h-12 rounded-2xl border-2 border-white shadow-sm overflow-hidden flex items-center justify-center text-white font-bold text-sm"
+                        className="flex items-center justify-center w-12 h-12 overflow-hidden text-sm font-bold text-white border-2 border-white shadow-sm rounded-2xl"
                         style={{ background: "var(--gradient-brand)" }}
-                        title={isAuthenticated ? user?.name : "Sign in to view profile"}
                       >
                         {userInitial}
                       </button>
@@ -288,60 +303,98 @@ const HomePage = () => {
                   </div>
 
                   {/* Mini charts */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white/40 p-5 rounded-3xl border border-white/60">
+                  <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
+                    <div className="p-5 border bg-white/40 rounded-3xl border-white/60">
                       <span className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 block">
                         Growth Rate
                       </span>
-                      <div className="h-24 flex items-end gap-2">
+                      <div className="flex items-end h-24 gap-2">
                         {[50, 65, 100, 75].map((h, i) => (
                           <div
                             key={i}
                             className="flex-1 rounded-xl"
                             style={{
                               height: `${h}%`,
-                              background: i === 2 ? "var(--gradient-brand)" : "var(--color-primary-bg)",
+                              background:
+                                i === 2
+                                  ? "var(--gradient-brand)"
+                                  : "var(--color-primary-bg)",
                               opacity: i === 2 ? 1 : 0.6,
                             }}
                           />
                         ))}
                       </div>
                     </div>
-
-                    <div className="bg-white/40 p-5 rounded-3xl border border-white/60 flex flex-col items-center justify-center">
+                    <div className="flex flex-col items-center justify-center p-5 border bg-white/40 rounded-3xl border-white/60">
                       <span className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 block">
                         Overall Progress
                       </span>
                       <div className="relative w-20 h-20">
-                        <svg className="w-full h-full" style={{ transform: "rotate(-90deg)" }} viewBox="0 0 36 36">
-                          <circle cx="18" cy="18" r="16" fill="none" stroke="#E2E8F0" strokeWidth="3" />
-                          <circle cx="18" cy="18" r="16" fill="none" stroke="url(#progressGrad)"
-                            strokeDasharray="76,100" strokeLinecap="round" strokeWidth="3" />
+                        <svg
+                          className="w-full h-full"
+                          style={{ transform: "rotate(-90deg)" }}
+                          viewBox="0 0 36 36"
+                        >
+                          <circle
+                            cx="18"
+                            cy="18"
+                            r="16"
+                            fill="none"
+                            stroke="#E2E8F0"
+                            strokeWidth="3"
+                          />
+                          <circle
+                            cx="18"
+                            cy="18"
+                            r="16"
+                            fill="none"
+                            stroke="url(#pg)"
+                            strokeDasharray="76,100"
+                            strokeLinecap="round"
+                            strokeWidth="3"
+                          />
                           <defs>
-                            <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%"   stopColor="var(--color-primary)" />
-                              <stop offset="100%" stopColor="var(--color-secondary)" />
+                            <linearGradient
+                              id="pg"
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="100%"
+                            >
+                              <stop
+                                offset="0%"
+                                stopColor="var(--color-primary)"
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor="var(--color-secondary)"
+                              />
                             </linearGradient>
                           </defs>
                         </svg>
-                        <div className="absolute inset-0 flex items-center justify-center font-bold text-lg text-heading">
+                        <div className="absolute inset-0 flex items-center justify-center text-lg font-bold text-heading">
                           76%
                         </div>
                       </div>
                     </div>
-
-                    <div className="bg-white/40 p-5 rounded-3xl border border-white/60">
+                    <div className="p-5 border bg-white/40 rounded-3xl border-white/60">
                       <span className="text-[10px] text-muted font-bold uppercase tracking-widest mb-3 block">
                         Weekly Activity
                       </span>
-                      <div className="space-y-3 pt-2">
+                      <div className="pt-2 space-y-3">
                         {[100, 65, 80].map((w, i) => (
-                          <div key={i} className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            key={i}
+                            className="h-2.5 bg-slate-100 rounded-full overflow-hidden"
+                          >
                             <div
                               className="h-full rounded-full"
                               style={{
                                 width: `${w}%`,
-                                background: i % 2 === 0 ? "var(--color-primary)" : "var(--color-secondary)",
+                                background:
+                                  i % 2 === 0
+                                    ? "var(--color-primary)"
+                                    : "var(--color-secondary)",
                                 opacity: 0.7,
                               }}
                             />
@@ -351,40 +404,63 @@ const HomePage = () => {
                     </div>
                   </div>
 
-                  {/* Next lessons */}
+                  {/* Up Next — real API */}
                   <div>
-                    <h4 className="text-xl font-extrabold mb-4 text-heading">Up Next</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {FAKE_COURSES.slice(0, 2).map((course) => (
-                        <button
-                          key={course.id}
-                          onClick={() =>
-                            enrolledCourseIds.includes(course.id)
-                              ? navigate(`/student/learning/${course.id}`)
-                              : navigate(`/courses/${course.id}`)
-                          }
-                          className="bg-white/80 p-4 rounded-2xl flex items-center justify-between hover:shadow-md transition-all cursor-pointer group border border-border/50 text-left w-full"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0">
-                              <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
+                    <h4 className="mb-4 text-xl font-extrabold text-heading">
+                      Up Next
+                    </h4>
+                    {upNext.length === 0 ? (
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {[...Array(2)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="h-16 rounded-2xl bg-white/40 animate-pulse"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {upNext.map((course) => (
+                          <button
+                            key={course._id}
+                            onClick={() =>
+                              enrolledCourseIds.includes(course._id)
+                                ? navigate(`/student/learning/${course._id}`)
+                                : navigate(`/courses/${course._id}`)
+                            }
+                            className="flex items-center justify-between w-full p-4 text-left transition-all border cursor-pointer bg-white/80 rounded-2xl hover:shadow-md group border-border/50"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="overflow-hidden w-11 h-11 rounded-xl shrink-0">
+                                <img
+                                  src={
+                                    course.thumbnail ||
+                                    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=88&h=88&fit=crop"
+                                  }
+                                  alt={course.title}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold tracking-tight uppercase text-heading line-clamp-1">
+                                  {course.title}
+                                </p>
+                                <p className="text-[9px] font-bold text-muted uppercase tracking-tighter mt-0.5">
+                                  {course.category?.name} · {course.level}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-xs uppercase tracking-tight text-heading line-clamp-1">
-                                {course.title}
-                              </p>
-                              <p className="text-[9px] font-bold text-muted uppercase tracking-tighter mt-0.5">
-                                {course.category} · {course.level}
-                              </p>
-                            </div>
-                          </div>
-                          <Icon name="chevronRight" size={16} color="var(--text-muted)" />
-                        </button>
-                      ))}
-                    </div>
+                            <Icon
+                              name="chevronRight"
+                              size={16}
+                              color="var(--text-muted)"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-
               </div>
             </GlassCard>
           </motion.div>
@@ -392,139 +468,151 @@ const HomePage = () => {
 
         {/* ══ LEARNING PATH ════════════════════════════════════════════════ */}
         <section
-          className="max-w-7xl mx-auto px-6 py-16 relative"
-          style={{ background: "radial-gradient(circle at 50% 50%, rgba(240,253,250,0.5) 0%, transparent 100%)" }}
+          className="relative px-6 py-16 mx-auto max-w-7xl"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 50%,rgba(240,253,250,0.5) 0%,transparent 100%)",
+          }}
         >
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-heading">
+          <div className="mb-16 text-center">
+            <h2 className="mb-3 text-4xl font-extrabold tracking-tight text-heading">
               Your Learning Journey
             </h2>
-            <p className="text-muted font-medium">
+            <p className="font-medium text-muted">
               Four strategic milestones from beginner to certified professional
             </p>
           </div>
-
           <div className="relative min-h-[500px] flex items-center justify-center">
-            <div aria-hidden className="particle" style={{ top: "20%", left: "15%", animationDelay: "0s" }} />
-            <div aria-hidden className="particle" style={{ top: "50%", left: "45%", animationDelay: "-3s" }} />
-            <div aria-hidden className="particle" style={{ top: "80%", left: "75%", animationDelay: "-6s" }} />
-
             <svg
-              className="absolute w-full pointer-events-none z-0"
+              className="absolute z-0 w-full pointer-events-none"
               style={{ height: 500 }}
               preserveAspectRatio="none"
               viewBox="0 0 1200 500"
             >
               <defs>
-                <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="var(--color-primary)" />
-                  <stop offset="50%"  stopColor="var(--color-secondary)" />
+                <linearGradient
+                  id="ribbonGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="var(--color-primary)" />
+                  <stop offset="50%" stopColor="var(--color-secondary)" />
                   <stop offset="100%" stopColor="var(--color-success)" />
                 </linearGradient>
-                <filter id="ribbonGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <filter
+                  id="ribbonGlow"
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
                   <feGaussianBlur stdDeviation="8" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
               </defs>
               <path
                 className="opacity-60"
-                d="M 150 400 C 300 400, 350 150, 450 150 C 550 150, 650 375, 750 375 C 850 375, 950 150, 1100 150"
-                fill="none" stroke="url(#ribbonGrad)" strokeWidth="12" strokeLinecap="round"
+                d="M 150 400 C 300 400,350 150,450 150 C 550 150,650 375,750 375 C 850 375,950 150,1100 150"
+                fill="none"
+                stroke="url(#ribbonGrad)"
+                strokeWidth="12"
+                strokeLinecap="round"
                 filter="url(#ribbonGlow)"
               />
               <path
-                className="step-path opacity-80"
-                d="M 150 400 C 300 400, 350 150, 450 150 C 550 150, 650 375, 750 375 C 850 375, 950 150, 1100 150"
-                fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 10"
+                className="opacity-80"
+                d="M 150 400 C 300 400,350 150,450 150 C 550 150,650 375,750 375 C 850 375,950 150,1100 150"
+                fill="none"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray="2 10"
               />
             </svg>
-
             <div className="absolute inset-0 z-10">
-              {/* Station 1: Discover — (150, 400) → left=12.5%, top=80% */}
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: 0 }}
-                whileHover={{ scale: 1.08 }}
-                onClick={() => navigate(MILESTONES[0].route)}
-                className="absolute flex flex-col items-center milestone-float"
-                style={{ left: "12.5%", top: "80%", transform: "translate(-50%, -50%)" }}
-              >
-                <div
-                  className="w-40 h-28 glass-card rounded-[2rem] border-2 flex flex-col items-center justify-center p-4"
-                  style={{ borderColor: "rgba(52,211,153,0.5)", boxShadow: "0 0 30px rgba(52,211,153,0.15)" }}
+              {[
+                {
+                  ms: MILESTONES[0],
+                  left: "12.5%",
+                  top: "80%",
+                  delay: 0,
+                  animDelay: "0s",
+                },
+                {
+                  ms: MILESTONES[1],
+                  left: "37.5%",
+                  top: "30%",
+                  delay: 0.15,
+                  animDelay: "0.5s",
+                },
+                {
+                  ms: MILESTONES[2],
+                  left: "62.5%",
+                  top: "75%",
+                  delay: 0.3,
+                  animDelay: "1s",
+                },
+                {
+                  ms: MILESTONES[3],
+                  left: "91.7%",
+                  top: "30%",
+                  delay: 0.45,
+                  animDelay: "1.5s",
+                },
+              ].map(({ ms, left, top, delay, animDelay }) => (
+                <motion.button
+                  key={ms.title}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay }}
+                  whileHover={{ scale: 1.08 }}
+                  onClick={() => navigate(ms.route)}
+                  className="absolute flex flex-col items-center milestone-float"
+                  style={{
+                    left,
+                    top,
+                    transform: "translate(-50%,-50%)",
+                    animationDelay: animDelay,
+                  }}
                 >
-                  <Icon name="compass" size={36} color="var(--color-primary)" className="milestone-icon-pulse" />
-                  <span className="font-bold text-sm mt-2 text-heading">{MILESTONES[0].title}</span>
-                </div>
-                <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">{MILESTONES[0].sub}</p>
-              </motion.button>
-
-              {/* Station 2: Learn — (450, 150) → left=37.5%, top=30% */}
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
-                whileHover={{ scale: 1.08 }}
-                onClick={() => navigate(MILESTONES[1].route)}
-                className="absolute flex flex-col items-center milestone-float"
-                style={{ left: "37.5%", top: "30%", transform: "translate(-50%, -50%)", animationDelay: "0.5s" }}
-              >
-                <div
-                  className="w-40 h-28 glass-card rounded-[2rem] border-2 flex flex-col items-center justify-center p-4"
-                  style={{ borderColor: "rgba(52,211,153,0.5)", boxShadow: "0 0 30px rgba(52,211,153,0.15)" }}
-                >
-                  <Icon name="book-open" size={36} color="var(--color-secondary)" className="milestone-icon-pulse" />
-                  <span className="font-bold text-sm mt-2 text-heading">{MILESTONES[1].title}</span>
-                </div>
-                <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">{MILESTONES[1].sub}</p>
-              </motion.button>
-
-              {/* Station 3: Build — (750, 375) → left=62.5%, top=75% */}
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
-                whileHover={{ scale: 1.08 }}
-                onClick={() => navigate(MILESTONES[2].route)}
-                className="absolute flex flex-col items-center milestone-float"
-                style={{ left: "62.5%", top: "75%", transform: "translate(-50%, -50%)", animationDelay: "1s" }}
-              >
-                <div
-                  className="w-40 h-28 glass-card rounded-[2rem] border-2 flex flex-col items-center justify-center p-4"
-                  style={{ borderColor: "rgba(52,211,153,0.5)", boxShadow: "0 0 30px rgba(52,211,153,0.15)" }}
-                >
-                  <Icon name="code" size={36} color="var(--color-secondary-light)" className="milestone-icon-pulse" />
-                  <span className="font-bold text-sm mt-2 text-heading">{MILESTONES[2].title}</span>
-                </div>
-                <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">{MILESTONES[2].sub}</p>
-              </motion.button>
-
-              {/* Station 4: Certify — (1100, 150) → left=91.7%, top=30% */}
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: 0.45 }}
-                whileHover={{ scale: 1.08 }}
-                onClick={() => navigate(MILESTONES[3].route)}
-                className="absolute flex flex-col items-center milestone-float"
-                style={{ left: "91.7%", top: "30%", transform: "translate(-50%, -50%)", animationDelay: "1.5s" }}
-              >
-                <div
-                  className="w-40 h-28 glass-card rounded-[2rem] border-2 flex flex-col items-center justify-center p-4"
-                  style={{ borderColor: "rgba(52,211,153,0.5)", boxShadow: "0 0 30px rgba(52,211,153,0.15)" }}
-                >
-                  <Icon name="award" size={36} color="var(--color-success)" className="milestone-icon-pulse" />
-                  <span className="font-bold text-sm mt-2 text-heading">{MILESTONES[3].title}</span>
-                </div>
-                <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">{MILESTONES[3].sub}</p>
-              </motion.button>
+                  <div
+                    className="w-40 h-28 glass-card rounded-[2rem] border-2 flex flex-col items-center justify-center p-4"
+                    style={{
+                      borderColor: "rgba(52,211,153,0.5)",
+                      boxShadow: "0 0 30px rgba(52,211,153,0.15)",
+                    }}
+                  >
+                    <Icon
+                      name={ms.icon}
+                      size={36}
+                      color="var(--color-primary)"
+                    />
+                    <span className="mt-2 text-sm font-bold text-heading">
+                      {ms.title}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">
+                    {ms.sub}
+                  </p>
+                </motion.button>
+              ))}
             </div>
           </div>
         </section>
 
         {/* ══ TOOLS ════════════════════════════════════════════════════════ */}
-        <section className="max-w-7xl mx-auto px-6 py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-heading">
+        <section className="px-6 py-16 mx-auto max-w-7xl">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-4xl font-extrabold tracking-tight text-heading">
               Next-gen Learning Tools
             </h2>
-            <p className="text-muted font-medium">AI-powered and simulator-driven environments</p>
+            <p className="font-medium text-muted">
+              AI-powered and simulator-driven environments
+            </p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {TOOLS.map((tool, i) => (
               <motion.div
                 key={tool.title}
@@ -537,13 +625,17 @@ const HomePage = () => {
                   onClick={() => navigate(tool.route)}
                 >
                   <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
+                    className="flex items-center justify-center mb-6 w-14 h-14 rounded-2xl"
                     style={{ background: tool.bg }}
                   >
                     <Icon name={tool.icon} size={26} color={tool.iconColor} />
                   </div>
-                  <h4 className="font-bold text-xl mb-3 text-heading">{tool.title}</h4>
-                  <p className="text-muted text-sm leading-relaxed font-medium">{tool.desc}</p>
+                  <h4 className="mb-3 text-xl font-bold text-heading">
+                    {tool.title}
+                  </h4>
+                  <p className="text-sm font-medium leading-relaxed text-muted">
+                    {tool.desc}
+                  </p>
                 </GlassCard>
               </motion.div>
             ))}
@@ -551,30 +643,32 @@ const HomePage = () => {
         </section>
 
         {/* ══ FEATURED COURSES ═════════════════════════════════════════════ */}
-        <section className="max-w-7xl mx-auto px-6 py-16">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-heading">
+        <section className="px-6 py-16 mx-auto max-w-7xl">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-4xl font-extrabold tracking-tight text-heading">
               Featured Courses
             </h2>
-            <p className="text-muted font-medium">
+            <p className="font-medium text-muted">
               Curated for the latest trends in technology
             </p>
           </div>
 
-          {/* Loading skeleton */}
+          {/* Skeleton */}
           {sectionsLoading && (
             <div className="space-y-12">
               {[...Array(3)].map((_, si) => (
                 <div key={si}>
-                  <div className="h-7 w-40 bg-white/50 rounded-full animate-pulse mb-6" />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="w-40 mb-6 rounded-full h-7 bg-white/50 animate-pulse" />
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {[...Array(4)].map((_, i) => (
-                      <div key={i} className="glass-card rounded-[2.5rem] overflow-hidden">
+                      <div
+                        key={i}
+                        className="glass-card rounded-[2.5rem] overflow-hidden"
+                      >
                         <div className="h-44 bg-white/40 animate-pulse" />
                         <div className="p-6 space-y-3">
-                          <div className="h-4 bg-white/40 rounded-full animate-pulse" />
-                          <div className="h-3 bg-white/40 rounded-full w-3/4 animate-pulse" />
-                          <div className="h-3 bg-white/40 rounded-full w-1/2 animate-pulse" />
+                          <div className="h-4 rounded-full bg-white/40 animate-pulse" />
+                          <div className="w-3/4 h-3 rounded-full bg-white/40 animate-pulse" />
                         </div>
                       </div>
                     ))}
@@ -584,32 +678,20 @@ const HomePage = () => {
             </div>
           )}
 
-          {/* Error fallback */}
+          {/* Error */}
           {!sectionsLoading && sectionsError && (
-            <>
-              <div className="mb-8 flex items-center gap-3 glass-card px-5 py-3 rounded-2xl w-fit mx-auto text-sm text-muted">
-                <Icon name="wifi-off" size={16} color="var(--text-muted)" />
-                Showing sample data · {sectionsError}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {FAKE_COURSES.slice(0, 4).map((course, i) => (
-                  <motion.div
-                    key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <CourseCard
-                      course={course}
-                      onEnroll={handleEnroll}
-                      onWishlist={handleWishlist}
-                      isEnrolled={enrolledCourseIds.includes(course.id)}
-                      isWishlisted={wishlistIds.includes(course.id)}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            </>
+            <div className="py-16 text-center">
+              <Icon name="wifi-off" size={40} color="var(--text-muted)" />
+              <p className="mt-4 font-medium text-muted">
+                Could not load courses. Please try again.
+              </p>
+              <button
+                className="mt-4 text-sm btn-aurora-outline"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
           )}
 
           {/* Real data */}
@@ -624,27 +706,37 @@ const HomePage = () => {
                 >
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-8 rounded-full" style={{ background: "var(--gradient-brand)" }} />
-                      <h3 className="text-2xl font-extrabold text-heading tracking-tight">
+                      <div
+                        className="w-1.5 h-8 rounded-full"
+                        style={{ background: "var(--gradient-brand)" }}
+                      />
+                      <h3 className="text-2xl font-extrabold tracking-tight text-heading">
                         {section.category.name}
                       </h3>
-                      <span className="text-xs text-muted font-bold bg-white/50 px-3 py-1 rounded-full border border-border/40">
+                      <span className="px-3 py-1 text-xs font-bold border rounded-full text-muted bg-white/50 border-border/40">
                         {section.total} courses
                       </span>
                     </div>
                     <button
-                      onClick={() => navigate(`${ROUTES.COURSES}?category=${section.category._id}`)}
+                      onClick={() =>
+                        navigate(
+                          `${ROUTES.COURSES}?category=${section.category._id}`,
+                        )
+                      }
                       className="flex items-center gap-1.5 text-sm font-bold text-primary hover:gap-3 transition-all duration-200"
                     >
-                      View all
-                      <Icon name="chevronRight" size={16} color="var(--color-primary)" />
+                      View all{" "}
+                      <Icon
+                        name="chevronRight"
+                        size={16}
+                        color="var(--color-primary)"
+                      />
                     </button>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {section.courses.map((course, i) => (
                       <motion.div
-                        key={course.id ?? course._id}
+                        key={course._id}
                         initial={{ opacity: 0, y: 16 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.08 }}
@@ -653,19 +745,17 @@ const HomePage = () => {
                           course={course}
                           onEnroll={handleEnroll}
                           onWishlist={handleWishlist}
-                          isEnrolled={enrolledCourseIds.includes(course.id ?? course._id)}
-                          isWishlisted={wishlistIds.includes(course.id ?? course._id)}
+                          isEnrolled={enrolledCourseIds.includes(course._id)}
+                          isWishlisted={wishlistIds.includes(course._id)}
                         />
                       </motion.div>
                     ))}
                   </div>
                 </motion.div>
               ))}
-
               {categorySections.length === 0 && (
-                <div className="text-center py-20">
-                  <Icon name="inbox" size={48} color="var(--text-muted)" />
-                  <p className="text-muted text-lg font-medium mt-4">
+                <div className="py-20 text-center">
+                  <p className="mt-4 text-lg font-medium text-muted">
                     No published courses yet.
                   </p>
                 </div>
@@ -673,23 +763,25 @@ const HomePage = () => {
             </div>
           )}
 
-          <div className="text-center mt-12">
-            <button className="btn-aurora-outline" onClick={() => navigate(ROUTES.COURSES)}>
+          <div className="mt-12 text-center">
+            <button
+              className="btn-aurora-outline"
+              onClick={() => navigate(ROUTES.COURSES)}
+            >
               Browse All Courses
             </button>
           </div>
         </section>
 
-        {/* ══ TRUST & STATS ════════════════════════════════════════════════ */}
-        <section className="max-w-7xl mx-auto px-6 py-16 pb-24 text-center">
-          <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-heading">
+        {/* ══ STATS ════════════════════════════════════════════════════════ */}
+        <section className="px-6 py-16 pb-24 mx-auto text-center max-w-7xl">
+          <h2 className="mb-3 text-4xl font-extrabold tracking-tight text-heading">
             Trusted by Thousands
           </h2>
-          <p className="text-muted font-medium mb-16">
+          <p className="mb-16 font-medium text-muted">
             The fastest-growing tech learning community in Southeast Asia
           </p>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
             {STATS.map((s) => (
               <motion.div
                 key={s.label}
@@ -698,10 +790,8 @@ const HomePage = () => {
                 transition={{ delay: s.delay }}
               >
                 <div className="deep-glass p-12 rounded-[3rem] relative overflow-hidden flex flex-col justify-center items-center">
-                  <div aria-hidden className="particle" style={{ top: "20%", left: "10%", animationDelay: "0s" }} />
-                  <div aria-hidden className="particle" style={{ top: "60%", left: "80%", animationDelay: "-5s", background: "var(--color-primary)" }} />
                   <h3
-                    className="text-6xl font-black mb-4 gradient-text"
+                    className="mb-4 text-6xl font-black gradient-text"
                     style={{ letterSpacing: "-0.05em" }}
                   >
                     {s.value}
@@ -714,7 +804,6 @@ const HomePage = () => {
             ))}
           </div>
         </section>
-
       </motion.div>
     </>
   );

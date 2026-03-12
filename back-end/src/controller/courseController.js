@@ -727,3 +727,37 @@ exports.rejectCourse = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/* =====================================================
+   INSTRUCTOR: GET MY COURSES (all statuses)
+   GET /api/courses/instructor/mine
+   Query: status? ("draft"|"pending"|"published"|"rejected"|"archived")
+===================================================== */
+exports.getInstructorCourses = async (req, res) => {
+  try {
+    const instructorId = req.user._id;
+    const { status } = req.query;
+
+    const query = { instructorId };
+    if (
+      status &&
+      ["draft", "pending", "published", "rejected", "archived"].includes(status)
+    ) {
+      query.status = status;
+    }
+
+    const courses = await Course.find(query)
+      .populate("instructorId", "fullname email avatarURL")
+      .populate("category", "name slug description")
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      count: courses.length,
+      data: courses,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
