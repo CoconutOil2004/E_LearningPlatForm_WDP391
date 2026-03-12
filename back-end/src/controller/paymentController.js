@@ -1,102 +1,167 @@
 const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const Payment = require("../models/Payment");
+const { createPaymentUrl, verifyReturnUrl } = require("../utils/vnpay");
 
 /* ===============================
-   CREATE PAYMENT
+   CREATE PAYMENT (VNPay)
 ================================*/
 exports.createPayment = async (req, res) => {
   try {
     const userId = req.user._id;
     const { courseId, paymentMethod } = req.body;
 
+    if (paymentMethod !== "vnpay") {
+      return res.status(400).json({
+        success: false,
+        message: "Chỉ hỗ trợ thanh toán VNPay. Gửi paymentMethod: 'vnpay'.",
+      });
+    }
+
     const course = await Course.findById(courseId);
     if (!course)
-      return res.status(404).json({ message: "Course not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
 
     const existed = await Enrollment.findOne({
       userId,
       courseId,
-      paymentStatus: "paid"
+      paymentStatus: "paid",
     });
 
     if (existed)
       return res.status(400).json({
-        message: "You already bought this course"
+        success: false,
+        message: "You already bought this course",
       });
 
     const enrollment = await Enrollment.create({
       userId,
       courseId,
-      paymentStatus: "pending"
+      paymentStatus: "pending",
     });
 
     const payment = await Payment.create({
       enrollmentId: enrollment._id,
       amount: course.price,
-      paymentMethod,
-      status: "pending"
+      paymentMethod: "vnpay",
+      status: "pending",
     });
 
-    const paymentUrl =
-      `http://localhost:9999/api/payments/callback` +
-      `?paymentId=${payment._id}&status=success`;
+    const ipAddr =
+      req.ip ||
+      req.headers["x-forwarded-for"] ||
+      req.connection?.remoteAddress ||
+      "127.0.0.1";
+    const orderInfo = `Thanh toan khoa hoc ${courseId}`;
+
+    const paymentUrl = createPaymentUrl({
+      amount: course.price,
+      orderId: payment._id.toString(),
+      ipAddr,
+      orderInfo,
+    });
 
     res.json({
-      paymentUrl
+      success: true,
+      paymentUrl,
+      paymentId: payment._id,
     });
-
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
 /* ===============================
-   PAYMENT CALLBACK
+   VNPay RETURN URL - Nhận kết quả từ VNPay
+   GET /api/payments/callback?vnp_xxx=...
 ================================*/
 exports.paymentCallback = async (req, res) => {
   try {
-    const { paymentId, status } = req.query;
+    const query = req.query;
 
-    const payment = await Payment.findById(paymentId)
-      .populate("enrollmentId");
+    if (!query.vnp_SecureHash) {
+      return res.redirect(
+        `${process.env.CLIENT_URL || "http://localhost:9999"}?payment=error&message=invalid_callback`,
+      );
+    }
 
-    if (!payment)
-      return res.status(404).json({ message: "Payment not found" });
+    const verify = verifyReturnUrl(query);
 
-    payment.status = status;
+    if (!verify.isVerified) {
+      return res.redirect(
+        `${process.env.CLIENT_URL || "http://localhost:9999"}?payment=error&message=invalid_signature`,
+      );
+    }
+
+    const payment = await Payment.findById(verify.orderId).populate(
+      "enrollmentId",
+    );
+
+    if (!payment) {
+      return res.redirect(
+        `${process.env.CLIENT_URL || "http://localhost:9999"}?payment=error&message=order_not_found`,
+      );
+    }
+
+    if (payment.status === "success") {
+      return res.redirect(
+        `${process.env.CLIENT_URL || "http://localhost:9999"}?payment=success&courseId=${payment.enrollmentId.courseId}`,
+      );
+    }
+
+    payment.status = verify.isSuccess ? "success" : "failed";
     payment.paymentDate = new Date();
-    payment.transactionId = "TRANS_" + Date.now();
-
+    payment.transactionId = verify.transactionNo || "VNP_" + Date.now();
     await payment.save();
 
-    if (status === "success") {
-      const enrollment = await Enrollment.findById(
-        payment.enrollmentId._id
-      );
-
+    if (verify.isSuccess) {
+      const enrollment = await Enrollment.findById(payment.enrollmentId._id);
       enrollment.paymentStatus = "paid";
       await enrollment.save();
     }
 
-    res.send("Payment success ✅");
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:9999";
+    const courseId = payment.enrollmentId?.courseId || "";
 
+    if (verify.isSuccess) {
+      return res.redirect(`${clientUrl}?payment=success&courseId=${courseId}`);
+    }
+
+    return res.redirect(
+      `${clientUrl}?payment=failed&code=${verify.responseCode}`,
+    );
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:9999";
+    return res.redirect(
+      `${clientUrl}?payment=error&message=${encodeURIComponent(err.message)}`,
+    );
   }
 };
-
 
 /* ===============================
    MY PAYMENTS
 ================================*/
 exports.getMyPayments = async (req, res) => {
-  const payments = await Payment.find()
-    .populate({
-      path: "enrollmentId",
-      populate: { path: "courseId" }
-    });
+  try {
+    const userId = req.user._id;
 
-  res.json(payments);
+    const enrollments = await Enrollment.find({ userId }).select("_id");
+    const enrollmentIds = enrollments.map((e) => e._id);
+
+    const payments = await Payment.find({
+      enrollmentId: { $in: enrollmentIds },
+    })
+      .populate({
+        path: "enrollmentId",
+        populate: { path: "courseId" },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ success: true, payments });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
