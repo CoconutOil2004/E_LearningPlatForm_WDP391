@@ -26,12 +26,14 @@ const ROUTES = {
   SEARCH: "/search",
   ABOUT: "/about",
   CONTACT: "/contact",
+
   // Auth
   LOGIN: "/signin",
   REGISTER: "/signup",
   VERIFY_OTP: "/verify-otp",
   FORGOT_PASSWORD: "/forgot-password",
-  RESET_PASSWORD: "/reset-password/:token",
+  RESET_PASSWORD: "/reset-password",
+
   // Student
   STUDENT_DASHBOARD: "/student/dashboard",
   MY_COURSES: "/student/my-courses",
@@ -42,6 +44,7 @@ const ROUTES = {
   PROGRESS: "/student/progress",
   STUDENT_PROFILE: "/student/profile",
   STUDENT_SETTINGS: "/student/settings",
+
   // Instructor
   INSTRUCTOR_DASHBOARD: "/instructor/dashboard",
   INSTRUCTOR_COURSES: "/instructor/courses",
@@ -51,6 +54,7 @@ const ROUTES = {
   INSTRUCTOR_STUDENTS: "/instructor/students",
   INSTRUCTOR_ANALYTICS: "/instructor/analytics",
   INSTRUCTOR_PROFILE: "/instructor/profile",
+
   // Admin
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_USERS: "/admin/users",
