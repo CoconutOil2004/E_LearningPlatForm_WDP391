@@ -3,10 +3,9 @@
  * Layout cho các trang public: Header + main content + Footer
  * KHÔNG chứa ToastContainer (đã mount ở App level)
  */
-import React from "react";
 import { Outlet, ScrollRestoration, useLocation } from "react-router-dom";
-import Header from "../components/home/Header/Header";
-import Footer from "../components/home/Footer/Footer";
+import Footer from "../components/home/Footer/FooterElearning";
+import Header from "../components/home/Header/HeaderElearning";
 
 const AnonymousLayout = () => {
   const location = useLocation();
