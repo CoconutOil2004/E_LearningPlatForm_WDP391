@@ -24,23 +24,32 @@ exports.createPayment = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Course not found" });
 
-    const existed = await Enrollment.findOne({
+    const paidEnrollment = await Enrollment.findOne({
       userId,
       courseId,
       paymentStatus: "paid",
     });
 
-    if (existed)
+    if (paidEnrollment)
       return res.status(400).json({
         success: false,
         message: "You already bought this course",
       });
 
-    const enrollment = await Enrollment.create({
+    // Dùng lại enrollment đang pending (user đã bấm thanh toán trước đó nhưng chưa hoàn tất)
+    let enrollment = await Enrollment.findOne({
       userId,
       courseId,
       paymentStatus: "pending",
     });
+
+    if (!enrollment) {
+      enrollment = await Enrollment.create({
+        userId,
+        courseId,
+        paymentStatus: "pending",
+      });
+    }
 
     const payment = await Payment.create({
       enrollmentId: enrollment._id,
