@@ -276,11 +276,51 @@ exports.forgotPassword = async (req, res) => {
 
     await user.save();
 
-    await sendEmail(
-      user.email,
-      "Mật khẩu mới của bạn",
-      `Mật khẩu tạm thời của bạn là: ${newPassword}\n\nVui lòng đăng nhập bằng mật khẩu này và đổi lại mật khẩu mới ngay sau khi vào hệ thống.`
-    );
+    await sendEmail({
+      to: user.email,
+      subject: "Đặt lại mật khẩu - E Learning Platform",
+      text: `Xin chào ${user.fullname || "bạn"},
+    Mật khẩu tạm thời của bạn là: ${newPassword}
+    Vui lòng đăng nhập bằng mật khẩu này và đổi lại mật khẩu mới ngay sau khi đăng nhập.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background:#f4f6f9; padding:40px 0;">
+          <div style="max-width:600px; margin:auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+
+            <div style="background:#4f46e5; color:white; padding:20px; text-align:center;">
+              <h2 style="margin:0;">E-Learning Platform</h2>
+            </div>
+
+            <div style="padding:30px; color:#333;">
+              <h3 style="margin-top:0;">Xin chào ${user.fullname || "bạn"},</h3>
+
+              <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản của mình.</p>
+
+              <p>Dưới đây là <strong>mật khẩu tạm thời</strong> của bạn:</p>
+
+              <div style="background:#f3f4f6; border:1px dashed #4f46e5; padding:15px; text-align:center; font-size:20px; font-weight:bold; letter-spacing:2px; margin:20px 0; border-radius:6px;">
+                ${newPassword}
+              </div>
+
+              <p>
+                Vui lòng đăng nhập bằng mật khẩu này và
+                <strong> đổi lại mật khẩu mới ngay sau khi đăng nhập</strong>
+                để đảm bảo an toàn cho tài khoản của bạn.
+              </p>
+
+              <p style="color:#666; font-size:14px;">
+                Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+              </p>
+            </div>
+
+            <div style="background:#f9fafb; text-align:center; padding:20px; font-size:13px; color:#888;">
+              © ${new Date().getFullYear()} E-Learning Platform
+              <br />
+              This is an automated email, please do not reply.
+            </div>
+          </div>
+        </div>
+      `,
+    });
 
     return res.json({
       success: true,
