@@ -25,16 +25,14 @@ exports.searchCourses = async (req, res) => {
       sortBy,
       page,
       limit,
-      myCourses
+      myCourses,
     } = req.query;
 
     /* ======================
        SAFE PARSE
     ====================== */
     page = Number.isInteger(+page) ? Math.max(+page, 1) : 1;
-    limit = Number.isInteger(+limit)
-      ? Math.min(Math.max(+limit, 1), 50)
-      : 10;
+    limit = Number.isInteger(+limit) ? Math.min(Math.max(+limit, 1), 50) : 10;
 
     const query = { status: "published" };
 
@@ -56,11 +54,9 @@ exports.searchCourses = async (req, res) => {
     if (minPrice || maxPrice) {
       query.price = {};
 
-      if (!isNaN(minPrice))
-        query.price.$gte = Number(minPrice);
+      if (!isNaN(minPrice)) query.price.$gte = Number(minPrice);
 
-      if (!isNaN(maxPrice))
-        query.price.$lte = Number(maxPrice);
+      if (!isNaN(maxPrice)) query.price.$lte = Number(maxPrice);
     }
 
     /* ======================
@@ -79,19 +75,15 @@ exports.searchCourses = async (req, res) => {
     if (userId) {
       const enrollments = await Enrollment.find({
         userId,
-        paymentStatus: "paid"
+        paymentStatus: "paid",
       }).select("courseId");
 
-      purchasedCourseIds = enrollments.map(e =>
-        e.courseId.toString()
-      );
+      purchasedCourseIds = enrollments.map((e) => e.courseId.toString());
 
       /* My courses only */
       if (myCourses === "true") {
         query._id = {
-          $in: purchasedCourseIds.map(
-            id => new mongoose.Types.ObjectId(id)
-          )
+          $in: purchasedCourseIds.map((id) => new mongoose.Types.ObjectId(id)),
         };
       }
     } else if (myCourses === "true") {
@@ -100,7 +92,7 @@ exports.searchCourses = async (req, res) => {
         total: 0,
         page: 1,
         pages: 0,
-        data: []
+        data: [],
       });
     }
 
@@ -128,16 +120,14 @@ exports.searchCourses = async (req, res) => {
     if (keyword) {
       sortOption = {
         score: { $meta: "textScore" },
-        ...sortOption
+        ...sortOption,
       };
     }
 
     /* ======================
        PROJECTION
     ====================== */
-    const projection = keyword
-      ? { score: { $meta: "textScore" } }
-      : {};
+    const projection = keyword ? { score: { $meta: "textScore" } } : {};
 
     /* ======================
        QUERY + COUNT PARALLEL
@@ -151,17 +141,15 @@ exports.searchCourses = async (req, res) => {
         .limit(limit)
         .lean(),
 
-      Course.countDocuments(query)
+      Course.countDocuments(query),
     ]);
 
     /* ======================
        ADD isEnrolled FLAG
     ====================== */
-    const result = courses.map(course => ({
+    const result = courses.map((course) => ({
       ...course,
-      isEnrolled: purchasedCourseIds.includes(
-        course._id.toString()
-      )
+      isEnrolled: purchasedCourseIds.includes(course._id.toString()),
     }));
 
     res.json({
@@ -169,13 +157,12 @@ exports.searchCourses = async (req, res) => {
       total,
       page,
       pages: Math.ceil(total / limit),
-      data: result
+      data: result,
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -192,7 +179,7 @@ exports.getCoursesByCategory = async (req, res) => {
     if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
       return res.status(400).json({
         success: false,
-        message: "categoryId không hợp lệ"
+        message: "categoryId không hợp lệ",
       });
     }
 
@@ -201,7 +188,7 @@ exports.getCoursesByCategory = async (req, res) => {
 
     const query = {
       status: "published",
-      category: new mongoose.Types.ObjectId(categoryId)
+      category: new mongoose.Types.ObjectId(categoryId),
     };
 
     let sortOption = { createdAt: -1 };
@@ -230,7 +217,7 @@ exports.getCoursesByCategory = async (req, res) => {
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Course.countDocuments(query)
+      Course.countDocuments(query),
     ]);
 
     return res.status(200).json({
@@ -240,14 +227,15 @@ exports.getCoursesByCategory = async (req, res) => {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi server khi lấy danh sách khóa học theo category"
+      message:
+        error.message || "Lỗi server khi lấy danh sách khóa học theo category",
     });
   }
 };
@@ -259,11 +247,13 @@ exports.getCoursesByCategory = async (req, res) => {
 ===================================================== */
 exports.createCourse = async (req, res) => {
   try {
-    const { title, description, categoryId, level, thumbnail } = req.body;
+    const { title, description, categoryId, level, thumbnail, language } = req.body;
     const instructorId = req.user._id;
 
     if (!title || typeof title !== "string" || !title.trim()) {
-      return res.status(400).json({ message: "title: Bắt buộc, không được để trống." });
+      return res
+        .status(400)
+        .json({ message: "title: Bắt buộc, không được để trống." });
     }
     const trimmedTitle = title.trim();
     if (trimmedTitle.length > 60) {
@@ -271,16 +261,22 @@ exports.createCourse = async (req, res) => {
     }
 
     if (!categoryId) {
-      return res.status(400).json({ message: "categoryId: Bắt buộc phải chọn thể loại." });
+      return res
+        .status(400)
+        .json({ message: "categoryId: Bắt buộc phải chọn thể loại." });
     }
     const categoryValidation = await validateCategoryId(categoryId);
     if (!categoryValidation.valid) {
-      return res.status(400).json({ message: "categoryId: " + categoryValidation.error });
+      return res
+        .status(400)
+        .json({ message: "categoryId: " + categoryValidation.error });
     }
 
     if (!level || !LEVEL_ENUM.includes(level)) {
       return res.status(400).json({
-        message: "level: Bắt buộc, giá trị phải là một trong: " + LEVEL_ENUM.join(", ")
+        message:
+          "level: Bắt buộc, giá trị phải là một trong: " +
+          LEVEL_ENUM.join(", "),
       });
     }
 
@@ -289,10 +285,11 @@ exports.createCourse = async (req, res) => {
       description: (description || "").trim(),
       category: categoryValidation.category._id,
       level,
+      language: language || "Tiếng Việt",
       price: 0,
       status: "draft",
       instructorId,
-      thumbnail: (thumbnail && String(thumbnail).trim()) || null
+      thumbnail: (thumbnail && String(thumbnail).trim()) || null,
     });
 
     const populated = await Course.findById(course._id)
@@ -302,11 +299,13 @@ exports.createCourse = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: populated
+      data: populated,
     });
   } catch (err) {
     if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message || "Dữ liệu không hợp lệ." });
+      return res
+        .status(400)
+        .json({ message: err.message || "Dữ liệu không hợp lệ." });
     }
     res.status(500).json({ message: err.message || "Lỗi server." });
   }
@@ -324,7 +323,9 @@ exports.getCoursePreview = async (req, res) => {
     }
 
     const course = await Course.findOne({ _id: id, status: "published" })
-      .select("title description price level rating enrollmentCount totalDuration category instructorId sections")
+      .select(
+        "title description price level rating enrollmentCount totalDuration category instructorId sections",
+      )
       .populate("category", "name slug description")
       .populate("instructorId", "fullname")
       .populate({ path: "sections.items.itemId", select: "title duration" })
@@ -334,20 +335,24 @@ exports.getCoursePreview = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    const sections = (course.sections || []).map(sec => ({
+    const sections = (course.sections || []).map((sec) => ({
       _id: sec._id,
       title: sec.title,
-      items: (sec.items || []).map(it => {
+      items: (sec.items || []).map((it) => {
         const item = { ...it };
         if (it.itemId) {
           if (it.itemType === "lesson") {
-            item.itemId = { _id: it.itemId._id, title: it.itemId.title, duration: it.itemId.duration ?? 0 };
+            item.itemId = {
+              _id: it.itemId._id,
+              title: it.itemId.title,
+              duration: it.itemId.duration ?? 0,
+            };
           } else {
             item.itemId = { _id: it.itemId._id, title: it.itemId.title };
           }
         }
         return item;
-      })
+      }),
     }));
 
     res.json({
@@ -363,8 +368,8 @@ exports.getCoursePreview = async (req, res) => {
         totalDuration: course.totalDuration,
         category: course.category,
         instructorId: course.instructorId,
-        sections
-      }
+        sections,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -373,8 +378,10 @@ exports.getCoursePreview = async (req, res) => {
 
 /* =====================================================
    GET COURSE DETAIL – full (videoUrl + questions)
-   Admin / Instructor của khóa: vào được luôn.
-   Student: chỉ vào được nếu đã enroll (đã mua khóa).
+   - Admin / Instructor sở hữu: full data
+   - Student đã enroll (paid): full data
+   - Guest / Student chưa enroll: trả về preview (syllabus, không có videoUrl/questions)
+     kèm flag isEnrolled: false để FE hiển thị nút "Mua ngay"
 ===================================================== */
 exports.getCourseById = async (req, res) => {
   try {
@@ -393,24 +400,75 @@ exports.getCourseById = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    const instructorIdStr = course.instructorId?._id?.toString() || course.instructorId?.toString();
-    const isInstructor = instructorIdStr && req.user._id.toString() === instructorIdStr;
-    const isAdmin = req.user.role === "admin";
+    const user = req.user; // null nếu guest (optionalAuth)
 
-    if (isAdmin || isInstructor) {
-      return res.json({ success: true, data: course });
+    // Admin hoặc instructor sở hữu → trả full
+    if (user) {
+      const instructorIdStr =
+        course.instructorId?._id?.toString() || course.instructorId?.toString();
+      const isInstructor =
+        instructorIdStr && user._id.toString() === instructorIdStr;
+      const isAdmin = user.role === "admin";
+
+      if (isAdmin || isInstructor) {
+        return res.json({ success: true, data: course, isEnrolled: true });
+      }
+
+      // Student đã mua → full
+      const enrollment = await Enrollment.findOne({
+        userId: user._id,
+        courseId: id,
+        paymentStatus: "paid",
+      });
+      if (enrollment) {
+        return res.json({ success: true, data: course, isEnrolled: true });
+      }
     }
 
-    const enrollment = await Enrollment.findOne({
-      userId: req.user._id,
-      courseId: id,
-      paymentStatus: "paid"
+    // Guest hoặc student chưa mua → trả preview (strip videoUrl, questions)
+    const previewSections = (course.sections || []).map((sec) => ({
+      _id: sec._id,
+      title: sec.title,
+      items: (sec.items || []).map((it) => {
+        const item = { ...it };
+        if (it.itemId) {
+          if (it.itemType === "lesson") {
+            // Ẩn videoUrl với người chưa mua
+            item.itemId = {
+              _id: it.itemId._id,
+              title: it.itemId.title,
+              duration: it.itemId.duration ?? 0,
+            };
+          } else {
+            // Ẩn questions của quiz
+            item.itemId = { _id: it.itemId._id, title: it.itemId.title };
+          }
+        }
+        return item;
+      }),
+    }));
+
+    return res.json({
+      success: true,
+      isEnrolled: false,
+      data: {
+        _id: course._id,
+        title: course.title,
+        description: course.description,
+        price: course.price,
+        status: course.status,
+        level: course.level,
+        language: course.language,
+        thumbnail: course.thumbnail,
+        rating: course.rating,
+        enrollmentCount: course.enrollmentCount,
+        totalDuration: course.totalDuration,
+        category: course.category,
+        instructorId: course.instructorId,
+        sections: previewSections,
+        createdAt: course.createdAt,
+      },
     });
-    if (!enrollment) {
-      return res.status(403).json({ message: "Bạn cần mua khóa học để xem nội dung." });
-    }
-
-    res.json({ success: true, data: course });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -425,7 +483,17 @@ exports.getCourseById = async (req, res) => {
 exports.updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, categoryId, level, price, status, thumbnail, sections: bodySections } = req.body;
+    const {
+      title,
+      description,
+      categoryId,
+      level,
+      price,
+      status,
+      thumbnail,
+      language,
+      sections: bodySections,
+    } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course id" });
@@ -442,7 +510,7 @@ exports.updateCourse = async (req, res) => {
 
     if (["pending", "published"].includes(course.status)) {
       return res.status(400).json({
-        message: `Cannot update course while it is ${course.status}. Please move it back to draft first.`
+        message: `Cannot update course while it is ${course.status}. Please move it back to draft first.`,
       });
     }
 
@@ -458,7 +526,12 @@ exports.updateCourse = async (req, res) => {
     if (description !== undefined) course.description = description.trim();
     if (level !== undefined) course.level = level;
     if (price !== undefined) course.price = Number(price);
-    if (status !== undefined && ["draft", "pending", "published", "rejected", "archived"].includes(status)) {
+    if (thumbnail !== undefined) course.thumbnail = thumbnail;
+    if (language !== undefined) course.language = language;
+    if (
+      status !== undefined &&
+      ["draft", "pending", "published", "rejected", "archived"].includes(status)
+    ) {
       course.status = status;
     }
     if (thumbnail !== undefined) {
@@ -466,8 +539,8 @@ exports.updateCourse = async (req, res) => {
     }
 
     const oldItemIds = new Set();
-    (course.sections || []).forEach(sec => {
-      (sec.items || []).forEach(it => {
+    (course.sections || []).forEach((sec) => {
+      (sec.items || []).forEach((it) => {
         if (it.itemId) oldItemIds.add(it.itemId.toString());
       });
     });
@@ -478,42 +551,56 @@ exports.updateCourse = async (req, res) => {
       let totalDuration = 0;
 
       for (const sec of bodySections) {
-        const sectionTitle = (sec.title && String(sec.title).trim()) || "Section";
+        const sectionTitle =
+          (sec.title && String(sec.title).trim()) || "Section";
         const newItems = [];
         const items = Array.isArray(sec.items) ? sec.items : [];
         let orderIndex = 0;
 
         for (const it of items) {
           orderIndex += 1;
-          const itemTitle = (it.title && String(it.title).trim()) || (it.itemType === "quiz" ? "Quiz" : "Bài học");
+          const itemTitle =
+            (it.title && String(it.title).trim()) ||
+            (it.itemType === "quiz" ? "Quiz" : "Bài học");
           const itemType = it.itemType === "quiz" ? "quiz" : "lesson";
           const itemRef = itemType === "quiz" ? "Quiz" : "Lesson";
 
-          let itemId = it.itemId && mongoose.Types.ObjectId.isValid(it.itemId) ? new mongoose.Types.ObjectId(it.itemId) : null;
+          let itemId =
+            it.itemId && mongoose.Types.ObjectId.isValid(it.itemId)
+              ? new mongoose.Types.ObjectId(it.itemId)
+              : null;
 
           if (!itemId) {
             if (itemType === "lesson") {
-              const videoUrl = it.videoUrl && String(it.videoUrl).trim() ? String(it.videoUrl).trim() : "";
+              const videoUrl =
+                it.videoUrl && String(it.videoUrl).trim()
+                  ? String(it.videoUrl).trim()
+                  : "";
               const lesson = await Lesson.create({
                 title: itemTitle,
                 videoUrl: videoUrl || null,
-                videoPublicId: (it.videoPublicId && String(it.videoPublicId).trim()) || null,
+                videoPublicId:
+                  (it.videoPublicId && String(it.videoPublicId).trim()) || null,
                 duration: Math.max(0, Number(it.duration) || 0),
-                courseId: course._id
+                courseId: course._id,
               });
               itemId = lesson._id;
               totalDuration += lesson.duration;
             } else {
-              const questionList = Array.isArray(it.questions) ? it.questions : [];
+              const questionList = Array.isArray(it.questions)
+                ? it.questions
+                : [];
               const quiz = await Quiz.create({
                 title: itemTitle,
                 courseId: course._id,
-                questions: questionList
+                questions: questionList,
               });
               itemId = quiz._id;
             }
           } else {
-            const existing = await Lesson.findById(itemId).select("duration").lean();
+            const existing = await Lesson.findById(itemId)
+              .select("duration")
+              .lean();
             if (existing) totalDuration += existing.duration || 0;
           }
 
@@ -523,7 +610,7 @@ exports.updateCourse = async (req, res) => {
             itemRef,
             itemId,
             title: itemTitle,
-            orderIndex
+            orderIndex,
           });
         }
 
@@ -532,11 +619,15 @@ exports.updateCourse = async (req, res) => {
 
       for (const oldId of oldItemIds) {
         if (newItemIds.has(oldId)) continue;
-        const lesson = await Lesson.findById(oldId).select("videoPublicId").lean();
+        const lesson = await Lesson.findById(oldId)
+          .select("videoPublicId")
+          .lean();
         if (lesson) {
           if (lesson.videoPublicId) {
             try {
-              await cloudinary.uploader.destroy(lesson.videoPublicId, { resource_type: "video" });
+              await cloudinary.uploader.destroy(lesson.videoPublicId, {
+                resource_type: "video",
+              });
             } catch (e) {
               console.warn("Cloudinary delete video failed:", e?.message);
             }
@@ -591,7 +682,7 @@ exports.submitCourse = async (req, res) => {
 
     if (!["draft", "rejected"].includes(course.status)) {
       return res.status(400).json({
-        message: `Cannot submit course with status: ${course.status}`
+        message: `Cannot submit course with status: ${course.status}`,
       });
     }
 
@@ -601,7 +692,7 @@ exports.submitCourse = async (req, res) => {
     res.json({
       success: true,
       message: "Course submitted for review",
-      data: course
+      data: course,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -622,7 +713,7 @@ exports.getPendingCourses = async (req, res) => {
     res.json({
       success: true,
       count: courses.length,
-      data: courses
+      data: courses,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -647,7 +738,7 @@ exports.approveCourse = async (req, res) => {
 
     if (course.status !== "pending") {
       return res.status(400).json({
-        message: `Cannot approve course with status: ${course.status}`
+        message: `Cannot approve course with status: ${course.status}`,
       });
     }
 
@@ -657,7 +748,7 @@ exports.approveCourse = async (req, res) => {
     res.json({
       success: true,
       message: "Course approved and published",
-      data: course
+      data: course,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -683,7 +774,7 @@ exports.rejectCourse = async (req, res) => {
 
     if (course.status !== "pending") {
       return res.status(400).json({
-        message: `Cannot reject course with status: ${course.status}`
+        message: `Cannot reject course with status: ${course.status}`,
       });
     }
 
@@ -693,7 +784,7 @@ exports.rejectCourse = async (req, res) => {
     res.json({
       success: true,
       message: "Course rejected",
-      data: course
+      data: course,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

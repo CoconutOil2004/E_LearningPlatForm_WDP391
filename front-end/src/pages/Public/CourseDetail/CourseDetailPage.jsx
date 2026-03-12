@@ -1,13 +1,44 @@
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  EditOutlined,
+  GlobalOutlined,
+  HeartFilled,
+  HeartOutlined,
+  LockOutlined,
+  PlayCircleOutlined,
+  QuestionCircleOutlined,
+  StarFilled,
+  TeamOutlined,
+  TrophyOutlined,
+  UnlockOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Collapse,
+  Divider,
+  message,
+  Row,
+  Skeleton,
+  Space,
+  Tag,
+  Typography,
+} from "antd";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Icon } from "../../../components/ui";
-import { useToast } from "../../../contexts/ToastContext";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import CourseService from "../../../services/api/CourseService";
+import PaymentService from "../../../services/api/PaymentService";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
+
+const { Title, Text, Paragraph } = Typography;
 
 const fmtDuration = (s) => {
   if (!s) return null;
@@ -16,148 +47,126 @@ const fmtDuration = (s) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-// ─── Section accordion ────────────────────────────────────────────────────────
-const SectionAccordion = ({ section, idx, isUnlocked }) => {
-  const [open, setOpen] = useState(idx === 0);
-  const lessons = section.items?.filter((i) => i.itemType === "lesson") ?? [];
-  const quizzes = section.items?.filter((i) => i.itemType === "quiz") ?? [];
-
-  return (
-    <div className="overflow-hidden border border-border/40 rounded-2xl">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-between w-full p-5 text-left transition-colors bg-white/50 hover:bg-white/70"
-      >
-        <div>
-          <span className="font-bold text-heading">{section.title}</span>
-          <span className="ml-3 text-xs text-muted">
-            {lessons.length} lessons · {quizzes.length} quizzes
-          </span>
-        </div>
-        <Icon
-          name={open ? "chevronDown" : "chevronRight"}
-          size={18}
-          color="var(--text-muted)"
-        />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: "auto" }}
-            exit={{ height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="divide-y divide-border/30">
-              {section.items?.map((item, i) => {
-                const duration = item.itemId?.duration;
-                return (
-                  <div
-                    key={item._id || i}
-                    className="flex items-center gap-3 px-5 py-3"
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                        item.itemType === "quiz"
-                          ? "bg-purple-100"
-                          : isUnlocked
-                            ? "bg-green-100"
-                            : "bg-gray-100"
-                      }`}
-                    >
-                      {item.itemType === "quiz" ? (
-                        <Icon name="note" size={14} color="#8B5CF6" />
-                      ) : isUnlocked ? (
-                        <Icon
-                          name="play"
-                          size={14}
-                          color="var(--color-success)"
-                        />
-                      ) : (
-                        <Icon name="lock" size={14} color="var(--text-muted)" />
-                      )}
-                    </div>
-                    <span className="flex-1 text-sm text-body">
-                      {item.title}
-                    </span>
-                    {duration > 0 && (
-                      <span className="text-xs text-muted">
-                        {fmtDuration(duration)}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 const CourseDetailPage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const toast = useToast();
   const { user, isAuthenticated } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } =
-    useCourseStore();
+  const {
+    enrolledCourseIds,
+    wishlistIds,
+    enroll,
+    toggleWishlist,
+    setEnrolledCourseIds,
+  } = useCourseStore();
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("overview"); // overview | curriculum
+  const [enrollChecked, setEnrollChecked] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [tab, setTab] = useState("overview");
 
+  // ── Handle VNPay payment callback ─────────────────────────────────────────
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    const courseId = searchParams.get("courseId");
+    if (payment === "success" && courseId) {
+      message.success("Thanh toán thành công! Bạn có thể bắt đầu học ngay.");
+      enroll(courseId);
+      PaymentService.getEnrolledCourseIds()
+        .then(setEnrolledCourseIds)
+        .catch(() => {});
+      navigate(`/courses/${courseId}`, { replace: true });
+    } else if (payment === "failed") {
+      message.error("Thanh toán thất bại. Vui lòng thử lại.");
+      navigate(`/courses/${id}`, { replace: true });
+    } else if (payment === "error") {
+      message.error("Có lỗi xảy ra trong quá trình thanh toán.");
+      navigate(`/courses/${id}`, { replace: true });
+    }
+  }, [searchParams]);
+
+  // ── Sync enrollment from server (fresh check every time) ──────────────────
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setEnrollChecked(true);
+      return;
+    }
+    PaymentService.getEnrolledCourseIds()
+      .then((ids) => {
+        setEnrolledCourseIds(ids);
+      })
+      .catch(() => {})
+      .finally(() => setEnrollChecked(true));
+  }, [isAuthenticated, id]);
+
+  // ── Load course data ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
     setLoading(true);
 
-    // Try full detail first (enrolled/instructor/admin), fallback to preview
-    CourseService.getCourseDetail(id)
-      .then(setCourse)
-      .catch((err) => {
-        if (err?.response?.status === 403 || err?.response?.status === 401) {
-          return CourseService.getCoursePreview(id).then(setCourse);
+    const load = async () => {
+      try {
+        // GET /api/courses/:id dùng optionalAuth — hoạt động với cả guest lẫn logged-in user
+        // BE tự quyết định trả full hay preview tùy enrollment status
+        const { course: data, isEnrolled: serverEnrolled } =
+          await CourseService.getCourseDetail(id);
+        if (!data) throw new Error("Not found");
+        setCourse(data);
+        console.log(data);
+        // Nếu BE xác nhận đã enroll → cập nhật store
+        if (serverEnrolled && data._id) {
+          const courseIdStr = data._id.toString();
+          // Merge vào enrolledCourseIds hiện tại (tránh duplicate)
+          const current = useCourseStore.getState().enrolledCourseIds ?? [];
+          if (!current.includes(courseIdStr)) {
+            setEnrolledCourseIds([...current, courseIdStr]);
+          }
         }
-        throw err;
-      })
-      .catch(() => {
-        toast.error("Course not found");
+      } catch {
+        message.error("Không tìm thấy khóa học");
         navigate(ROUTES.COURSES);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, [id]);
 
-  if (loading)
+  // ── Loading state ──────────────────────────────────────────────────────────
+  if (loading || !enrollChecked) {
     return (
-      <div className="max-w-6xl px-6 py-10 mx-auto">
-        <div className="w-64 h-8 mb-8 rounded-full bg-white/40 animate-pulse" />
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
-            <div className="aspect-video bg-white/40 rounded-3xl animate-pulse" />
-            <div className="w-3/4 h-6 rounded-full bg-white/40 animate-pulse" />
-            <div className="h-4 rounded-full bg-white/30 animate-pulse" />
-            <div className="w-5/6 h-4 rounded-full bg-white/30 animate-pulse" />
-          </div>
-          <div className="h-80 bg-white/40 rounded-3xl animate-pulse" />
-        </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+        <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
+  }
 
   if (!course) return null;
 
+  // ── Derived state ──────────────────────────────────────────────────────────
+  const courseId = course._id?.toString();
   const instructor =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
   const categoryName = course.category?.name ?? "";
   const isFree = course.price === 0;
-  const isEnrolled = enrolledCourseIds.includes(course._id);
+
+  // isEnrolled = student đã mua & có paymentStatus=paid
+  const isEnrolled = enrolledCourseIds.includes(courseId);
+
+  // isOwner = instructor sở hữu khóa này
   const isOwner =
-    user?._id &&
-    (course.instructorId?._id === user._id || course.instructorId === user._id);
+    !!user?._id &&
+    (course.instructorId?._id?.toString() === user._id?.toString() ||
+      course.instructorId?.toString() === user._id?.toString());
+
   const isAdmin = user?.role === "admin";
+
+  // isUnlocked = có quyền xem nội dung đầy đủ (cho syllabus display)
   const isUnlocked = isEnrolled || isOwner || isAdmin;
-  const isWishlisted = wishlistIds.includes(course._id);
+
+  const isWishlisted = wishlistIds.includes(courseId);
 
   const totalLessons = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
@@ -169,20 +178,132 @@ const CourseDetailPage = () => {
   );
   const duration = fmtDuration(course.totalDuration);
 
-  const handleEnroll = () => {
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleBuy = async () => {
     if (!isAuthenticated) {
+      message.info("Vui lòng đăng nhập để tiếp tục");
       navigate(ROUTES.LOGIN);
       return;
     }
     if (isFree) {
-      enroll(course._id);
-      toast.success("Enrolled successfully!");
-      navigate(`/student/learning/${course._id}`);
-    } else {
-      toast.info("Payment flow coming soon");
+      try {
+        // Free course: create a paid enrollment directly via payment with amount=0
+        const res = await PaymentService.createPayment(course._id, "vnpay");
+        // For free courses backend may enroll directly or return paymentUrl
+        if (res?.paymentUrl) {
+          window.location.href = res.paymentUrl;
+        } else {
+          enroll(courseId);
+          message.success("Đăng ký thành công!");
+          navigate(`/student/learning/${course._id}`);
+        }
+      } catch {
+        // Fallback: just enroll locally for free courses
+        enroll(courseId);
+        message.success("Đăng ký thành công!");
+        navigate(`/student/learning/${course._id}`);
+      }
+      return;
+    }
+    // Paid → VNPay
+    setPaying(true);
+    try {
+      const res = await PaymentService.createPayment(course._id, "vnpay");
+      if (res?.paymentUrl) {
+        window.location.href = res.paymentUrl;
+      } else {
+        message.error("Không thể tạo đơn thanh toán");
+      }
+    } catch (err) {
+      message.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Lỗi thanh toán, vui lòng thử lại",
+      );
+    } finally {
+      setPaying(false);
     }
   };
 
+  const handleLearn = () => {
+    navigate(`/student/learning/${course._id}`);
+  };
+
+  const handleWishlist = () => {
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
+    toggleWishlist(courseId);
+    message.success(
+      isWishlisted
+        ? "Đã xóa khỏi danh sách yêu thích"
+        : "Đã thêm vào yêu thích",
+    );
+  };
+
+  // ── Curriculum collapse items ──────────────────────────────────────────────
+  const collapseItems = (course.sections ?? []).map((sec, idx) => {
+    const lessons = sec.items?.filter((i) => i.itemType === "lesson") ?? [];
+    const quizzes = sec.items?.filter((i) => i.itemType === "quiz") ?? [];
+    return {
+      key: sec._id || idx,
+      label: (
+        <Space>
+          <Text strong>{sec.title}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {lessons.length} bài học · {quizzes.length} quiz
+          </Text>
+        </Space>
+      ),
+      children: (
+        <div>
+          {(sec.items ?? []).map((item, i) => {
+            const dur = item.itemId?.duration;
+            const isQuiz = item.itemType === "quiz";
+            return (
+              <div
+                key={item._id || i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 0",
+                  borderBottom:
+                    i < sec.items.length - 1 ? "1px solid #f0f0f0" : "none",
+                }}
+              >
+                {isQuiz ? (
+                  <QuestionCircleOutlined style={{ color: "#8B5CF6" }} />
+                ) : isUnlocked ? (
+                  <PlayCircleOutlined style={{ color: "#10b981" }} />
+                ) : (
+                  <LockOutlined style={{ color: "#9ca3af" }} />
+                )}
+                <Text style={{ flex: 1 }}>{item.title}</Text>
+                {dur > 0 && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {fmtDuration(dur)}
+                  </Text>
+                )}
+                {!isUnlocked && !isQuiz && (
+                  <Tag
+                    icon={<LockOutlined />}
+                    color="default"
+                    style={{ margin: 0 }}
+                  >
+                    Mua để xem
+                  </Tag>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ),
+    };
+  });
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <motion.div
       variants={pageVariants}
@@ -190,245 +311,353 @@ const CourseDetailPage = () => {
       animate="animate"
       exit="exit"
     >
-      <div className="max-w-6xl px-6 py-10 mx-auto">
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 mb-8 text-xs font-medium text-muted">
-          <button
+        <Space style={{ marginBottom: 24, fontSize: 13 }}>
+          <Button
+            type="link"
+            style={{ padding: 0 }}
             onClick={() => navigate(ROUTES.COURSES)}
-            className="transition-colors hover:text-primary"
           >
             Courses
-          </button>
-          <Icon name="chevronRight" size={12} color="var(--text-muted)" />
+          </Button>
+          <Text type="secondary">/</Text>
           {categoryName && (
             <>
-              <span>{categoryName}</span>
-              <Icon name="chevronRight" size={12} color="var(--text-muted)" />
+              <Text type="secondary">{categoryName}</Text>
+              <Text type="secondary">/</Text>
             </>
           )}
-          <span className="text-body line-clamp-1">{course.title}</span>
-        </nav>
+          <Text style={{ maxWidth: 300 }} ellipsis>
+            {course.title}
+          </Text>
+        </Space>
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
-          {/* ── Left: detail ──────────────────────────────────────────── */}
-          <div className="space-y-8 lg:col-span-2">
-            {/* Thumbnail */}
-            <div className="overflow-hidden aspect-video rounded-3xl bg-gradient-to-br from-primary/10 to-secondary/20">
-              <img
-                src={
-                  course.thumbnail ||
-                  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=450&fit=crop"
-                }
-                alt={course.title}
-                className="object-cover w-full h-full"
-              />
-            </div>
-
-            {/* Title */}
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {categoryName && (
-                  <span className="px-3 py-1 text-xs font-bold tracking-widest uppercase rounded-full text-primary bg-primary/10">
-                    {categoryName}
-                  </span>
-                )}
-                <span className="px-3 py-1 text-xs font-bold border rounded-full text-muted bg-white/50 border-border/30">
-                  {course.level}
-                </span>
-                {!isUnlocked && (
-                  <span className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-yellow-700 bg-yellow-100 rounded-full">
-                    <Icon name="lock" size={11} color="#92400E" /> Preview Only
-                  </span>
-                )}
-              </div>
-              <h1 className="mb-3 text-3xl font-black tracking-tight text-heading">
-                {course.title}
-              </h1>
-              <p className="leading-relaxed text-muted">{course.description}</p>
-            </div>
-
-            {/* Meta */}
-            <div className="flex flex-wrap gap-6 text-sm">
-              <div className="flex items-center gap-1.5 text-muted">
-                <Icon name="user" size={16} />
-                <span>{instructor}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted">
-                <Icon name="star" size={16} color="#F59E0B" />
-                <span className="font-bold text-heading">
-                  {Number(course.rating ?? 0).toFixed(1)}
-                </span>
-                <span>
-                  ({(course.enrollmentCount ?? 0).toLocaleString()} students)
-                </span>
-              </div>
-              {duration && (
-                <div className="flex items-center gap-1.5 text-muted">
-                  <Icon name="clock" size={16} />
-                  <span>{duration}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1.5 text-muted">
-                <Icon name="book" size={16} />
-                <span>
-                  {totalLessons} lessons · {totalQuizzes} quizzes
-                </span>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div>
-              <div className="flex gap-2 mb-6 border-b border-border/40">
-                {["overview", "curriculum"].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={`px-5 py-3 text-sm font-bold capitalize transition-colors border-b-2 -mb-px ${
-                      tab === t
-                        ? "border-primary text-primary"
-                        : "border-transparent text-muted hover:text-body"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              {tab === "overview" && (
-                <div className="prose-sm prose max-w-none text-body">
-                  <p className="leading-relaxed">
-                    {course.description || "No description available."}
-                  </p>
-                  {course.sections?.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4 mt-6">
-                      {[
-                        { icon: "book", label: `${totalLessons} Lessons` },
-                        { icon: "note", label: `${totalQuizzes} Quizzes` },
-                        { icon: "clock", label: duration || "—" },
-                        {
-                          icon: "users",
-                          label: `${(course.enrollmentCount ?? 0).toLocaleString()} Students`,
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.label}
-                          className="flex items-center gap-3 p-4 glass-card rounded-2xl"
-                        >
-                          <Icon
-                            name={item.icon}
-                            size={18}
-                            color="var(--color-primary)"
-                          />
-                          <span className="text-sm font-semibold text-body">
-                            {item.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {tab === "curriculum" && (
-                <div className="space-y-3">
-                  {(course.sections ?? []).length === 0 ? (
-                    <p className="text-sm text-muted">
-                      No curriculum available yet.
-                    </p>
-                  ) : (
-                    (course.sections ?? []).map((sec, idx) => (
-                      <SectionAccordion
-                        key={sec._id || idx}
-                        section={sec}
-                        idx={idx}
-                        isUnlocked={isUnlocked}
-                      />
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Right: sticky purchase card ───────────────────────────── */}
-          <div className="lg:col-span-1">
-            <div className="sticky p-6 space-y-5 top-24 glass-card rounded-3xl">
-              {/* Price */}
-              <div>
-                {!isFree && (
-                  <p className="text-sm line-through text-muted">
-                    ${(course.price * 1.4).toFixed(2)}
-                  </p>
-                )}
-                <p className="text-4xl font-black tracking-tight gradient-text">
-                  {isFree ? "Free" : `$${course.price}`}
-                </p>
-              </div>
-
-              {/* CTA */}
-              {isOwner || isAdmin ? (
-                <button
-                  onClick={() =>
-                    navigate(`/instructor/courses/edit/${course._id}`)
+        <Row gutter={[32, 32]}>
+          {/* ── LEFT: Course info ── */}
+          <Col xs={24} lg={16}>
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              {/* Thumbnail */}
+              <div
+                style={{
+                  borderRadius: 20,
+                  overflow: "hidden",
+                  aspectRatio: "16/9",
+                  background: "linear-gradient(135deg,#667eea22,#764ba222)",
+                }}
+              >
+                <img
+                  src={
+                    course.thumbnail ||
+                    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=450&fit=crop"
                   }
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm btn-aurora flex items-center justify-center gap-2"
-                >
-                  <Icon name="edit" size={16} color="white" /> Edit Course
-                </button>
-              ) : isEnrolled ? (
-                <button
-                  onClick={() => navigate(`/student/learning/${course._id}`)}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm btn-aurora flex items-center justify-center gap-2"
-                >
-                  <Icon name="play" size={16} color="white" /> Continue Learning
-                </button>
-              ) : (
-                <button
-                  onClick={handleEnroll}
-                  className="w-full py-3.5 rounded-2xl font-bold text-sm btn-aurora flex items-center justify-center gap-2"
-                >
-                  <Icon name="award" size={16} color="white" />
-                  {isFree ? "Enroll Free" : "Buy Now"}
-                </button>
-              )}
-
-              {/* Wishlist */}
-              {/* {!isOwner && !isAdmin && !isEnrolled && (
-                <button
-                  onClick={() => handleWishlist(course._id)}
-                  className="flex items-center justify-center w-full gap-2 py-3 text-sm font-bold transition-all rounded-2xl glass-card hover:border-primary/30"
-                >
-                  <Icon
-                    name="heart"
-                    size={16}
-                    color={isWishlisted ? "#EF4444" : "var(--text-muted)"}
-                  />
-                  {isWishlisted ? "Wishlisted" : "Add to Wishlist"}
-                </button>
-              )} */}
-
-              {/* Info list */}
-              <div className="pt-2 space-y-2 text-sm border-t border-border/40 text-muted">
-                {[
-                  { icon: "book", text: `${totalLessons} lessons` },
-                  { icon: "note", text: `${totalQuizzes} quizzes` },
-                  { icon: "clock", text: duration || "—" },
-                  { icon: "globe", text: "Full lifetime access" },
-                  { icon: "award", text: "Certificate of completion" },
-                ].map((item) => (
-                  <div key={item.text} className="flex items-center gap-2">
-                    <Icon
-                      name={item.icon}
-                      size={15}
-                      color="var(--color-primary)"
-                    />{" "}
-                    {item.text}
-                  </div>
-                ))}
+                  alt={course.title}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </div>
+
+              {/* Tags + Title */}
+              <div>
+                <Space wrap style={{ marginBottom: 12 }}>
+                  {categoryName && <Tag color="blue">{categoryName}</Tag>}
+                  <Tag>{course.level}</Tag>
+                  {isEnrolled && (
+                    <Tag icon={<UnlockOutlined />} color="success">
+                      Đã đăng ký
+                    </Tag>
+                  )}
+                  {!isEnrolled && !isOwner && !isAdmin && (
+                    <Tag icon={<LockOutlined />} color="warning">
+                      Preview Only
+                    </Tag>
+                  )}
+                  {(isOwner || isAdmin) && !isEnrolled && (
+                    <Tag color="purple">{isAdmin ? "Admin" : "Instructor"}</Tag>
+                  )}
+                </Space>
+                <Title level={2} style={{ marginBottom: 8 }}>
+                  {course.title}
+                </Title>
+                <Paragraph type="secondary">{course.description}</Paragraph>
+              </div>
+
+              {/* Meta */}
+              <Space wrap size="large">
+                <Space>
+                  <TeamOutlined />
+                  <Text>{instructor}</Text>
+                </Space>
+                <Space>
+                  <StarFilled style={{ color: "#F59E0B" }} />
+                  <Text strong>{Number(course.rating ?? 0).toFixed(1)}</Text>
+                  <Text type="secondary">
+                    ({(course.enrollmentCount ?? 0).toLocaleString()} học viên)
+                  </Text>
+                </Space>
+                {duration && (
+                  <Space>
+                    <ClockCircleOutlined />
+                    <Text>{duration}</Text>
+                  </Space>
+                )}
+                <Space>
+                  <BookOutlined />
+                  <Text>
+                    {totalLessons} bài học · {totalQuizzes} quiz
+                  </Text>
+                </Space>
+              </Space>
+
+              {/* Tabs */}
+              <div>
+                <Space
+                  style={{
+                    borderBottom: "2px solid #f0f0f0",
+                    marginBottom: 20,
+                  }}
+                >
+                  {["overview", "curriculum"].map((t) => (
+                    <Button
+                      key={t}
+                      type="text"
+                      onClick={() => setTab(t)}
+                      style={{
+                        fontWeight: tab === t ? 700 : 400,
+                        color:
+                          tab === t
+                            ? "var(--color-primary,#667eea)"
+                            : undefined,
+                        borderBottom:
+                          tab === t
+                            ? "2px solid var(--color-primary,#667eea)"
+                            : "2px solid transparent",
+                        borderRadius: 0,
+                      }}
+                    >
+                      {t === "overview" ? "Tổng quan" : "Chương trình học"}
+                    </Button>
+                  ))}
+                </Space>
+
+                {tab === "overview" && (
+                  <Row gutter={[16, 16]}>
+                    {[
+                      {
+                        icon: <BookOutlined />,
+                        label: `${totalLessons} Bài học`,
+                      },
+                      {
+                        icon: <QuestionCircleOutlined />,
+                        label: `${totalQuizzes} Quiz`,
+                      },
+                      { icon: <ClockCircleOutlined />, label: duration || "—" },
+                      {
+                        icon: <TeamOutlined />,
+                        label: `${(course.enrollmentCount ?? 0).toLocaleString()} Học viên`,
+                      },
+                    ].map((item) => (
+                      <Col xs={12} sm={6} key={item.label}>
+                        <Card size="small" style={{ textAlign: "center" }}>
+                          <div
+                            style={{
+                              fontSize: 20,
+                              marginBottom: 4,
+                              color: "var(--color-primary,#667eea)",
+                            }}
+                          >
+                            {item.icon}
+                          </div>
+                          <Text strong>{item.label}</Text>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                )}
+
+                {tab === "curriculum" && (
+                  <div>
+                    {collapseItems.length === 0 ? (
+                      <Text type="secondary">Chưa có nội dung khóa học.</Text>
+                    ) : (
+                      <Collapse
+                        items={collapseItems}
+                        defaultActiveKey={[collapseItems[0]?.key]}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </Space>
+          </Col>
+
+          {/* ── RIGHT: Action card ── */}
+          <Col xs={24} lg={8}>
+            <div style={{ position: "sticky", top: 90 }}>
+              <Card
+                style={{
+                  borderRadius: 20,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                }}
+              >
+                {/* Price */}
+                <div style={{ marginBottom: 20 }}>
+                  {isEnrolled ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "10px 14px",
+                        background: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
+                        borderRadius: 12,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <CheckCircleOutlined
+                        style={{ color: "#059669", fontSize: 18 }}
+                      />
+                      <Text strong style={{ color: "#065f46" }}>
+                        Bạn đã đăng ký khóa học này
+                      </Text>
+                    </div>
+                  ) : (
+                    <>
+                      {!isFree && (
+                        <Text
+                          delete
+                          type="secondary"
+                          style={{ display: "block", fontSize: 13 }}
+                        >
+                          {(course.price * 1.4).toFixed(2)}VND
+                        </Text>
+                      )}
+                      <Title
+                        level={2}
+                        style={{
+                          margin: 0,
+                          background: "linear-gradient(135deg,#667eea,#764ba2)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                        }}
+                      >
+                        {isFree ? "Miễn phí" : `${course.price}`}VND
+                      </Title>
+                    </>
+                  )}
+                </div>
+
+                {/* ── MAIN CTA: Học / Mua ─────────────────────────── */}
+                {isEnrolled ? (
+                  /* ✅ Đã mua → Bắt đầu học */
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    icon={<PlayCircleOutlined />}
+                    onClick={handleLearn}
+                    style={{
+                      borderRadius: 12,
+                      height: 48,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      background: "linear-gradient(135deg,#10b981,#059669)",
+                      border: "none",
+                    }}
+                  >
+                    Bắt đầu học
+                  </Button>
+                ) : (
+                  /* ❌ Chưa mua → Mua ngay / Đăng ký miễn phí */
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    loading={paying}
+                    icon={isFree ? <CheckCircleOutlined /> : <TrophyOutlined />}
+                    onClick={handleBuy}
+                    style={{
+                      borderRadius: 12,
+                      height: 48,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      background: "linear-gradient(135deg,#667eea,#764ba2)",
+                      border: "none",
+                    }}
+                  >
+                    {isFree ? "Đăng ký miễn phí" : "Mua ngay"}
+                  </Button>
+                )}
+
+                {/* Wishlist button (chỉ khi chưa đăng ký) */}
+                {!isEnrolled && (
+                  <Button
+                    block
+                    size="large"
+                    style={{ marginTop: 10, borderRadius: 12 }}
+                    icon={
+                      isWishlisted ? (
+                        <HeartFilled style={{ color: "#ef4444" }} />
+                      ) : (
+                        <HeartOutlined />
+                      )
+                    }
+                    onClick={handleWishlist}
+                  >
+                    {isWishlisted ? "Đã lưu" : "Lưu khóa học"}
+                  </Button>
+                )}
+
+                {/* Owner/Admin: nút chỉnh sửa riêng biệt (secondary) */}
+                {(isOwner || isAdmin) && (
+                  <Button
+                    block
+                    size="large"
+                    icon={<EditOutlined />}
+                    style={{ marginTop: 10, borderRadius: 12 }}
+                    onClick={() =>
+                      navigate(`/instructor/courses/edit/${course._id}`)
+                    }
+                  >
+                    {isAdmin ? "Quản lý khóa học" : "Chỉnh sửa khóa học"}
+                  </Button>
+                )}
+
+                {/* 30-day guarantee */}
+                {!isFree && !isEnrolled && (
+                  <Alert
+                    message="Đảm bảo hoàn tiền 30 ngày"
+                    type="info"
+                    showIcon
+                    style={{ marginTop: 12, borderRadius: 10 }}
+                  />
+                )}
+
+                <Divider />
+
+                {/* Course info list */}
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  {[
+                    { icon: <BookOutlined />, text: `${totalLessons} bài học` },
+                    {
+                      icon: <QuestionCircleOutlined />,
+                      text: `${totalQuizzes} quiz`,
+                    },
+                    { icon: <ClockCircleOutlined />, text: duration || "—" },
+                    { icon: <GlobalOutlined />, text: "Truy cập trọn đời" },
+                    { icon: <TrophyOutlined />, text: "Chứng chỉ hoàn thành" },
+                  ].map((item) => (
+                    <Space key={item.text}>
+                      <span style={{ color: "var(--color-primary,#667eea)" }}>
+                        {item.icon}
+                      </span>
+                      <Text>{item.text}</Text>
+                    </Space>
+                  ))}
+                </Space>
+              </Card>
             </div>
-          </div>
-        </div>
+          </Col>
+        </Row>
       </div>
     </motion.div>
   );

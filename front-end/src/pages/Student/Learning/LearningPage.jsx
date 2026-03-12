@@ -1,12 +1,21 @@
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeftOutlined,
+  CheckCircleFilled,
+  CheckCircleOutlined,
+  LeftOutlined,
+  MenuOutlined,
+  PlayCircleOutlined,
+  QuestionCircleOutlined,
+  RightOutlined,
+} from "@ant-design/icons";
+import { Button, Card, message, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Icon } from "../../../components/ui";
-import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
-import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
+
+const { Text, Title } = Typography;
 
 const fmtTime = (s) => {
   if (!s) return "—";
@@ -15,16 +24,192 @@ const fmtTime = (s) => {
   return `${m}:${String(sec).padStart(2, "0")}`;
 };
 
+// ─── Quiz Player ─────────────────────────────────────────────────────────────
+const QuizPlayer = ({ quiz, courseId, onComplete }) => {
+  const [answers, setAnswers] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
+  const { saveQuizScore } = useCourseStore();
+
+  const questions = quiz?.questions ?? [];
+
+  const handleSelect = (qIdx, optIdx) => {
+    if (submitted) return;
+    setAnswers((prev) => ({ ...prev, [qIdx]: optIdx }));
+  };
+
+  const handleSubmit = () => {
+    let correct = 0;
+    questions.forEach((q, qi) => {
+      if (answers[qi] === q.correctAnswerIndex) correct++;
+    });
+    const sc =
+      questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+    setScore(sc);
+    setSubmitted(true);
+    saveQuizScore(courseId, sc);
+    if (sc >= 70) message.success(`Chúc mừng! Điểm của bạn: ${sc}/100`);
+    else message.warning(`Điểm của bạn: ${sc}/100. Hãy thử lại!`);
+  };
+
+  if (questions.length === 0)
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "#fff",
+          gap: 12,
+        }}
+      >
+        <QuestionCircleOutlined style={{ fontSize: 48, opacity: 0.5 }} />
+        <Text style={{ color: "rgba(255,255,255,0.6)" }}>
+          Quiz này chưa có câu hỏi
+        </Text>
+        <Button type="primary" onClick={onComplete}>
+          Tiếp tục
+        </Button>
+      </div>
+    );
+
+  return (
+    <div
+      style={{ flex: 1, overflowY: "auto", padding: 32, background: "#111827" }}
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div
+          style={{
+            marginBottom: 24,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Title level={4} style={{ color: "#fff", margin: 0 }}>
+            {quiz.title}
+          </Title>
+          {submitted && (
+            <Tag
+              color={score >= 70 ? "success" : "error"}
+              style={{ fontSize: 14 }}
+            >
+              {score}/100
+            </Tag>
+          )}
+        </div>
+
+        {questions.map((q, qi) => {
+          const userAns = answers[qi];
+          const isCorrect = submitted && userAns === q.correctAnswerIndex;
+          const isWrong =
+            submitted &&
+            userAns !== undefined &&
+            userAns !== q.correctAnswerIndex;
+          return (
+            <Card
+              key={qi}
+              style={{
+                marginBottom: 16,
+                borderRadius: 12,
+                border: submitted
+                  ? isCorrect
+                    ? "1.5px solid #10b981"
+                    : isWrong
+                      ? "1.5px solid #ef4444"
+                      : "1.5px solid #374151"
+                  : "1.5px solid #374151",
+                background: "#1f2937",
+              }}
+            >
+              <Text
+                strong
+                style={{ color: "#fff", display: "block", marginBottom: 12 }}
+              >
+                {qi + 1}. {q.question}
+              </Text>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(q.options ?? []).map((opt, oi) => {
+                  const isSelected = userAns === oi;
+                  const isCorrectOpt = submitted && oi === q.correctAnswerIndex;
+                  return (
+                    <div
+                      key={oi}
+                      onClick={() => handleSelect(qi, oi)}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 8,
+                        cursor: submitted ? "default" : "pointer",
+                        background: isCorrectOpt
+                          ? "rgba(16,185,129,0.2)"
+                          : isSelected && submitted
+                            ? "rgba(239,68,68,0.2)"
+                            : isSelected
+                              ? "rgba(99,102,241,0.2)"
+                              : "rgba(255,255,255,0.05)",
+                        border: isCorrectOpt
+                          ? "1px solid #10b981"
+                          : isSelected
+                            ? "1px solid #6366f1"
+                            : "1px solid transparent",
+                        color: "#e5e7eb",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {opt}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          );
+        })}
+
+        {!submitted ? (
+          <Button
+            type="primary"
+            size="large"
+            block
+            onClick={handleSubmit}
+            style={{
+              borderRadius: 12,
+              background: "linear-gradient(135deg,#667eea,#764ba2)",
+              border: "none",
+            }}
+          >
+            Nộp bài
+          </Button>
+        ) : (
+          <Button
+            type="primary"
+            size="large"
+            block
+            onClick={onComplete}
+            style={{ borderRadius: 12, background: "#10b981", border: "none" }}
+          >
+            Tiếp tục
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 const LearningPage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const toast = useToast();
-  const { user } = useAuthStore();
-  const { markLessonComplete, setCurrentLesson, lessonProgress } =
-    useCourseStore();
+  const {
+    markLessonComplete,
+    setCurrentLesson,
+    lessonProgress,
+    saveQuizScore,
+  } = useCourseStore();
 
   const [course, setCourse] = useState(null);
-  const [lessons, setLessons] = useState([]); // flat list: { ...lesson, sectionTitle }
+  const [flatItems, setFlatItems] = useState([]); // all lesson+quiz flat
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,31 +219,44 @@ const LearningPage = () => {
     CourseService.getCourseDetail(courseId)
       .then((data) => {
         if (!data) {
-          toast.error("Course not found");
+          message.error("Không tìm thấy khóa học");
           navigate(ROUTES.MY_COURSES);
           return;
         }
         setCourse(data);
-        setLessons(CourseService.getLessonsFromCourse(data));
+        // Build flat list of ALL items (lessons + quizzes)
+        const flat = [];
+        for (const sec of data.sections ?? []) {
+          for (const item of sec.items ?? []) {
+            flat.push({
+              ...item,
+              sectionTitle: sec.title,
+              flatIdx: flat.length,
+            });
+          }
+        }
+        setFlatItems(flat);
         const saved = lessonProgress[courseId]?.currentLesson;
-        if (saved) setActiveIdx(saved);
+        if (saved != null) setActiveIdx(saved);
       })
       .catch((err) => {
         if (err?.response?.status === 403) {
-          toast.error("You haven't enrolled in this course");
+          message.error("Bạn chưa đăng ký khóa học này");
           navigate(ROUTES.MY_COURSES);
         } else {
-          toast.error("Failed to load course");
+          message.error("Không thể tải khóa học");
         }
       })
       .finally(() => setLoading(false));
   }, [courseId]);
 
   const completed = lessonProgress[courseId]?.completedLessons ?? [];
-  const totalLess = lessons.length;
+  const lessonItems = flatItems.filter((i) => i.itemType === "lesson");
   const progress =
-    totalLess > 0 ? Math.round((completed.length / totalLess) * 100) : 0;
-  const activeLesson = lessons[activeIdx];
+    lessonItems.length > 0
+      ? Math.round((completed.length / lessonItems.length) * 100)
+      : 0;
+  const activeItem = flatItems[activeIdx];
 
   const goTo = (idx) => {
     setActiveIdx(idx);
@@ -66,223 +264,430 @@ const LearningPage = () => {
   };
 
   const handleComplete = () => {
-    markLessonComplete(courseId, activeIdx);
-    if (activeIdx < totalLess - 1) goTo(activeIdx + 1);
-    else toast.success("🎉 You've completed this course!");
+    if (activeItem?.itemType === "lesson") {
+      // mark lesson complete by flat index
+      markLessonComplete(courseId, activeIdx);
+    }
+    if (activeIdx < flatItems.length - 1) goTo(activeIdx + 1);
+    else message.success("🎉 Bạn đã hoàn thành khóa học!");
   };
 
-  // Build sections with flat index mapping
+  // Build sections with flat indexes
   const sectionsWithIdx = [];
-  let flatCounter = 0;
+  let fc = 0;
   for (const sec of course?.sections ?? []) {
     const mapped = [];
     for (const item of sec.items ?? []) {
-      if (item.itemType === "lesson")
-        mapped.push({ ...item, flatIdx: flatCounter++ });
+      mapped.push({ ...item, flatIdx: fc++ });
     }
     if (mapped.length) sectionsWithIdx.push({ ...sec, mappedItems: mapped });
   }
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950">
-        <div className="w-8 h-8 border-2 rounded-full border-primary border-t-transparent animate-spin" />
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#030712",
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            border: "2px solid #667eea",
+            borderTopColor: "transparent",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
       </div>
     );
   if (!course) return null;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden text-white bg-gray-950">
-      {/* ── Top bar ────────────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-4 border-b h-14 border-white/10 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
+        background: "#030712",
+        color: "#fff",
+      }}
+    >
+      {/* ── Top bar ─── */}
+      <header
+        style={{
+          height: 56,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 16px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
             onClick={() => navigate(ROUTES.MY_COURSES)}
-            className="p-2 transition-colors rounded-lg hover:bg-white/10"
-          >
-            <Icon name="chevronLeft" size={18} color="white" />
-          </button>
+            style={{ color: "#fff" }}
+          />
           <div>
-            <p className="text-xs text-white/50 font-medium leading-none mb-0.5">
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.4)",
+                fontSize: 11,
+                display: "block",
+              }}
+            >
               {course.category?.name}
-            </p>
-            <h1 className="max-w-xs text-sm font-bold leading-none line-clamp-1">
+            </Text>
+            <Text
+              strong
+              style={{
+                color: "#fff",
+                fontSize: 13,
+                maxWidth: 300,
+                display: "block",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {course.title}
-            </h1>
+            </Text>
           </div>
         </div>
-        <div className="items-center hidden gap-3 md:flex">
-          <div className="w-40 h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div
-              className="h-full transition-all rounded-full bg-secondary"
-              style={{ width: `${progress}%` }}
-            />
+              style={{
+                width: 140,
+                height: 6,
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: 3,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: "100%",
+                  background: "#10b981",
+                  borderRadius: 3,
+                  transition: "width 0.4s",
+                }}
+              />
+            </div>
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
+              {progress}%
+            </Text>
           </div>
-          <span className="text-xs font-bold text-white/50">{progress}%</span>
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setSidebarOpen((v) => !v)}
+            style={{ color: "#fff" }}
+          />
         </div>
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className="p-2 transition-colors rounded-lg hover:bg-white/10"
-        >
-          <Icon name="menu" size={18} color="white" />
-        </button>
       </header>
 
-      {/* ── Body ───────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Video area */}
-        <div className="flex flex-col flex-1 overflow-hidden">
-          {activeLesson?.videoUrl ? (
+      {/* ── Body ─── */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        {/* ── Sidebar LEFT ─── */}
+        {sidebarOpen && (
+          <div
+            style={{
+              width: 300,
+              flexShrink: 0,
+              background: "#111827",
+              borderRight: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.4)",
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  display: "block",
+                }}
+              >
+                Nội dung khóa học
+              </Text>
+              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
+                {completed.length}/{lessonItems.length} bài hoàn thành
+              </Text>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {sectionsWithIdx.map((sec, si) => (
+                <div
+                  key={sec._id || si}
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                >
+                  <div
+                    style={{
+                      padding: "10px 16px",
+                      background: "rgba(255,255,255,0.03)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "rgba(255,255,255,0.5)",
+                        fontSize: 11,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.8,
+                      }}
+                    >
+                      {sec.title}
+                    </Text>
+                  </div>
+                  {sec.mappedItems.map((item) => {
+                    const isDone =
+                      item.itemType === "lesson" &&
+                      completed.includes(item.flatIdx);
+                    const isActive = item.flatIdx === activeIdx;
+                    const isQuiz = item.itemType === "quiz";
+                    return (
+                      <div
+                        key={item._id || item.flatIdx}
+                        onClick={() => goTo(item.flatIdx)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "10px 16px",
+                          cursor: "pointer",
+                          background: isActive
+                            ? "rgba(102,126,234,0.15)"
+                            : "transparent",
+                          borderLeft: isActive
+                            ? "2px solid #667eea"
+                            : "2px solid transparent",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            background: isDone
+                              ? "#10b981"
+                              : isQuiz
+                                ? "rgba(139,92,246,0.2)"
+                                : isActive
+                                  ? "#667eea"
+                                  : "rgba(255,255,255,0.08)",
+                            color:
+                              isDone || isActive
+                                ? "#fff"
+                                : isQuiz
+                                  ? "#8B5CF6"
+                                  : "rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          {isDone ? (
+                            <CheckCircleFilled style={{ fontSize: 12 }} />
+                          ) : isQuiz ? (
+                            <QuestionCircleOutlined style={{ fontSize: 12 }} />
+                          ) : (
+                            item.flatIdx + 1
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            style={{
+                              color: isActive
+                                ? "#fff"
+                                : "rgba(255,255,255,0.6)",
+                              fontSize: 12,
+                              fontWeight: isActive ? 600 : 400,
+                              display: "block",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {item.title}
+                          </Text>
+                          {item.itemId?.duration > 0 && (
+                            <Text
+                              style={{
+                                color: "rgba(255,255,255,0.3)",
+                                fontSize: 10,
+                              }}
+                            >
+                              {fmtTime(item.itemId.duration)}
+                            </Text>
+                          )}
+                          {isQuiz && (
+                            <Text style={{ color: "#8B5CF6", fontSize: 10 }}>
+                              Quiz
+                            </Text>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Content area RIGHT */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {activeItem?.itemType === "quiz" ? (
+            <QuizPlayer
+              quiz={activeItem.itemId}
+              courseId={courseId}
+              onComplete={handleComplete}
+            />
+          ) : activeItem?.itemId?.videoUrl ? (
             <video
-              key={activeLesson._id ?? activeIdx}
-              src={activeLesson.videoUrl}
+              key={activeItem.itemId._id ?? activeIdx}
+              src={activeItem.itemId.videoUrl}
               controls
-              className="flex-1 object-contain w-full bg-black"
+              style={{
+                flex: 1,
+                width: "100%",
+                background: "#000",
+                objectFit: "contain",
+              }}
               onEnded={handleComplete}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center flex-1 bg-gray-900">
-              <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-white/10">
-                <Icon name="play" size={32} color="white" />
-              </div>
-              <p className="font-medium text-white/50">
-                {activeLesson
-                  ? "No video for this lesson"
-                  : "Select a lesson to start"}
-              </p>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#111827",
+              }}
+            >
+              <PlayCircleOutlined
+                style={{
+                  fontSize: 48,
+                  color: "rgba(255,255,255,0.2)",
+                  marginBottom: 12,
+                }}
+              />
+              <Text style={{ color: "rgba(255,255,255,0.5)" }}>
+                {activeItem
+                  ? "Bài học này chưa có video"
+                  : "Chọn bài học để bắt đầu"}
+              </Text>
             </div>
           )}
 
           {/* Controls */}
-          {activeLesson && (
-            <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gray-900 border-t border-white/10 shrink-0">
-              <div className="min-w-0">
-                <p className="text-xs text-white/40 font-medium mb-0.5">
-                  Lesson {activeIdx + 1} of {totalLess}
-                </p>
-                <h2 className="font-bold text-white truncate">
-                  {activeLesson.title}
-                </h2>
-                {activeLesson.duration > 0 && (
-                  <p className="text-xs text-white/40 mt-0.5">
-                    {fmtTime(activeLesson.duration)}
-                  </p>
+          {activeItem && activeItem.itemType !== "quiz" && (
+            <div
+              style={{
+                padding: "12px 24px",
+                background: "#1f2937",
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexShrink: 0,
+              }}
+            >
+              <div>
+                <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
+                  {activeIdx + 1} / {flatItems.length}
+                </Text>
+                <Title level={5} style={{ color: "#fff", margin: 0 }}>
+                  {activeItem.title}
+                </Title>
+                {activeItem.itemId?.duration > 0 && (
+                  <Text
+                    style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}
+                  >
+                    {fmtTime(activeItem.itemId.duration)}
+                  </Text>
                 )}
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={() => goTo(Math.max(0, activeIdx - 1))}
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button
+                  icon={<LeftOutlined />}
                   disabled={activeIdx === 0}
-                  className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-colors"
-                >
-                  <Icon name="chevronLeft" size={16} color="white" />
-                </button>
-                <button
+                  onClick={() => goTo(Math.max(0, activeIdx - 1))}
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "none",
+                    color: "#fff",
+                  }}
+                />
+                <Button
+                  type="primary"
                   onClick={handleComplete}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                    completed.includes(activeIdx)
-                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : "btn-aurora"
-                  }`}
+                  style={{
+                    background: completed.includes(activeIdx)
+                      ? "#10b981"
+                      : "linear-gradient(135deg,#667eea,#764ba2)",
+                    border: "none",
+                    borderRadius: 10,
+                  }}
+                  icon={
+                    completed.includes(activeIdx) ? (
+                      <CheckCircleOutlined />
+                    ) : null
+                  }
                 >
-                  {completed.includes(activeIdx) ? (
-                    <span className="flex items-center gap-1.5">
-                      <Icon name="check" size={14} color="#4ADE80" />
-                      Done
-                    </span>
-                  ) : activeIdx === totalLess - 1 ? (
-                    "Complete Course"
-                  ) : (
-                    "Mark Complete & Next"
-                  )}
-                </button>
-                <button
-                  onClick={() => goTo(Math.min(totalLess - 1, activeIdx + 1))}
-                  disabled={activeIdx === totalLess - 1}
-                  className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-30 transition-colors"
-                >
-                  <Icon name="chevronRight" size={16} color="white" />
-                </button>
+                  {completed.includes(activeIdx)
+                    ? "Đã hoàn thành"
+                    : activeIdx === flatItems.length - 1
+                      ? "Hoàn thành khóa học"
+                      : "Xong & tiếp theo"}
+                </Button>
+                <Button
+                  icon={<RightOutlined />}
+                  disabled={activeIdx === flatItems.length - 1}
+                  onClick={() =>
+                    goTo(Math.min(flatItems.length - 1, activeIdx + 1))
+                  }
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "none",
+                    color: "#fff",
+                  }}
+                />
               </div>
             </div>
           )}
         </div>
-
-        {/* ── Sidebar ──────────────────────────────────────────────────── */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.aside
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 300, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex flex-col overflow-hidden bg-gray-900 border-l border-white/10 shrink-0"
-            >
-              <div className="p-4 border-b border-white/10">
-                <p className="text-xs font-bold tracking-widest uppercase text-white/40">
-                  Course Content
-                </p>
-                <p className="mt-1 text-xs text-white/50">
-                  {completed.length}/{totalLess} completed
-                </p>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {sectionsWithIdx.map((sec, si) => (
-                  <div key={sec._id || si} className="border-b border-white/5">
-                    <div className="px-4 py-3 bg-white/5">
-                      <p className="text-xs font-bold tracking-widest uppercase text-white/60">
-                        {sec.title}
-                      </p>
-                    </div>
-                    {sec.mappedItems.map((item) => {
-                      const isDone = completed.includes(item.flatIdx);
-                      const isActive = item.flatIdx === activeIdx;
-                      return (
-                        <button
-                          key={item._id || item.flatIdx}
-                          onClick={() => goTo(item.flatIdx)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5 ${
-                            isActive
-                              ? "bg-primary/20 border-l-2 border-primary"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black ${
-                              isDone
-                                ? "bg-green-500 text-white"
-                                : isActive
-                                  ? "bg-primary text-white"
-                                  : "bg-white/10 text-white/40"
-                            }`}
-                          >
-                            {isDone ? (
-                              <Icon name="check" size={10} color="white" />
-                            ) : (
-                              item.flatIdx + 1
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className={`text-xs font-semibold truncate ${isActive ? "text-white" : "text-white/60"}`}
-                            >
-                              {item.title}
-                            </p>
-                            {item.itemId?.duration > 0 && (
-                              <p className="text-[10px] text-white/30">
-                                {fmtTime(item.itemId.duration)}
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

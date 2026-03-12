@@ -12,10 +12,10 @@ const {
   getInstructorCourses,
   getPendingCourses,
   approveCourse,
-  rejectCourse
+  rejectCourse,
 } = require("../controller/courseController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect, optionalAuth } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/roleMiddleware");
 
 /* ========================= PUBLIC ========================= */
@@ -31,7 +31,7 @@ router.get(
   "/instructor/mine",
   protect,
   authorize("instructor"),
-  getInstructorCourses
+  getInstructorCourses,
 );
 router.post("/", protect, authorize("instructor"), createCourse);
 router.put("/:courseId", protect, authorize("instructor"), updateCourse);
@@ -43,6 +43,6 @@ router.put("/:courseId/approve", protect, authorize("admin"), approveCourse);
 router.put("/:courseId/reject", protect, authorize("admin"), rejectCourse);
 
 router.get("/:id/preview", getCoursePreview);
-router.get("/:id", protect, getCourseById);
+router.get("/:id", optionalAuth, getCourseById);
 
 module.exports = router;
