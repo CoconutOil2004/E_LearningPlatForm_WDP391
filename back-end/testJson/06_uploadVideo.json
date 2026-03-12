@@ -1,0 +1,24 @@
+{
+  "method": "POST",
+  "basePath": "/api/upload",
+  "path": "/video",
+  "fullEndpoint": "/api/upload/video",
+  "protect": true,
+  "headers": {
+    "Authorization": "Bearer <token>"
+  },
+  "contentType": "multipart/form-data",
+  "description": "Upload file video lên Cloudinary. FE gọi trước, lấy videoUrl + duration + publicId rồi gửi vào PUT course (sections[].items[] lesson).",
+  "body_formData": {
+    "video": "File, bắt buộc – video (mp4, webm, mov, avi)"
+  },
+  "exampleResponse": {
+    "success": true,
+    "data": {
+      "videoUrl": "https://res.cloudinary.com/xxx/video/upload/...",
+      "publicId": "elearning-videos/xxx",
+      "duration": 120
+    }
+  },
+  "note": "duration đơn vị giây. FE gửi videoUrl, duration, videoPublicId vào PUT /api/courses/:courseId (body.sections[].items[])."
+}

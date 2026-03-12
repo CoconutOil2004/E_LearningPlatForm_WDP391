@@ -11,11 +11,6 @@ const {
 } = require("../controller/enrollmentController");
 const { completeLesson } = require("../controller/lessonController");
 
-console.log("enrollmentRoutes.js - protect:", typeof protect);
-console.log("enrollmentRoutes.js - checkEnrollment:", typeof checkEnrollment);
-console.log("enrollmentRoutes.js - completeLesson:", typeof completeLesson);
-console.log("enrollmentRoutes.js - getMyCourses:", typeof getMyCourses);
-
 /* ======================================
    STUDENT LEARNING ROUTES
 ====================================== */

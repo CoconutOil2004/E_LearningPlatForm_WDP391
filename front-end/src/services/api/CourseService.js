@@ -129,20 +129,35 @@ class CourseService {
       .then((r) => r.data?.data ?? null);
   }
 
-  // ─── POST /api/courses/upload-video ───────────────────────────────────────
-  // Instructor only. multipart/form-data, field: "video"
-  // → { videoUrl, publicId, duration }  (duration tính bằng giây)
+  // ─── POST /api/upload/video ───────────────────────────────────────────────
+  // multipart/form-data, field: "video" → { videoUrl, publicId, duration } (giây)
   uploadVideo(file, onProgress) {
     const form = new FormData();
     form.append("video", file);
     return api
-      .post("/courses/upload-video", form, {
+      .post("/upload/video", form, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: onProgress
           ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
           : undefined,
       })
       .then((r) => r.data?.data ?? null);
+  }
+
+  // ─── POST /api/upload/images ──────────────────────────────────────────────
+  // multipart, field: "images" (nhiều file) → { data: [ { url, publicId }, ... ] }
+  uploadImages(files, onProgress) {
+    const form = new FormData();
+    const list = Array.isArray(files) ? files : [files];
+    list.forEach((f) => form.append("images", f));
+    return api
+      .post("/upload/images", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: onProgress
+          ? (e) => onProgress(e.total ? Math.round((e.loaded * 100) / e.total) : 0)
+          : undefined,
+      })
+      .then((r) => r.data?.data ?? []);
   }
 
   // ─── PUT /api/courses/:courseId/submit ────────────────────────────────────

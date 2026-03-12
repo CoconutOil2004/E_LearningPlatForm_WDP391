@@ -1,0 +1,13 @@
+{
+  "method": "GET",
+  "basePath": "/api/courses",
+  "path": "/levels",
+  "fullEndpoint": "/api/courses/levels",
+  "protect": false,
+  "description": "Lấy danh sách level hợp lệ (dropdown / validation).",
+  "requestBody": null,
+  "exampleResponse": {
+    "success": true,
+    "data": ["Beginner", "Intermediate", "Advanced"]
+  }
+}

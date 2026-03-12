@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "basePath": "/api/upload",
+  "path": "/images",
+  "fullEndpoint": "/api/upload/images",
+  "protect": true,
+  "headers": {
+    "Authorization": "Bearer <token>"
+  },
+  "contentType": "multipart/form-data",
+  "description": "Upload nhiều ảnh một lúc lên Cloudinary. Field: images. Dùng cho thumbnail khóa hoặc ảnh khác.",
+  "body_formData": {
+    "images": "File(s), tối đa 10 ảnh – jpeg, png, gif, webp (5MB/file)"
+  },
+  "exampleResponse": {
+    "success": true,
+    "data": [
+      { "url": "https://res.cloudinary.com/.../image/upload/...", "publicId": "elearning-images/xxx" }
+    ]
+  },
+  "note": "FE lấy data[0].url làm thumbnail course (gửi vào POST/PUT course body.thumbnail)."
+}

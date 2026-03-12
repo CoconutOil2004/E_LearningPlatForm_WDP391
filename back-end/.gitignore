@@ -8,6 +8,9 @@
 # testing
 /coverage
 
+# script test (chứa email/pass mặc định)
+/scripts/test-update-course-sections.js
+
 # production
 /build
 

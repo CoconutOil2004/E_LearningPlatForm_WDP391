@@ -10,25 +10,6 @@ const { cloudinary } = require("../config/cloudinary");
 const LEVEL_ENUM = ["Beginner", "Intermediate", "Advanced"];
 exports.LEVEL_ENUM = LEVEL_ENUM;
 
-/** Upload buffer video lên Cloudinary, trả về { videoUrl, publicId, duration } */
-function uploadVideoToCloudinary(buffer) {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: "video", folder: "elearning-videos" },
-      (err, result) => {
-        if (err) return reject(err);
-        const duration = result?.duration ? Math.round(Number(result.duration)) : 0;
-        resolve({
-          videoUrl: result.secure_url,
-          publicId: result.public_id,
-          duration
-        });
-      }
-    );
-    uploadStream.end(buffer);
-  });
-}
-
 /* =====================================================
    SEARCH COURSES (Udemy Style)
 ===================================================== */
@@ -278,7 +259,7 @@ exports.getCoursesByCategory = async (req, res) => {
 ===================================================== */
 exports.createCourse = async (req, res) => {
   try {
-    const { title, description, categoryId, level } = req.body;
+    const { title, description, categoryId, level, thumbnail } = req.body;
     const instructorId = req.user._id;
 
     if (!title || typeof title !== "string" || !title.trim()) {
@@ -310,7 +291,8 @@ exports.createCourse = async (req, res) => {
       level,
       price: 0,
       status: "draft",
-      instructorId
+      instructorId,
+      thumbnail: (thumbnail && String(thumbnail).trim()) || null
     });
 
     const populated = await Course.findById(course._id)
@@ -443,7 +425,7 @@ exports.getCourseById = async (req, res) => {
 exports.updateCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, categoryId, level, price, status, sections: bodySections } = req.body;
+    const { title, description, categoryId, level, price, status, thumbnail, sections: bodySections } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course id" });
@@ -478,6 +460,9 @@ exports.updateCourse = async (req, res) => {
     if (price !== undefined) course.price = Number(price);
     if (status !== undefined && ["draft", "pending", "published", "rejected", "archived"].includes(status)) {
       course.status = status;
+    }
+    if (thumbnail !== undefined) {
+      course.thumbnail = (thumbnail && String(thumbnail).trim()) || null;
     }
 
     const oldItemIds = new Set();
@@ -583,19 +568,6 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
-
-/* ====================== UPLOAD VIDEO (FE gọi trước, rồi gửi url vào PUT course sections) ====================== */
-exports.uploadVideo = async (req, res) => {
-  try {
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ message: "Cần gửi file video (field: video)." });
-    }
-    const data = await uploadVideoToCloudinary(req.file.buffer);
-    res.json({ success: true, data });
-  } catch (err) {
-    res.status(500).json({ message: err.message || "Upload video thất bại." });
-  }
-};
 
 /* =====================================================
    SUBMIT COURSE (Instructor)

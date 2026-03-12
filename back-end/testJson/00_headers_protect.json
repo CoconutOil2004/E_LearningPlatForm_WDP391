@@ -1,0 +1,7 @@
+{
+  "description": "Mọi API course có protect cần gửi header này. Token lấy từ API đăng nhập (auth).",
+  "headers": {
+    "Authorization": "Bearer <access_token>"
+  },
+  "note": "Thay <access_token> bằng token thật. Thiếu hoặc sai → 401 Unauthorized."
+}

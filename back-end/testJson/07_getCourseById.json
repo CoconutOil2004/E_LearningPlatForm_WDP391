@@ -1,0 +1,67 @@
+{
+  "method": "GET",
+  "basePath": "/api/courses",
+  "path": "/:id",
+  "fullEndpoint": "/api/courses/:id",
+  "protect": true,
+  "headers": { "Authorization": "Bearer <token>" },
+  "description": "Course detail (đầy đủ). Lấy tất cả thông tin khóa để xem/quản lý. Chỉ instructor của khóa hoặc admin. Trả về full course kèm sections đã populate (lesson có videoUrl, duration; quiz có questions).",
+  "pathParams": {
+    "id": "ObjectId của course"
+  },
+  "exampleRequest": "GET /api/courses/507f1f77bcf86cd799439011",
+  "exampleResponse": {
+    "success": true,
+    "data": {
+      "_id": "507f1f77bcf86cd799439011",
+      "title": "...",
+      "description": "...",
+      "price": 0,
+      "status": "draft",
+      "thumbnail": null,
+      "category": { "_id": "...", "name": "Development", "slug": "...", "description": "..." },
+      "level": "Beginner",
+      "language": "none",
+      "rating": 0,
+      "enrollmentCount": 0,
+      "totalDuration": 0,
+      "instructorId": { "_id": "...", "fullname": "...", "email": "..." },
+      "sections": [
+        {
+          "_id": "...",
+          "title": "Chương 1",
+          "items": [
+            {
+              "itemType": "lesson",
+              "itemRef": "Lesson",
+              "itemId": {
+                "_id": "...",
+                "title": "Bài 1",
+                "videoUrl": "https://...",
+                "videoPublicId": "...",
+                "duration": 300,
+                "courseId": "..."
+              },
+              "title": "Bài 1",
+              "orderIndex": 1
+            },
+            {
+              "itemType": "quiz",
+              "itemRef": "Quiz",
+              "itemId": {
+                "_id": "...",
+                "title": "Quiz 1",
+                "courseId": "...",
+                "questions": []
+              },
+              "title": "Quiz 1",
+              "orderIndex": 2
+            }
+          ]
+        }
+      ],
+      "createdAt": "...",
+      "updatedAt": "..."
+    }
+  }
+}
