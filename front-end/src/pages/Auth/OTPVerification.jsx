@@ -70,17 +70,17 @@ const OTPVerification = () => {
     e.preventDefault();
     const code = otp.join("");
     if (code.length < 6) {
-      toast.error("Vui lòng nhập đủ 6 chữ số OTP");
+      toast.error("Please enter all 6 digits of the OTP");
       return;
     }
     setIsLoading(true);
     try {
       await AuthenService.verifyOTP(email, code);
-      toast.success("Xác thực thành công! Vui lòng đăng nhập.");
+      toast.success("Verification successful! Please sign in.");
       navigate("/signin");
     } catch (error) {
       toast.error(
-        error.response?.data?.message || "Mã OTP không đúng hoặc đã hết hạn",
+        error.response?.data?.message || "OTP is invalid or has expired",
       );
     } finally {
       setIsLoading(false);
@@ -92,12 +92,12 @@ const OTPVerification = () => {
     setResending(true);
     try {
       await AuthenService.resendOTP({ email });
-      toast.success("Đã gửi lại mã OTP. Vui lòng kiểm tra email.");
+      toast.success("A new OTP has been sent. Please check your email.");
       setCountdown(60);
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Gửi lại OTP thất bại");
+      toast.error(error.response?.data?.message || "Failed to resend OTP");
     } finally {
       setResending(false);
     }
@@ -145,10 +145,10 @@ const OTPVerification = () => {
             className="text-4xl font-black"
             style={{ color: "var(--text-heading)" }}
           >
-            Xác thực Email
+            Verify your email
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Nhập mã 6 chữ số đã gửi tới
+            Enter the 6-digit code we sent to
           </p>
           {email && (
             <p
@@ -208,20 +208,20 @@ const OTPVerification = () => {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Spinner />
-                  Đang xác thực...
+                  Verifying...
                 </span>
               ) : (
-                "Xác thực"
+                "Verify"
               )}
             </motion.button>
           </form>
 
           <div className="mt-5 text-center">
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Không nhận được mã?{" "}
+              Didn't receive a code?{" "}
               {countdown > 0 ? (
-                <span style={{ color: "var(--text-disabled)" }}>
-                  Gửi lại sau {countdown}s
+                  <span style={{ color: "var(--text-disabled)" }}>
+                    Resend available in {countdown}s
                 </span>
               ) : (
                 <button
@@ -229,7 +229,7 @@ const OTPVerification = () => {
                   disabled={resending}
                   className="text-xs font-semibold auth-link disabled:opacity-50"
                 >
-                  {resending ? "Đang gửi..." : "Gửi lại OTP"}
+                  {resending ? "Sending..." : "Resend OTP"}
                 </button>
               )}
             </p>
@@ -240,7 +240,7 @@ const OTPVerification = () => {
             style={{ color: "var(--text-muted)" }}
           >
             <Link to="/signin" className="auth-link">
-              ← Quay lại đăng nhập
+              ← Back to sign in
             </Link>
           </p>
         </div>

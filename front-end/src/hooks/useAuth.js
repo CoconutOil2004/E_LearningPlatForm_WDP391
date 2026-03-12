@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import { logout } from "../features/auth/authSlice";
-import { resetUserInfo } from "../redux/slices/orebi.slice";
 import AuthenService from "../services/api/AuthenService";
 
 const useAuth = () => {
@@ -20,7 +19,6 @@ const useAuth = () => {
     } catch {
     } finally {
       dispatch(logout());
-      dispatch(resetUserInfo());
       navigate("/signin");
     }
   }, [dispatch, navigate]);

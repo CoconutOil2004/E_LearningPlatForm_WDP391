@@ -35,14 +35,14 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) { toast.error("Mật khẩu xác nhận không khớp!"); return; }
+    if (formData.password !== formData.confirmPassword) { toast.error("Password confirmation does not match!"); return; }
     setIsLoading(true);
     try {
       const res = await AuthenService.register({ username: formData.username, fullname: formData.fullname, email: formData.email, password: formData.password });
-      toast.success(res.message || "Đăng ký thành công! Vui lòng kiểm tra email.");
+      toast.success(res.message || "Registration successful! Please check your email.");
       navigate("/verify-otp", { state: { email: formData.email } });
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message || "Đăng ký thất bại");
+      toast.error(error.response?.data?.message || error.message || "Registration failed");
     } finally {
       setIsLoading(false);
     }
@@ -79,13 +79,13 @@ const SignUp = () => {
             style={{ background: "var(--color-primary-bg)", color: "var(--color-primary)" }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-            Tạo tài khoản
+            Create account
           </motion.div>
           <h1 className="text-4xl font-black" style={{ color: "var(--text-heading)" }}>
-            Bắt đầu học ngay
+            Start learning now
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Tham gia cùng hàng nghìn học viên trên LearnX
+            Join thousands of learners on LearnX
           </p>
         </div>
 
@@ -98,9 +98,9 @@ const SignUp = () => {
                   onChange={handleChange} className="auth-input" placeholder="learnx_user" />
               </div>
               <div>
-                <label className="auth-label">Họ và tên</label>
+                <label className="auth-label">Full name</label>
                 <input name="fullname" type="text" required value={formData.fullname}
-                  onChange={handleChange} className="auth-input" placeholder="Nguyễn Văn A" />
+                  onChange={handleChange} className="auth-input" placeholder="John Doe" />
               </div>
             </div>
 
@@ -111,11 +111,11 @@ const SignUp = () => {
             </div>
 
             <div>
-              <label className="auth-label">Mật khẩu</label>
+              <label className="auth-label">Password</label>
               <div className="relative">
                 <input name="password" type={showPassword ? "text" : "password"} required
                   value={formData.password} onChange={handleChange}
-                  className="auth-input" style={{ paddingRight: "2.75rem" }} placeholder="Tối thiểu 6 ký tự" />
+                  className="auth-input" style={{ paddingRight: "2.75rem" }} placeholder="At least 6 characters" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3.5"
                   style={{ color: "var(--text-disabled)" }}>
@@ -125,11 +125,11 @@ const SignUp = () => {
             </div>
 
             <div>
-              <label className="auth-label">Xác nhận mật khẩu</label>
+              <label className="auth-label">Confirm password</label>
               <div className="relative">
                 <input name="confirmPassword" type={showConfirm ? "text" : "password"} required
                   value={formData.confirmPassword} onChange={handleChange}
-                  className="auth-input" style={{ paddingRight: "2.75rem" }} placeholder="Nhập lại mật khẩu" />
+                  className="auth-input" style={{ paddingRight: "2.75rem" }} placeholder="Re-enter your password" />
                 <button type="button" onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3.5"
                   style={{ color: "var(--text-disabled)" }}>
@@ -143,19 +143,19 @@ const SignUp = () => {
                 className="flex items-center gap-1.5 text-xs font-medium"
                 style={{ color: passwordMatch ? "var(--color-success)" : "var(--color-danger)" }}>
                 <span>{passwordMatch ? "✓" : "✗"}</span>
-                <span>{passwordMatch ? "Mật khẩu khớp" : "Mật khẩu chưa khớp"}</span>
+                <span>{passwordMatch ? "Passwords match" : "Passwords do not match"}</span>
               </motion.div>
             )}
 
             <motion.button type="submit" disabled={isLoading} whileTap={{ scale: 0.98 }}
               className="auth-btn-submit mt-2">
-              {isLoading ? <span className="flex items-center justify-center gap-2"><Spinner />Đang tạo tài khoản...</span> : "Tạo tài khoản"}
+              {isLoading ? <span className="flex items-center justify-center gap-2"><Spinner />Creating account...</span> : "Create account"}
             </motion.button>
           </form>
 
           <p className="mt-6 text-xs text-center" style={{ color: "var(--text-muted)" }}>
-            Đã có tài khoản?{" "}
-            <Link to="/signin" className="auth-link">Đăng nhập</Link>
+            Already have an account?{" "}
+            <Link to="/signin" className="auth-link">Sign in</Link>
           </p>
         </div>
       </motion.div>
