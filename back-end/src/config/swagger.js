@@ -134,7 +134,7 @@ const swaggerDocument = {
     { name: "Courses", description: "Khóa học" },
     { name: "Categories", description: "Danh mục" },
     { name: "Enrollments", description: "Khóa học của tôi" },
-    { name: "Payments", description: "Thanh toán" },
+    { name: "Payments", description: "Thanh toán & thống kê doanh thu" },
     { name: "Images", description: "Upload ảnh" },
     { name: "Blogs", description: "Quản lý bài viết" },
   ],
@@ -660,9 +660,14 @@ const swaggerDocument = {
             "application/json": {
               schema: {
                 type: "object",
+                required: ["courseId"],
                 properties: {
                   courseId: { type: "string" },
-                  amount: { type: "number" },
+                  paymentMethod: {
+                    type: "string",
+                    enum: ["vnpay"],
+                    example: "vnpay",
+                  },
                 },
               },
             },
@@ -688,6 +693,99 @@ const swaggerDocument = {
         summary: "Lịch sử thanh toán của tôi",
         security: [{ bearerAuth: [] }],
         responses: { "200": { description: "payments" } },
+      },
+    },
+
+    "/api/payments/admin/revenue/summary": {
+      get: {
+        tags: ["Payments"],
+        summary: "Tổng doanh thu trong khoảng thời gian (Admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "from",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+            required: false,
+            description: "Ngày bắt đầu (ISO string), vd 2024-01-01",
+          },
+          {
+            name: "to",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+            required: false,
+            description: "Ngày kết thúc (ISO string)",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Tổng doanh thu và số đơn",
+          },
+        },
+      },
+    },
+
+    "/api/payments/admin/revenue/daily": {
+      get: {
+        tags: ["Payments"],
+        summary: "Doanh thu theo ngày/tháng (Admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "from",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+            required: false,
+          },
+          {
+            name: "to",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+            required: false,
+          },
+          {
+            name: "groupBy",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: ["day", "month"],
+              default: "day",
+            },
+            required: false,
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Danh sách doanh thu theo mốc thời gian",
+          },
+        },
+      },
+    },
+
+    "/api/payments/admin/revenue/by-course": {
+      get: {
+        tags: ["Payments"],
+        summary: "Doanh thu theo khóa học (Admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "from",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+            required: false,
+          },
+          {
+            name: "to",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+            required: false,
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Danh sách doanh thu theo từng khóa học",
+          },
+        },
       },
     },
 

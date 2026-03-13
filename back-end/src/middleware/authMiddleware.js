@@ -42,7 +42,6 @@ const protect = async (req, res, next) => {
       });
     }
 
-    /* attach user to request */
     req.user = user;
 
     next();
@@ -53,6 +52,19 @@ const protect = async (req, res, next) => {
       error: error.message,
     });
   }
+};
+
+/* =====================================
+   ADMIN GUARD
+===================================== */
+const requireAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Admin access only",
+    });
+  }
+  next();
 };
 
 /* =====================================
@@ -80,10 +92,9 @@ const optionalAuth = async (req, res, next) => {
     req.user = user || null;
     next();
   } catch {
-    // Token lỗi/hết hạn → coi như guest
     req.user = null;
     next();
   }
 };
 
-module.exports = { protect, optionalAuth };
+module.exports = { protect, optionalAuth, requireAdmin };
