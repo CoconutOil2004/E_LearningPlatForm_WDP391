@@ -2,14 +2,21 @@ const qs = require("qs");
 const crypto = require("crypto");
 const moment = require("moment");
 
+// 1. HÀM SORT CHUẨN CỦA VNPAY: Vừa sắp xếp, vừa encodeURIComponent chuẩn xác
 function sortObject(obj) {
-  const sorted = {};
-  const keys = Object.keys(obj).sort();
-
-  keys.forEach((key) => {
-    sorted[key] = obj[key];
-  });
-
+  let sorted = {};
+  let str = [];
+  let key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      str.push(encodeURIComponent(key));
+    }
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    // VNPay yêu cầu encode và đổi khoảng trắng (%20) thành dấu +
+    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+  }
   return sorted;
 }
 
@@ -33,6 +40,7 @@ exports.createPaymentUrl = ({ amount, orderId, ipAddr, orderInfo }) => {
 
   vnp_Params = sortObject(vnp_Params);
 
+  // Vì hàm sortObject ở trên ĐÃ ENCODE rồi, nên ở đây ta set encode: false
   const signData = qs.stringify(vnp_Params, { encode: false });
 
   const secureHash = crypto
@@ -42,19 +50,13 @@ exports.createPaymentUrl = ({ amount, orderId, ipAddr, orderInfo }) => {
 
   vnp_Params.vnp_SecureHash = secureHash;
 
-  return (
-    process.env.VNP_URL + "?" + qs.stringify(vnp_Params, { encode: false })
-  );
+  // LƯU Ý QUAN TRỌNG: Sửa encode: true thành encode: false để tránh mã hóa 2 lần (double-encoding)
+  const finalUrl =
+    process.env.VNP_URL + "?" + qs.stringify(vnp_Params, { encode: false });
+    
+  return finalUrl;
 };
 
-/**
- * Verify the return URL / IPN from VNPay.
- * Strips vnp_SecureHash (and vnp_SecureHashType if present) before re-computing the HMAC,
- * then compares with the hash VNPay sent back.
- *
- * @param {object} query  – req.query from the callback route
- * @returns {{ isVerified, isSuccess, orderId, responseCode, transactionNo }}
- */
 exports.verifyReturnUrl = (query) => {
   const params = { ...query };
 
@@ -62,6 +64,7 @@ exports.verifyReturnUrl = (query) => {
   delete params["vnp_SecureHash"];
   if (params["vnp_SecureHashType"]) delete params["vnp_SecureHashType"];
 
+  // req.query của Express đã tự động decode, nên ta phải ném nó vào sortObject để encode lại từ đầu
   const sorted = sortObject(params);
   const signData = qs.stringify(sorted, { encode: false });
 
@@ -73,7 +76,7 @@ exports.verifyReturnUrl = (query) => {
   return {
     isVerified: expectedHash === receivedHash,
     isSuccess: params["vnp_ResponseCode"] === "00",
-    orderId: params["vnp_TxnRef"], // payment._id string
+    orderId: params["vnp_TxnRef"],
     responseCode: params["vnp_ResponseCode"],
     transactionNo: params["vnp_TransactionNo"] || null,
   };
