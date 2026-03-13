@@ -127,8 +127,14 @@ exports.paymentCallback = async (req, res) => {
 
     if (verify.isSuccess) {
       const enrollment = await Enrollment.findById(payment.enrollmentId._id);
-      enrollment.paymentStatus = "paid";
-      await enrollment.save();
+      if (enrollment && enrollment.paymentStatus !== "paid") {
+        enrollment.paymentStatus = "paid";
+        await enrollment.save();
+        // Increment enrollmentCount on the course
+        await Course.findByIdAndUpdate(enrollment.courseId, {
+          $inc: { enrollmentCount: 1 },
+        });
+      }
     }
 
     const clientUrl = process.env.CLIENT_URL || "http://localhost:9999";

@@ -268,7 +268,7 @@ exports.getCoursesByCategory = async (req, res) => {
 ===================================================== */
 exports.createCourse = async (req, res) => {
   try {
-    const { title, description, categoryId, level } = req.body;
+    const { title, description, categoryId, level, thumbnail } = req.body;
     const instructorId = req.user._id;
 
     if (!title || typeof title !== "string" || !title.trim()) {
@@ -309,6 +309,7 @@ exports.createCourse = async (req, res) => {
       price: 0,
       status: "draft",
       instructorId,
+      thumbnail: (thumbnail && String(thumbnail).trim()) || null,
     });
 
     const populated = await Course.findById(course._id)
@@ -341,39 +342,17 @@ exports.getCoursePreview = async (req, res) => {
       return res.status(400).json({ message: "Invalid course id" });
     }
 
+    // Dòng .select() — thêm "thumbnail"
     const course = await Course.findOne({ _id: id, status: "published" })
       .select(
-        "title description price level rating enrollmentCount totalDuration category instructorId sections",
+        "title description price level rating enrollmentCount totalDuration thumbnail category instructorId sections",
       )
       .populate("category", "name slug description")
-      .populate("instructorId", "fullname")
+      .populate("instructorId", "fullname avatarURL")
       .populate({ path: "sections.items.itemId", select: "title duration" })
       .lean();
 
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-
-    const sections = (course.sections || []).map((sec) => ({
-      _id: sec._id,
-      title: sec.title,
-      items: (sec.items || []).map((it) => {
-        const item = { ...it };
-        if (it.itemId) {
-          if (it.itemType === "lesson") {
-            item.itemId = {
-              _id: it.itemId._id,
-              title: it.itemId.title,
-              duration: it.itemId.duration ?? 0,
-            };
-          } else {
-            item.itemId = { _id: it.itemId._id, title: it.itemId.title };
-          }
-        }
-        return item;
-      }),
-    }));
-
+    // Response object — thêm thumbnail
     res.json({
       success: true,
       data: {
@@ -385,13 +364,14 @@ exports.getCoursePreview = async (req, res) => {
         rating: course.rating,
         enrollmentCount: course.enrollmentCount,
         totalDuration: course.totalDuration,
+        thumbnail: course.thumbnail ?? null, // ← THÊM DÒNG NÀY
         category: course.category,
         instructorId: course.instructorId,
         sections,
       },
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -460,6 +440,7 @@ exports.updateCourse = async (req, res) => {
       level,
       price,
       status,
+      thumbnail,
       sections: bodySections,
     } = req.body;
 
@@ -494,15 +475,15 @@ exports.updateCourse = async (req, res) => {
     if (description !== undefined) course.description = description.trim();
     if (level !== undefined) course.level = level;
     if (price !== undefined) course.price = Number(price);
+    if (thumbnail !== undefined) {
+      course.thumbnail = (thumbnail && String(thumbnail).trim()) || null;
+    }
     if (
       status !== undefined &&
       ["draft", "pending", "published", "rejected", "archived"].includes(status)
     ) {
       course.status = status;
     }
-    // if (thumbnail !== undefined) {
-    //   course.thumbnail = (thumbnail && String(thumbnail).trim()) || null;
-    // }
 
     const oldItemIds = new Set();
     (course.sections || []).forEach((sec) => {
@@ -736,8 +717,49 @@ exports.approveCourse = async (req, res) => {
 };
 
 /* =====================================================
-   ADMIN: REJECT COURSE
+   ADMIN: GET ALL COURSES (all statuses)
+   GET /api/courses/admin/all
+   Query: status? page? limit? keyword?
 ===================================================== */
+exports.getAdminAllCourses = async (req, res) => {
+  try {
+    let { status, page, limit, keyword } = req.query;
+    page = Math.max(1, parseInt(page, 10) || 1);
+    limit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+
+    const query = {};
+    if (
+      status &&
+      ["draft", "pending", "published", "rejected", "archived"].includes(status)
+    ) {
+      query.status = status;
+    }
+    if (keyword && keyword.trim()) {
+      query.$or = [{ title: { $regex: keyword.trim(), $options: "i" } }];
+    }
+
+    const [courses, total] = await Promise.all([
+      Course.find(query)
+        .populate("instructorId", "fullname email avatarURL")
+        .populate("category", "name slug description")
+        .sort({ updatedAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Course.countDocuments(query),
+    ]);
+
+    res.json({
+      success: true,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      data: courses,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 exports.rejectCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -758,13 +780,26 @@ exports.rejectCourse = async (req, res) => {
       });
     }
 
+    if (!reason || !String(reason).trim()) {
+      return res.status(400).json({
+        message: "A rejection reason is required.",
+      });
+    }
+
     course.status = "rejected";
+    course.rejectionReason = String(reason).trim();
+    course.rejectedAt = new Date();
     await course.save();
+
+    const populated = await Course.findById(course._id)
+      .populate("instructorId", "fullname email")
+      .populate("category", "name")
+      .lean();
 
     res.json({
       success: true,
       message: "Course rejected",
-      data: course,
+      data: populated,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

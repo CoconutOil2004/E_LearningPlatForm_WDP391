@@ -11,6 +11,7 @@ const {
   submitCourse,
   getInstructorCourses,
   getPendingCourses,
+  getAdminAllCourses,
   approveCourse,
   rejectCourse,
 } = require("../controller/courseController");
@@ -34,12 +35,12 @@ router.get(
   getInstructorCourses,
 );
 router.post("/", protect, authorize("instructor"), createCourse);
-``;
 router.put("/:courseId", protect, authorize("instructor"), updateCourse);
 router.put("/:courseId/submit", protect, authorize("instructor"), submitCourse);
 
-/* ========================= ADMIN (trước /:id để không match nhầm) ========================= */
+/* ========================= ADMIN (before /:id to avoid wrong match) ========================= */
 router.get("/admin/pending", protect, authorize("admin"), getPendingCourses);
+router.get("/admin/all", protect, authorize("admin"), getAdminAllCourses);
 router.put("/:courseId/approve", protect, authorize("admin"), approveCourse);
 router.put("/:courseId/reject", protect, authorize("admin"), rejectCourse);
 

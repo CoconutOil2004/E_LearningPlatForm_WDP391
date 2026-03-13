@@ -523,6 +523,7 @@ const CreateCoursePage = () => {
         categoryId: values.categoryId,
         level: values.level,
         language: values.language || "English",
+        thumbnail: values.thumbnail || thumbnailUrl || null,
       });
       if (!created) throw new Error("Failed to create course");
       id = created._id;

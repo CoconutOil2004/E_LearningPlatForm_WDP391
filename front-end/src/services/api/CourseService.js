@@ -1,25 +1,5 @@
 import { api } from "../index";
 
-/**
- * CourseService — map 1:1 với courseController.js (BE)
- *
- * Response shape BE populate:
- *   Course:       { _id, title, description, price, status, thumbnail, level,
- *                   rating, enrollmentCount, totalDuration, createdAt, updatedAt,
- *                   category:     { _id, name, slug, description },
- *                   instructorId: { _id, fullname, email, avatarURL? },
- *                   sections: [{
- *                     _id, title,
- *                     items: [{ _id, itemType, title, orderIndex,
- *                               itemId: Lesson | Quiz }]
- *                   }],
- *                   isEnrolled?: boolean  ← chỉ có trong searchCourses }
- *
- *   Lesson:  { _id, title, videoUrl, videoPublicId, duration, courseId }
- *   Quiz:    { _id, title, courseId, questions }
- *   Preview: itemId chỉ có { _id, title, duration? } — không có videoUrl
- */
-
 class CourseService {
   // ─── GET /api/categories ───────────────────────────────────────────────────
   // → [{ _id, name, slug, description }]
@@ -105,12 +85,19 @@ class CourseService {
 
   // ─── POST /api/courses ────────────────────────────────────────────────────
   // Instructor only. Body: { title (max 60, required), description,
-  //                          categoryId (required), level (required), language? }
+  //                          categoryId (required), level (required), thumbnail?, language? }
   // BE tự set: status="draft", price=0
   // → Course (populated category.name, instructorId.fullname/email)
-  createCourse({ title, description, categoryId, level, language }) {
+  createCourse({ title, description, categoryId, level, language, thumbnail }) {
     return api
-      .post("/courses", { title, description, categoryId, level, language })
+      .post("/courses", {
+        title,
+        description,
+        categoryId,
+        level,
+        language,
+        thumbnail,
+      })
       .then((r) => r.data?.data ?? null);
   }
 
@@ -156,7 +143,8 @@ class CourseService {
       .post("/upload/images", form, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: onProgress
-          ? (e) => onProgress(e.total ? Math.round((e.loaded * 100) / e.total) : 0)
+          ? (e) =>
+              onProgress(e.total ? Math.round((e.loaded * 100) / e.total) : 0)
           : undefined,
       })
       .then((r) => r.data?.data ?? []);
@@ -184,6 +172,21 @@ class CourseService {
     return api
       .get("/courses/instructor/mine", { params: status ? { status } : {} })
       .then((r) => r.data?.data ?? []);
+  }
+
+  // ─── GET /api/courses/admin/all ───────────────────────────────────────────
+  // Admin only. Returns courses of ALL statuses with pagination + optional keyword/status filter.
+  // → { data: Course[], total, page, pages }
+  getAdminAllCourses({ status, page = 1, limit = 20, keyword } = {}) {
+    const params = { page, limit };
+    if (status && status !== "all") params.status = status;
+    if (keyword) params.keyword = keyword;
+    return api.get("/courses/admin/all", { params }).then((r) => ({
+      courses: r.data?.data ?? [],
+      total: r.data?.total ?? 0,
+      page: r.data?.page ?? 1,
+      pages: r.data?.pages ?? 1,
+    }));
   }
 
   // ─── PUT /api/courses/:courseId/approve ───────────────────────────────────

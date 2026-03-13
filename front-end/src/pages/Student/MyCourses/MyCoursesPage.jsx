@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
-import CourseService from "../../../services/api/CourseService";
-import useCourseStore from "../../../store/slices/courseStore";
+import PaymentService from "../../../services/api/PaymentService";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
@@ -22,14 +21,24 @@ const countLessons = (sections = []) =>
   );
 
 const TABS = ["all", "inProgress", "completed"];
+const TAB_LABELS = {
+  all: "All Courses",
+  inProgress: "In Progress",
+  completed: "Completed",
+};
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
-const MyCourseCard = ({ course, progress }) => {
+const MyCourseCard = ({ enrollment }) => {
   const navigate = useNavigate();
+  const { course, progress, continueLesson } = enrollment;
   const instructor =
-    course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
-  const lessons = countLessons(course.sections);
-  const duration = fmtDuration(course.totalDuration);
+    course?.instructor?.fullname ??
+    course?.instructorId?.fullname ??
+    course?.instructorId?.email ??
+    "Instructor";
+  const lessons = countLessons(course?.sections);
+  const duration = fmtDuration(course?.totalDuration);
+  const progressPct = Math.min(100, Math.max(0, progress ?? 0));
 
   return (
     <motion.div
@@ -37,22 +46,37 @@ const MyCourseCard = ({ course, progress }) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       className="overflow-hidden cursor-pointer glass-card rounded-2xl group"
-      onClick={() => navigate(`/student/learning/${course._id}`)}
+      onClick={() => course?._id && navigate(`/student/learning/${course._id}`)}
     >
-      <div className="relative overflow-hidden aspect-video bg-gradient-to-br from-primary/10 to-secondary/20">
+      <div
+        className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/20"
+        style={{ aspectRatio: "16/9" }}
+      >
         <img
           src={
-            course.thumbnail ||
+            course?.thumbnail ||
             "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop"
           }
-          alt={course.title}
-          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+          alt={course?.title}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+          className="transition-transform duration-500 group-hover:scale-105"
         />
-        {progress > 0 && (
+        {progressPct > 0 && (
           <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/20">
             <div
-              className="h-full transition-all duration-500 bg-secondary"
-              style={{ width: `${progress}%` }}
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${progressPct}%`,
+                background:
+                  progressPct === 100
+                    ? "#10B981"
+                    : "var(--gradient-brand, #667eea)",
+              }}
             />
           </div>
         )}
@@ -65,41 +89,39 @@ const MyCourseCard = ({ course, progress }) => {
 
       <div className="p-5">
         <div className="flex items-center gap-2 mb-2">
-          {course.category?.name && (
+          {course?.category?.name && (
             <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">
               {course.category.name}
             </span>
           )}
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted bg-white/50 px-2 py-0.5 rounded border border-border/30">
-            {course.level}
-          </span>
+          {course?.level && (
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted bg-white/50 px-2 py-0.5 rounded border border-border/30">
+              {course.level}
+            </span>
+          )}
         </div>
         <h3 className="mb-1 text-sm font-bold leading-snug text-heading line-clamp-2">
-          {course.title}
+          {course?.title}
         </h3>
         <p className="mb-3 text-xs text-muted">{instructor}</p>
-
         <div className="flex items-center gap-4 mb-4 text-xs text-muted">
           {duration && (
             <span className="flex items-center gap-1">
-              <Icon name="clock" size={12} />
-              {duration}
+              <Icon name="clock" size={12} /> {duration}
             </span>
           )}
           {lessons > 0 && (
             <span className="flex items-center gap-1">
-              <Icon name="book" size={12} />
-              {lessons} lessons
+              <Icon name="book" size={12} /> {lessons} lessons
             </span>
           )}
         </div>
-
         <div>
           <div className="flex justify-between text-xs mb-1.5">
             <span className="font-semibold text-body">
-              {progress > 0 ? `${progress}% complete` : "Not started"}
+              {progressPct > 0 ? `${progressPct}% complete` : "Not started"}
             </span>
-            {progress === 100 && (
+            {progressPct === 100 && (
               <span className="flex items-center gap-1 font-bold text-green-600">
                 <Icon name="award" size={12} color="#10B981" /> Complete
               </span>
@@ -109,20 +131,23 @@ const MyCourseCard = ({ course, progress }) => {
             <div
               className="h-full transition-all duration-500 rounded-full"
               style={{
-                width: `${progress}%`,
+                width: `${progressPct}%`,
                 background:
-                  progress === 100 ? "#10B981" : "var(--gradient-brand)",
+                  progressPct === 100
+                    ? "#10B981"
+                    : "var(--gradient-brand, #667eea)",
               }}
             />
           </div>
         </div>
-
         <button className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold transition-all btn-aurora">
-          {progress === 0
+          {progressPct === 0
             ? "Start Learning"
-            : progress === 100
+            : progressPct === 100
               ? "Review Course"
-              : "Continue"}
+              : continueLesson?.title
+                ? `Continue: ${continueLesson.title.slice(0, 28)}${continueLesson.title.length > 28 ? "…" : ""}`
+                : "Continue"}
         </button>
       </div>
     </motion.div>
@@ -133,47 +158,34 @@ const MyCourseCard = ({ course, progress }) => {
 const MyCoursesPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const { lessonProgress } = useCourseStore();
-
-  const [courses, setCourses] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
 
   useEffect(() => {
-    CourseService.getMyCourses({ limit: 50 })
-      .then((res) => setCourses(res.courses ?? []))
+    // Use enrollment endpoint which returns progress + continueLesson
+    PaymentService.getMyCourses()
+      .then((data) => setEnrollments(data ?? []))
       .catch(() => toast.error("Failed to load your courses"))
       .finally(() => setLoading(false));
   }, []);
 
-  const getProgress = (courseId, total) => {
-    const prog = lessonProgress[courseId];
-    if (!prog || total === 0) return 0;
-    return Math.round((prog.completedLessons.length / total) * 100);
-  };
-
-  const filtered = courses.filter((c) => {
-    const p = getProgress(c._id, countLessons(c.sections));
+  const filtered = enrollments.filter((e) => {
+    const p = e.progress ?? 0;
     if (tab === "inProgress") return p > 0 && p < 100;
-    if (tab === "completed") return p === 100;
+    if (tab === "completed") return p === 100 || e.completed;
     return true;
   });
 
   const tabCounts = {
-    all: courses.length,
-    inProgress: courses.filter((c) => {
-      const p = getProgress(c._id, countLessons(c.sections));
+    all: enrollments.length,
+    inProgress: enrollments.filter((e) => {
+      const p = e.progress ?? 0;
       return p > 0 && p < 100;
     }).length,
-    completed: courses.filter(
-      (c) => getProgress(c._id, countLessons(c.sections)) === 100,
+    completed: enrollments.filter(
+      (e) => (e.progress ?? 0) === 100 || e.completed,
     ).length,
-  };
-
-  const TAB_LABELS = {
-    all: "All Courses",
-    inProgress: "In Progress",
-    completed: "Completed",
   };
 
   return (
@@ -189,19 +201,20 @@ const MyCoursesPage = () => {
             My Courses
           </h1>
           <p className="text-muted">
-            {courses.length > 0
-              ? `Enrolled in ${courses.length} course${courses.length > 1 ? "s" : ""}`
+            {enrollments.length > 0
+              ? `Enrolled in ${enrollments.length} course${enrollments.length > 1 ? "s" : ""}`
               : "Your enrolled courses will appear here"}
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-8">
           {TABS.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all ${t === tab ? "btn-aurora" : "glass-card hover:border-primary/30"}`}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                t === tab ? "btn-aurora" : "glass-card hover:border-primary/30"
+              }`}
             >
               {TAB_LABELS[t]}
               {tabCounts[t] > 0 && (
@@ -222,7 +235,12 @@ const MyCoursesPage = () => {
                 key={i}
                 className="overflow-hidden glass-card rounded-2xl animate-pulse"
               >
-                <div className="aspect-video bg-white/40" />
+                <div
+                  style={{
+                    aspectRatio: "16/9",
+                    background: "rgba(255,255,255,0.4)",
+                  }}
+                />
                 <div className="p-5 space-y-3">
                   <div className="w-3/4 h-4 rounded-full bg-white/40" />
                   <div className="w-1/2 h-3 rounded-full bg-white/30" />
@@ -257,20 +275,14 @@ const MyCoursesPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((course, i) => (
+            {filtered.map((enrollment, i) => (
               <motion.div
-                key={course._id}
+                key={enrollment.enrollmentId || i}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
               >
-                <MyCourseCard
-                  course={course}
-                  progress={getProgress(
-                    course._id,
-                    countLessons(course.sections),
-                  )}
-                />
+                <MyCourseCard enrollment={enrollment} />
               </motion.div>
             ))}
           </div>

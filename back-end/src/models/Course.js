@@ -7,29 +7,29 @@ const sectionItemSchema = new mongoose.Schema(
     itemType: {
       type: String,
       enum: ["lesson", "quiz"],
-      required: true
+      required: true,
     },
     itemRef: {
       type: String,
       enum: ["Lesson", "Quiz"],
-      required: true
+      required: true,
     },
     itemId: {
       type: mongoose.Schema.Types.ObjectId,
       refPath: "sections.items.itemRef",
-      required: true
+      required: true,
     },
     title: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     orderIndex: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const sectionSchema = new mongoose.Schema(
@@ -37,14 +37,14 @@ const sectionSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     items: {
       type: [sectionItemSchema],
-      default: []
-    }
+      default: [],
+    },
   },
-  { _id: true }
+  { _id: true },
 );
 
 /* ================= COURSE ================= */
@@ -55,12 +55,12 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 60
+      maxlength: 60,
     },
 
     description: {
       type: String,
-      trim: true
+      trim: true,
     },
 
     price: {
@@ -68,14 +68,14 @@ const courseSchema = new mongoose.Schema(
       default: 0,
       validate: {
         validator: (v) => v >= 0,
-        message: "Price must be >= 0"
-      }
+        message: "Price must be >= 0",
+      },
     },
 
     status: {
       type: String,
       enum: ["draft", "pending", "published", "rejected", "archived"],
-      default: "draft"
+      default: "draft",
     },
 
     thumbnail: String,
@@ -84,48 +84,58 @@ const courseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       default: null,
-      index: true
+      index: true,
     },
 
     level: {
       type: String,
       enum: ["Beginner", "Intermediate", "Advanced"],
-      index: true
+      index: true,
     },
 
     /* Hiển thị ngôn ngữ khóa học. Dùng "none" để tránh lỗi text index (MongoDB không hỗ trợ Vietnamese). */
     language: {
       type: String,
-      default: "none"
+      default: "none",
     },
 
     rating: {
       type: Number,
-      default: 0
+      default: 0,
     },
 
     enrollmentCount: {
       type: Number,
-      default: 0
+      default: 0,
     },
 
     totalDuration: {
       type: Number,
-      default: 0
+      default: 0,
     }, // seconds
 
     instructorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
 
     sections: {
       type: [sectionSchema],
-      default: []
-    }
+      default: [],
+    },
+
+    rejectionReason: {
+      type: String,
+      default: "",
+    },
+
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 /* ================= INDEX SEARCH ================= */

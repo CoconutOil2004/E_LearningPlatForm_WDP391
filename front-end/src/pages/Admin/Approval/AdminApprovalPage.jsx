@@ -6,13 +6,13 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import {
+  Alert,
   Badge,
   Button,
   Card,
   Col,
   Empty,
   Form,
-  Image,
   Input,
   Modal,
   Row,
@@ -59,30 +59,54 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
         borderRadius: 16,
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
         overflow: "hidden",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
       }}
-      bodyStyle={{ padding: 0 }}
+      bodyStyle={{
+        padding: 0,
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+      }}
       hoverable
     >
-      {/* Thumbnail */}
-      <div style={{ position: "relative" }}>
-        <Image
+      {/* Thumbnail — fixed aspect ratio, object-fit: cover */}
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          paddingTop: "56.25%" /* 16:9 */,
+          background: COLOR.gray100,
+          overflow: "hidden",
+          flexShrink: 0,
+        }}
+      >
+        <img
           src={
             course.thumbnail ||
-            "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=300&fit=crop"
+            "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=338&fit=crop"
           }
           alt={course.title}
           style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
             width: "100%",
-            height: 180,
+            height: "100%",
             objectFit: "cover",
             display: "block",
           }}
-          preview={false}
+          onError={(e) => {
+            e.target.src =
+              "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=338&fit=crop";
+          }}
         />
+        {/* Overlay badges */}
         <div
           style={{
             position: "absolute",
-            bottom: 12,
+            bottom: 10,
             left: 12,
             right: 12,
             display: "flex",
@@ -90,15 +114,23 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
             alignItems: "flex-end",
           }}
         >
-          <Tag color="blue" style={{ borderRadius: 6, fontWeight: 600 }}>
+          <Tag
+            color="blue"
+            style={{
+              borderRadius: 6,
+              fontWeight: 600,
+              margin: 0,
+              backdropFilter: "blur(4px)",
+            }}
+          >
             {course.category?.name ?? "—"}
           </Tag>
           <Text
             strong
             style={{
               color: "white",
-              fontSize: 18,
-              textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+              fontSize: 17,
+              textShadow: "0 1px 6px rgba(0,0,0,0.6)",
             }}
           >
             {course.price === 0 ? "Free" : `$${course.price}`}
@@ -106,11 +138,20 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
         </div>
       </div>
 
-      <div style={{ padding: 20 }}>
-        {/* Title + level */}
+      <div
+        style={{
+          padding: 20,
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Level */}
         <Space size={6} style={{ marginBottom: 6 }}>
           <Tag style={{ borderRadius: 6, fontWeight: 600 }}>{course.level}</Tag>
         </Space>
+
+        {/* Title */}
         <Title
           level={5}
           style={{ margin: "0 0 4px", color: COLOR.ocean, lineHeight: 1.4 }}
@@ -118,7 +159,9 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
         >
           {course.title}
         </Title>
-        <Space size={6} style={{ marginBottom: 10 }}>
+
+        {/* Instructor */}
+        <Space size={6} style={{ marginBottom: 8 }}>
           <UserOutlined style={{ color: COLOR.gray500, fontSize: 12 }} />
           <Text type="secondary" style={{ fontSize: 12 }}>
             {instructor}
@@ -139,7 +182,7 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
         {/* Meta */}
         <Space
           split={<Text type="secondary">·</Text>}
-          style={{ marginBottom: 14, flexWrap: "wrap" }}
+          style={{ marginBottom: 12, flexWrap: "wrap" }}
         >
           <Text type="secondary" style={{ fontSize: 12 }}>
             {totalLessons} lessons
@@ -162,6 +205,7 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
               borderRadius: 10,
               padding: "10px 14px",
               marginBottom: 14,
+              flex: 1,
             }}
           >
             <Text
@@ -171,6 +215,8 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
+                display: "block",
+                marginBottom: 4,
               }}
             >
               Curriculum
@@ -181,7 +227,7 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  marginTop: 6,
+                  marginTop: 4,
                 }}
               >
                 <Text style={{ fontSize: 12 }} ellipsis>
@@ -196,16 +242,19 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
               </div>
             ))}
             {course.sections.length > 3 && (
-              <Text type="secondary" style={{ fontSize: 11 }}>
-                +{course.sections.length - 3} more
+              <Text
+                type="secondary"
+                style={{ fontSize: 11, marginTop: 4, display: "block" }}
+              >
+                +{course.sections.length - 3} more sections
               </Text>
             )}
           </div>
         )}
 
         {/* Actions */}
-        <Space style={{ width: "100%" }}>
-          <Tooltip title="Preview course">
+        <Space style={{ width: "100%", marginTop: "auto" }}>
+          <Tooltip title="Preview course detail">
             <Button
               icon={<EyeOutlined />}
               onClick={() => navigate(`/courses/${course._id}`)}
@@ -243,33 +292,55 @@ const RejectModal = ({ open, onConfirm, onCancel }) => {
   const [form] = Form.useForm();
 
   const handleOk = async () => {
-    const { reason } = await form.validateFields().catch(() => ({}));
+    try {
+      const values = await form.validateFields();
+      form.resetFields();
+      onConfirm(values.reason);
+    } catch {
+      // validation failed — keep modal open
+    }
+  };
+
+  const handleCancel = () => {
     form.resetFields();
-    onConfirm(reason ?? "");
+    onCancel();
   };
 
   return (
     <Modal
       open={open}
       title="Reject Course"
-      onCancel={() => {
-        form.resetFields();
-        onCancel();
-      }}
+      onCancel={handleCancel}
       onOk={handleOk}
       okText="Reject"
       okButtonProps={{ danger: true }}
-      width={460}
+      width={480}
+      destroyOnClose
     >
-      <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-        Provide a reason so the instructor can improve their course.
-      </Text>
+      <Alert
+        type="warning"
+        showIcon
+        message="A rejection reason is required so the instructor can improve their course."
+        style={{ marginBottom: 16, borderRadius: 8 }}
+      />
       <Form form={form} layout="vertical">
-        <Form.Item name="reason" label="Reason (optional)">
+        <Form.Item
+          name="reason"
+          label="Rejection Reason"
+          rules={[
+            {
+              required: true,
+              message: "Please provide a reason for rejection.",
+            },
+            { min: 10, message: "Reason must be at least 10 characters." },
+          ]}
+        >
           <TextArea
             rows={4}
-            placeholder="Reason for rejection..."
+            placeholder="e.g. The course content is incomplete — sections 3 and 4 are missing video content. Please add lesson videos before resubmitting."
             style={{ borderRadius: 8 }}
+            showCount
+            maxLength={500}
           />
         </Form.Item>
       </Form>
@@ -311,7 +382,7 @@ const AdminApprovalPage = () => {
     setProcessing(courseId);
     try {
       await CourseService.rejectCourse(courseId, reason);
-      toast.success("Course rejected.");
+      toast.success("Course rejected. The instructor has been notified.");
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
     } catch (err) {
       toast.error(err?.response?.data?.message ?? "Reject failed");
@@ -369,15 +440,23 @@ const AdminApprovalPage = () => {
           />
         </Card>
       ) : (
-        <Row gutter={[20, 20]}>
+        <Row gutter={[20, 20]} align="stretch">
           {courses.map((course) => (
-            <Col key={course._id} xs={24} md={12} lg={8}>
-              <CourseCard
-                course={course}
-                onApprove={handleApprove}
-                onReject={(id) => setRejectTarget(id)}
-                processing={processing}
-              />
+            <Col
+              key={course._id}
+              xs={24}
+              md={12}
+              lg={8}
+              style={{ display: "flex" }}
+            >
+              <div style={{ width: "100%" }}>
+                <CourseCard
+                  course={course}
+                  onApprove={handleApprove}
+                  onReject={(id) => setRejectTarget(id)}
+                  processing={processing}
+                />
+              </div>
             </Col>
           ))}
         </Row>
