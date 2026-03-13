@@ -548,6 +548,7 @@ const CreateCoursePage = () => {
       setSaving(true);
       await saveAndGetId(values);
       message.success("Draft saved successfully!");
+      navigate(ROUTES.INSTRUCTOR_COURSES);
     } catch (err) {
       if (err?.errorFields) return;
       message.error(err?.message || "Failed to save");

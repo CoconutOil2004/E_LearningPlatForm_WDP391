@@ -23,9 +23,9 @@ import {
   Typography,
 } from "antd";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
+import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR } from "../../../styles/adminTheme";
@@ -41,8 +41,13 @@ const fmtDuration = (s) => {
 };
 
 // ─── CourseCard ───────────────────────────────────────────────────────────────
-const CourseCard = ({ course, onApprove, onReject, processing }) => {
-  const navigate = useNavigate();
+const CourseCard = ({
+  course,
+  onApprove,
+  onReject,
+  onViewDetail,
+  processing,
+}) => {
   const instructor =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
   const duration = fmtDuration(course.totalDuration);
@@ -59,9 +64,10 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
         borderRadius: 16,
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
         overflow: "hidden",
-        height: "100%",
+        // Fixed height layout so all cards in a row are same height
         display: "flex",
         flexDirection: "column",
+        height: "100%",
       }}
       bodyStyle={{
         padding: 0,
@@ -71,12 +77,12 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
       }}
       hoverable
     >
-      {/* Thumbnail — fixed aspect ratio, object-fit: cover */}
+      {/* Thumbnail — 16:9 fixed */}
       <div
         style={{
           position: "relative",
           width: "100%",
-          paddingTop: "56.25%" /* 16:9 */,
+          paddingTop: "56.25%",
           background: COLOR.gray100,
           overflow: "hidden",
           flexShrink: 0,
@@ -102,7 +108,6 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
               "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&h=338&fit=crop";
           }}
         />
-        {/* Overlay badges */}
         <div
           style={{
             position: "absolute",
@@ -138,6 +143,7 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
         </div>
       </div>
 
+      {/* Body — flex:1 so content stretches */}
       <div
         style={{
           padding: 20,
@@ -146,21 +152,24 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
           flexDirection: "column",
         }}
       >
-        {/* Level */}
         <Space size={6} style={{ marginBottom: 6 }}>
           <Tag style={{ borderRadius: 6, fontWeight: 600 }}>{course.level}</Tag>
         </Space>
 
-        {/* Title */}
+        {/* Title — fixed 2 lines */}
         <Title
           level={5}
-          style={{ margin: "0 0 4px", color: COLOR.ocean, lineHeight: 1.4 }}
+          style={{
+            margin: "0 0 4px",
+            color: COLOR.ocean,
+            lineHeight: 1.4,
+            minHeight: 44,
+          }}
           ellipsis={{ rows: 2, tooltip: course.title }}
         >
           {course.title}
         </Title>
 
-        {/* Instructor */}
         <Space size={6} style={{ marginBottom: 8 }}>
           <UserOutlined style={{ color: COLOR.gray500, fontSize: 12 }} />
           <Text type="secondary" style={{ fontSize: 12 }}>
@@ -168,16 +177,25 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
           </Text>
         </Space>
 
-        {/* Description */}
-        {course.description && (
-          <Paragraph
-            type="secondary"
-            ellipsis={{ rows: 2 }}
-            style={{ fontSize: 12, marginBottom: 12 }}
-          >
-            {course.description}
-          </Paragraph>
-        )}
+        {/* Description — fixed 2 lines */}
+        <div style={{ minHeight: 36, marginBottom: 12 }}>
+          {course.description ? (
+            <Paragraph
+              type="secondary"
+              ellipsis={{ rows: 2 }}
+              style={{ fontSize: 12, margin: 0 }}
+            >
+              {course.description}
+            </Paragraph>
+          ) : (
+            <Text
+              type="secondary"
+              style={{ fontSize: 12, fontStyle: "italic" }}
+            >
+              No description
+            </Text>
+          )}
+        </div>
 
         {/* Meta */}
         <Space
@@ -197,31 +215,38 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
           </Text>
         </Space>
 
-        {/* Curriculum preview */}
-        {(course.sections?.length ?? 0) > 0 && (
-          <div
+        {/* Curriculum preview — fixed height */}
+        <div
+          style={{
+            background: COLOR.gray50,
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 14,
+            minHeight: 80,
+          }}
+        >
+          <Text
+            type="secondary"
             style={{
-              background: COLOR.gray50,
-              borderRadius: 10,
-              padding: "10px 14px",
-              marginBottom: 14,
-              flex: 1,
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              display: "block",
+              marginBottom: 4,
             }}
           >
+            Curriculum
+          </Text>
+          {(course.sections?.length ?? 0) === 0 ? (
             <Text
               type="secondary"
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                display: "block",
-                marginBottom: 4,
-              }}
+              style={{ fontSize: 12, fontStyle: "italic" }}
             >
-              Curriculum
+              No sections yet
             </Text>
-            {course.sections.slice(0, 3).map((sec, i) => (
+          ) : (
+            course.sections.slice(0, 3).map((sec, i) => (
               <div
                 key={sec._id ?? i}
                 style={{
@@ -240,24 +265,24 @@ const CourseCard = ({ course, onApprove, onReject, processing }) => {
                   {sec.items?.length ?? 0} items
                 </Text>
               </div>
-            ))}
-            {course.sections.length > 3 && (
-              <Text
-                type="secondary"
-                style={{ fontSize: 11, marginTop: 4, display: "block" }}
-              >
-                +{course.sections.length - 3} more sections
-              </Text>
-            )}
-          </div>
-        )}
+            ))
+          )}
+          {(course.sections?.length ?? 0) > 3 && (
+            <Text
+              type="secondary"
+              style={{ fontSize: 11, marginTop: 4, display: "block" }}
+            >
+              +{course.sections.length - 3} more sections
+            </Text>
+          )}
+        </div>
 
-        {/* Actions */}
+        {/* Actions pinned to bottom */}
         <Space style={{ width: "100%", marginTop: "auto" }}>
-          <Tooltip title="Preview course detail">
+          <Tooltip title="View full details & preview content">
             <Button
               icon={<EyeOutlined />}
-              onClick={() => navigate(`/courses/${course._id}`)}
+              onClick={() => onViewDetail(course)}
               style={{ borderRadius: 8 }}
             />
           </Tooltip>
@@ -297,20 +322,18 @@ const RejectModal = ({ open, onConfirm, onCancel }) => {
       form.resetFields();
       onConfirm(values.reason);
     } catch {
-      // validation failed — keep modal open
+      /* validation failed */
     }
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    onCancel();
   };
 
   return (
     <Modal
       open={open}
       title="Reject Course"
-      onCancel={handleCancel}
+      onCancel={() => {
+        form.resetFields();
+        onCancel();
+      }}
       onOk={handleOk}
       okText="Reject"
       okButtonProps={{ danger: true }}
@@ -337,7 +360,7 @@ const RejectModal = ({ open, onConfirm, onCancel }) => {
         >
           <TextArea
             rows={4}
-            placeholder="e.g. The course content is incomplete — sections 3 and 4 are missing video content. Please add lesson videos before resubmitting."
+            placeholder="e.g. The course content is incomplete — sections 3 and 4 are missing video content."
             style={{ borderRadius: 8 }}
             showCount
             maxLength={500}
@@ -356,6 +379,11 @@ const AdminApprovalPage = () => {
   const [processing, setProcessing] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
 
+  // detail modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   useEffect(() => {
     CourseService.getPendingCourses()
       .then(setCourses)
@@ -369,6 +397,7 @@ const AdminApprovalPage = () => {
       await CourseService.approveCourse(courseId);
       toast.success("Course approved and published!");
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
+      if (selectedCourse?._id === courseId) setModalOpen(false);
     } catch (err) {
       toast.error(err?.response?.data?.message ?? "Approve failed");
     } finally {
@@ -384,10 +413,25 @@ const AdminApprovalPage = () => {
       await CourseService.rejectCourse(courseId, reason);
       toast.success("Course rejected. The instructor has been notified.");
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
+      if (selectedCourse?._id === courseId) setModalOpen(false);
     } catch (err) {
       toast.error(err?.response?.data?.message ?? "Reject failed");
     } finally {
       setProcessing(null);
+    }
+  };
+
+  const handleViewDetail = async (course) => {
+    setSelectedCourse(course);
+    setModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const { course: full } = await CourseService.getCourseDetail(course._id);
+      if (full) setSelectedCourse(full);
+    } catch {
+      /* keep basic */
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -440,6 +484,7 @@ const AdminApprovalPage = () => {
           />
         </Card>
       ) : (
+        // align="stretch" + display:flex on Col ensures equal-height cards
         <Row gutter={[20, 20]} align="stretch">
           {courses.map((course) => (
             <Col
@@ -449,11 +494,12 @@ const AdminApprovalPage = () => {
               lg={8}
               style={{ display: "flex" }}
             >
-              <div style={{ width: "100%" }}>
+              <div style={{ width: "100%", display: "flex" }}>
                 <CourseCard
                   course={course}
                   onApprove={handleApprove}
                   onReject={(id) => setRejectTarget(id)}
+                  onViewDetail={handleViewDetail}
                   processing={processing}
                 />
               </div>
@@ -466,6 +512,16 @@ const AdminApprovalPage = () => {
         open={!!rejectTarget}
         onConfirm={handleRejectConfirm}
         onCancel={() => setRejectTarget(null)}
+      />
+
+      <CourseDetailModal
+        course={selectedCourse}
+        open={modalOpen}
+        loading={detailLoading}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedCourse(null);
+        }}
       />
     </AdminPageLayout>
   );

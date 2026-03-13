@@ -17,19 +17,25 @@ import {
   Typography,
 } from "antd";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
 import StatsRow from "../../../components/admin/StatsRow";
+import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
-import useAuthStore from "../../../store/slices/authStore";
 import { COLOR, STATUS_CONFIG } from "../../../styles/adminTheme";
 
 const { Text } = Typography;
 const { Option } = Select;
 
-const STATUS_TABS = ["all", "draft", "pending", "published", "rejected"];
+const STATUS_TABS = [
+  "all",
+  "draft",
+  "pending",
+  "published",
+  "rejected",
+  "archived",
+];
 
 const fmtDuration = (s) => {
   if (!s) return "—";
@@ -37,61 +43,105 @@ const fmtDuration = (s) => {
   return h > 0 ? `${h}h` : `${Math.floor(s / 60)}m`;
 };
 
-// ─── AdminCoursesPage ─────────────────────────────────────────────────────────
 const AdminCoursesPage = () => {
-  const navigate = useNavigate();
   const toast = useToast();
-  const { user } = useAuthStore();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
+  // modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const fetchCourses = async (
+    page = 1,
+    pageSize = 10,
+    status = "all",
+    keyword = "",
+  ) => {
+    setLoading(true);
+    try {
+      const res = await CourseService.getAdminAllCourses({
+        page,
+        limit: pageSize,
+        status: status !== "all" ? status : undefined,
+        keyword: keyword.trim() || undefined,
+      });
+      setCourses(res.courses ?? []);
+      setPagination((prev) => ({
+        ...prev,
+        current: page,
+        pageSize,
+        total: res.total ?? 0,
+      }));
+    } catch {
+      toast.error("Failed to load courses");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      CourseService.searchCourses({ page: 1, limit: 100 }),
-      CourseService.getPendingCourses().catch(() => []),
-    ])
-      .then(([searchRes, pendingList]) => {
-        const published = searchRes.courses ?? [];
-        const pendingIds = new Set(
-          (pendingList ?? []).map((c) => c._id?.toString()),
-        );
-        const merged = [
-          ...(pendingList ?? []),
-          ...published.filter((c) => !pendingIds.has(c._id?.toString())),
-        ];
-        setCourses(merged);
-      })
-      .catch(() => toast.error("Failed to load courses"))
-      .finally(() => setLoading(false));
+    fetchCourses(1, pagination.pageSize, filterStatus, search);
   }, []);
-
-  const filtered = courses
-    .filter((c) => filterStatus === "all" || c.status === filterStatus)
-    .filter(
-      (c) => !search || c.title?.toLowerCase().includes(search.toLowerCase()),
+  useEffect(() => {
+    const t = setTimeout(
+      () => fetchCourses(1, pagination.pageSize, filterStatus, search),
+      300,
     );
+    return () => clearTimeout(t);
+  }, [filterStatus, search]);
+
+  const handleTableChange = (pag) =>
+    fetchCourses(pag.current, pag.pageSize, filterStatus, search);
+
+  const handleViewDetail = async (record) => {
+    setSelectedCourse(record);
+    setModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const { course: full } = await CourseService.getCourseDetail(record._id);
+      if (full) setSelectedCourse(full);
+    } catch {
+      /* keep basic */
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const statusCounts = {
+    published: courses.filter((c) => c.status === "published").length,
+    pending: courses.filter((c) => c.status === "pending").length,
+    enrollments: courses.reduce((a, c) => a + (c.enrollmentCount ?? 0), 0),
+  };
 
   const stats = [
-    { title: "Total Courses", value: courses.length, prefix: <BookOutlined /> },
     {
-      title: "Published",
-      value: courses.filter((c) => c.status === "published").length,
+      title: "Total Courses",
+      value: pagination.total,
+      prefix: <BookOutlined />,
+    },
+    {
+      title: "Published (page)",
+      value: statusCounts.published,
       valueColor: COLOR.green,
     },
     {
-      title: "In Review",
-      value: courses.filter((c) => c.status === "pending").length,
+      title: "In Review (page)",
+      value: statusCounts.pending,
       valueColor: COLOR.warning,
     },
     {
-      title: "Total Enrollments",
-      value: courses
-        .reduce((a, c) => a + (c.enrollmentCount ?? 0), 0)
-        .toLocaleString(),
+      title: "Enrollments (page)",
+      value: statusCounts.enrollments.toLocaleString(),
       prefix: <TeamOutlined />,
     },
   ];
@@ -101,29 +151,40 @@ const AdminCoursesPage = () => {
       title: "Course",
       key: "course",
       fixed: "left",
-      width: 300,
+      width: 320,
       render: (_, record) => (
         <Space size={12}>
-          <Image
-            src={
-              record.thumbnail ||
-              "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=80&h=56&fit=crop"
-            }
-            width={64}
-            height={44}
-            style={{ borderRadius: 8, objectFit: "cover" }}
-            preview={false}
-          />
-          <Space direction="vertical" size={0}>
+          <div
+            style={{
+              width: 72,
+              height: 48,
+              borderRadius: 8,
+              overflow: "hidden",
+              flexShrink: 0,
+              background: "#f0f0f0",
+            }}
+          >
+            <Image
+              src={
+                record.thumbnail ||
+                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=80&h=56&fit=crop"
+              }
+              width={72}
+              height={48}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              preview={false}
+            />
+          </div>
+          <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
             <Text
               strong
-              style={{ color: COLOR.ocean }}
+              style={{ color: COLOR.ocean, display: "block", maxWidth: 200 }}
               ellipsis={{ tooltip: record.title }}
             >
               {record.title}
             </Text>
             <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.category?.name ?? "—"} · {record.level}
+              {record.category?.name ?? "—"} · {record.level ?? "—"}
             </Text>
           </Space>
         </Space>
@@ -143,6 +204,7 @@ const AdminCoursesPage = () => {
               style={{
                 background: `linear-gradient(135deg, ${COLOR.teal}, ${COLOR.ocean})`,
                 fontSize: 11,
+                flexShrink: 0,
               }}
             >
               {name[0]?.toUpperCase()}
@@ -209,7 +271,7 @@ const AdminCoursesPage = () => {
         <Button
           icon={<EyeOutlined />}
           size="small"
-          onClick={() => navigate(`/courses/${record._id}`)}
+          onClick={() => handleViewDetail(record)}
           style={{ borderRadius: 8 }}
         >
           View
@@ -224,20 +286,18 @@ const AdminCoursesPage = () => {
         title="Course Management"
         subtitle="View and manage all courses across the platform"
       />
-
       <StatsRow items={stats} />
-
       <Card
         bordered={false}
         style={{ borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
       >
-        {/* Toolbar */}
         <Space
           style={{
             marginBottom: 16,
             width: "100%",
             justifyContent: "space-between",
             flexWrap: "wrap",
+            gap: 8,
           }}
         >
           <Input
@@ -251,7 +311,7 @@ const AdminCoursesPage = () => {
           <Select
             value={filterStatus}
             onChange={setFilterStatus}
-            style={{ width: 160, borderRadius: 8 }}
+            style={{ width: 160 }}
           >
             {STATUS_TABS.map((s) => (
               <Option key={s} value={s}>
@@ -260,20 +320,33 @@ const AdminCoursesPage = () => {
             ))}
           </Select>
         </Space>
-
         <Table
           columns={columns}
-          dataSource={filtered}
+          dataSource={courses}
           loading={loading}
           rowKey="_id"
           scroll={{ x: 1100 }}
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showTotal: (t) => `Total ${t} courses`,
+            pageSizeOptions: ["10", "20", "50"],
           }}
+          onChange={handleTableChange}
         />
       </Card>
+
+      <CourseDetailModal
+        course={selectedCourse}
+        open={modalOpen}
+        loading={detailLoading}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedCourse(null);
+        }}
+      />
     </AdminPageLayout>
   );
 };
