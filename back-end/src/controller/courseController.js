@@ -352,6 +352,10 @@ exports.getCoursePreview = async (req, res) => {
       .populate({ path: "sections.items.itemId", select: "title duration" })
       .lean();
 
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
     // Response object — thêm thumbnail
     res.json({
       success: true,
@@ -367,7 +371,7 @@ exports.getCoursePreview = async (req, res) => {
         thumbnail: course.thumbnail ?? null, // ← THÊM DÒNG NÀY
         category: course.category,
         instructorId: course.instructorId,
-        sections,
+        sections: course.sections,
       },
     });
   } catch (error) {

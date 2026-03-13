@@ -8,8 +8,17 @@ import {
   QuestionCircleOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { Button, Card, message, Tag, Typography } from "antd";
-import { useEffect, useState } from "react";
+import {
+  Progress as AntProgress,
+  Button,
+  Card,
+  message,
+  Space,
+  Tag,
+  Typography,
+} from "antd";
+import { useEffect, useRef, useState } from "react";
+import ReactPlayer from "react-player"; // <-- Thư viện Video tối ưu
 import { useNavigate, useParams } from "react-router-dom";
 import CourseService from "../../../services/api/CourseService";
 import useCourseStore from "../../../store/slices/courseStore";
@@ -17,15 +26,16 @@ import { ROUTES } from "../../../utils/constants";
 
 const { Text, Title } = Typography;
 
+/* ─── Helpers ───────────────────────────────────────────────────────────── */
 const fmtTime = (s) => {
-  if (!s) return "—";
-  const m = Math.floor(s / 60),
-    sec = s % 60;
+  if (!s) return "0:00";
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
   return `${m}:${String(sec).padStart(2, "0")}`;
 };
 
-// ─── Quiz Player ─────────────────────────────────────────────────────────────
-const QuizPlayer = ({ quiz, courseId, onComplete }) => {
+/* ─── Quiz Player (Giữ nguyên UI, tối ưu Logic & Fix data type) ────────── */
+const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
@@ -41,15 +51,25 @@ const QuizPlayer = ({ quiz, courseId, onComplete }) => {
   const handleSubmit = () => {
     let correct = 0;
     questions.forEach((q, qi) => {
-      if (answers[qi] === q.correctAnswerIndex) correct++;
+      // FIX: Ép kiểu correctAnswer từ string sang number để so sánh
+      if (answers[qi] === parseInt(q.correctAnswer, 10)) correct++;
     });
+
     const sc =
       questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
     setScore(sc);
     setSubmitted(true);
     saveQuizScore(courseId, sc);
-    if (sc >= 70) message.success(`Chúc mừng! Điểm của bạn: ${sc}/100`);
-    else message.warning(`Điểm của bạn: ${sc}/100. Hãy thử lại!`);
+
+    // Auto mark as complete if pass
+    if (sc >= 70) {
+      message.success(`Chúc mừng! Điểm của bạn: ${sc}/100`);
+      onComplete(); // Tự động đánh dấu hoàn thành lesson này trên store
+    } else {
+      message.warning(
+        `Điểm của bạn: ${sc}/100. Hãy thử lại để đạt ít nhất 70 điểm!`,
+      );
+    }
   };
 
   if (questions.length === 0)
@@ -69,7 +89,13 @@ const QuizPlayer = ({ quiz, courseId, onComplete }) => {
         <Text style={{ color: "rgba(255,255,255,0.6)" }}>
           Quiz này chưa có câu hỏi
         </Text>
-        <Button type="primary" onClick={onComplete}>
+        <Button
+          type="primary"
+          onClick={() => {
+            onComplete();
+            onNext();
+          }}
+        >
           Tiếp tục
         </Button>
       </div>
@@ -94,20 +120,20 @@ const QuizPlayer = ({ quiz, courseId, onComplete }) => {
           {submitted && (
             <Tag
               color={score >= 70 ? "success" : "error"}
-              style={{ fontSize: 14 }}
+              style={{ fontSize: 14, padding: "4px 12px" }}
             >
-              {score}/100
+              Score: {score}/100
             </Tag>
           )}
         </div>
 
         {questions.map((q, qi) => {
           const userAns = answers[qi];
-          const isCorrect = submitted && userAns === q.correctAnswerIndex;
+          const correctIdx = parseInt(q.correctAnswer, 10); // Đã ép kiểu
+          const isCorrect = submitted && userAns === correctIdx;
           const isWrong =
-            submitted &&
-            userAns !== undefined &&
-            userAns !== q.correctAnswerIndex;
+            submitted && userAns !== undefined && userAns !== correctIdx;
+
           return (
             <Card
               key={qi}
@@ -126,20 +152,28 @@ const QuizPlayer = ({ quiz, courseId, onComplete }) => {
             >
               <Text
                 strong
-                style={{ color: "#fff", display: "block", marginBottom: 12 }}
+                style={{
+                  color: "#fff",
+                  display: "block",
+                  marginBottom: 16,
+                  fontSize: 15,
+                }}
               >
-                {qi + 1}. {q.question}
+                {qi + 1}. {q.text} {/* SỬA THÀNH q.text theo JSON */}
               </Text>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
                 {(q.options ?? []).map((opt, oi) => {
                   const isSelected = userAns === oi;
-                  const isCorrectOpt = submitted && oi === q.correctAnswerIndex;
+                  const isCorrectOpt = submitted && oi === correctIdx;
+
                   return (
                     <div
                       key={oi}
                       onClick={() => handleSelect(qi, oi)}
                       style={{
-                        padding: "10px 14px",
+                        padding: "12px 16px",
                         borderRadius: 8,
                         cursor: submitted ? "default" : "pointer",
                         background: isCorrectOpt
@@ -155,7 +189,7 @@ const QuizPlayer = ({ quiz, courseId, onComplete }) => {
                             ? "1px solid #6366f1"
                             : "1px solid transparent",
                         color: "#e5e7eb",
-                        transition: "all 0.2s",
+                        transition: "all 0.2s ease",
                       }}
                     >
                       {opt}
@@ -173,31 +207,123 @@ const QuizPlayer = ({ quiz, courseId, onComplete }) => {
             size="large"
             block
             onClick={handleSubmit}
+            disabled={Object.keys(answers).length !== questions.length}
             style={{
               borderRadius: 12,
               background: "linear-gradient(135deg,#667eea,#764ba2)",
               border: "none",
+              marginTop: 8,
             }}
           >
             Nộp bài
           </Button>
         ) : (
-          <Button
-            type="primary"
-            size="large"
-            block
-            onClick={onComplete}
-            style={{ borderRadius: 12, background: "#10b981", border: "none" }}
+          <Space
+            style={{ width: "100%", marginTop: 8 }}
+            direction="vertical"
+            size={12}
           >
-            Tiếp tục
-          </Button>
+            {score < 70 && (
+              <Button
+                size="large"
+                block
+                onClick={() => {
+                  setAnswers({});
+                  setSubmitted(false);
+                }}
+                style={{
+                  borderRadius: 12,
+                  background: "transparent",
+                  color: "#fff",
+                  borderColor: "#4B5563",
+                }}
+              >
+                Làm lại
+              </Button>
+            )}
+            <Button
+              type="primary"
+              size="large"
+              block
+              onClick={onNext}
+              style={{
+                borderRadius: 12,
+                background: "#10b981",
+                border: "none",
+              }}
+            >
+              Bài tiếp theo
+            </Button>
+          </Space>
         )}
       </div>
     </div>
   );
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+/* ─── Video Component có Tracking bằng ReactPlayer ──────────────────────── */
+const TrackedVideoPlayer = ({ url, onComplete, onEnded }) => {
+  const playerRef = useRef(null);
+
+  const handleProgress = (state) => {
+    // Nếu người dùng xem được 90% video -> Đánh dấu hoàn thành tự động
+    if (state.played >= 0.9) {
+      onComplete();
+    }
+  };
+
+  if (!url) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#111827",
+        }}
+      >
+        <PlayCircleOutlined
+          style={{
+            fontSize: 48,
+            color: "rgba(255,255,255,0.2)",
+            marginBottom: 12,
+          }}
+        />
+        <Text style={{ color: "rgba(255,255,255,0.5)" }}>
+          Bài học này chưa có video
+        </Text>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        background: "#000",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <ReactPlayer
+        ref={playerRef}
+        url={url}
+        width="100%"
+        height="100%"
+        controls
+        playing={true} // Auto play
+        onProgress={handleProgress}
+        onEnded={onEnded} // Hết video thì next hoặc báo xong
+        config={{ file: { attributes: { controlsList: "nodownload" } } }} // Chống tải lậu cơ bản
+      />
+    </div>
+  );
+};
+
+/* ─── Main Page ───────────────────────────────────────────────────────────── */
 const LearningPage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -205,8 +331,7 @@ const LearningPage = () => {
     markLessonComplete,
     setCurrentLesson,
     lessonProgress,
-    saveQuizScore,
-    enrolledCourseIds, // BƯỚC 1: Lấy enrolledCourseIds từ store
+    enrolledCourseIds,
   } = useCourseStore();
 
   const [course, setCourse] = useState(null);
@@ -215,10 +340,10 @@ const LearningPage = () => {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Khởi tạo Data
   useEffect(() => {
     if (!courseId) return;
     CourseService.getCourseDetail(courseId)
-      // Đổi tên isEnrolled của server thành serverEnrolled để dễ phân biệt
       .then(({ course: data, isEnrolled: serverEnrolled }) => {
         if (!data) {
           message.error("Không tìm thấy khóa học");
@@ -226,11 +351,8 @@ const LearningPage = () => {
           return;
         }
 
-        // BƯỚC 2: Kiểm tra enroll dựa vào store HOẶC server
         const hasEnrolled =
           enrolledCourseIds.includes(courseId) || serverEnrolled;
-
-        // Nếu chưa enroll → redirect về trang mua
         if (!hasEnrolled) {
           message.warning(
             "Bạn chưa đăng ký khóa học này. Vui lòng mua để tiếp tục.",
@@ -240,28 +362,24 @@ const LearningPage = () => {
         }
 
         setCourse(data);
-        // Build flat list of ALL items (lessons + quizzes)
         const flat = [];
-        for (const sec of data.sections ?? []) {
-          for (const item of sec.items ?? []) {
+        (data.sections ?? []).forEach((sec) => {
+          (sec.items ?? []).forEach((item) => {
             flat.push({
               ...item,
               sectionTitle: sec.title,
               flatIdx: flat.length,
             });
-          }
-        }
+          });
+        });
         setFlatItems(flat);
+
         const saved = lessonProgress[courseId]?.currentLesson;
         if (saved != null) setActiveIdx(saved);
       })
       .catch((err) => {
-        const status = err?.response?.status;
-        if (status === 403 || status === 401) {
-          // BE cũ trả 403 → student chưa mua → redirect về trang detail để mua
-          message.warning(
-            "Bạn chưa đăng ký khóa học này. Vui lòng mua để tiếp tục.",
-          );
+        if (err?.response?.status === 403 || err?.response?.status === 401) {
+          message.warning("Bạn chưa đăng ký khóa học này.");
           navigate(`/courses/${courseId}`);
         } else {
           message.error("Không thể tải khóa học");
@@ -273,7 +391,7 @@ const LearningPage = () => {
 
   const completed = lessonProgress[courseId]?.completedLessons ?? [];
   const lessonItems = flatItems.filter((i) => i.itemType === "lesson");
-  const progress =
+  const progressPercent =
     lessonItems.length > 0
       ? Math.round((completed.length / lessonItems.length) * 100)
       : 0;
@@ -284,25 +402,31 @@ const LearningPage = () => {
     setCurrentLesson(courseId, idx);
   };
 
-  const handleComplete = () => {
-    if (activeItem?.itemType === "lesson") {
-      // mark lesson complete by flat index
+  const markCurrentAsComplete = () => {
+    if (activeItem?.itemType === "lesson" || activeItem?.itemType === "quiz") {
       markLessonComplete(courseId, activeIdx);
     }
-    if (activeIdx < flatItems.length - 1) goTo(activeIdx + 1);
-    else message.success("🎉 Bạn đã hoàn thành khóa học!");
   };
 
-  // Build sections with flat indexes
+  const handleNext = () => {
+    markCurrentAsComplete();
+    if (activeIdx < flatItems.length - 1) {
+      goTo(activeIdx + 1);
+    } else {
+      message.success("🎉 Chúc mừng bạn đã hoàn thành toàn bộ khóa học!");
+    }
+  };
+
+  // Build Layout Data
   const sectionsWithIdx = [];
   let fc = 0;
-  for (const sec of course?.sections ?? []) {
-    const mapped = [];
-    for (const item of sec.items ?? []) {
-      mapped.push({ ...item, flatIdx: fc++ });
-    }
+  (course?.sections ?? []).forEach((sec) => {
+    const mapped = (sec.items ?? []).map((item) => ({
+      ...item,
+      flatIdx: fc++,
+    }));
     if (mapped.length) sectionsWithIdx.push({ ...sec, mappedItems: mapped });
-  }
+  });
 
   if (loading)
     return (
@@ -320,13 +444,14 @@ const LearningPage = () => {
             width: 32,
             height: 32,
             borderRadius: "50%",
-            border: "2px solid #667eea",
+            border: "3px solid #667eea",
             borderTopColor: "transparent",
-            animation: "spin 0.8s linear infinite",
+            animation: "spin 1s linear infinite",
           }}
         />
       </div>
     );
+
   if (!course) return null;
 
   return (
@@ -340,19 +465,20 @@ const LearningPage = () => {
         color: "#fff",
       }}
     >
-      {/* ── Top bar ─── */}
+      {/* ── Header ── */}
       <header
         style={{
-          height: 56,
+          height: 60,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 16px",
+          padding: "0 20px",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
           flexShrink: 0,
+          background: "#111827",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
@@ -362,52 +488,49 @@ const LearningPage = () => {
           <div>
             <Text
               style={{
-                color: "rgba(255,255,255,0.4)",
-                fontSize: 11,
+                color: "#9CA3AF",
+                fontSize: 12,
                 display: "block",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
               }}
             >
               {course.category?.name}
             </Text>
-            <Text
-              strong
+            <Title
+              level={5}
               style={{
                 color: "#fff",
-                fontSize: 13,
-                maxWidth: 300,
-                display: "block",
+                margin: 0,
+                maxWidth: 400,
+                whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
               {course.title}
-            </Text>
+            </Title>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div
-              style={{
-                width: 140,
-                height: 6,
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: 3,
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  width: `${progress}%`,
-                  height: "100%",
-                  background: "#10b981",
-                  borderRadius: 3,
-                  transition: "width 0.4s",
-                }}
-              />
-            </div>
-            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
-              {progress}%
+
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              width: 200,
+            }}
+          >
+            <AntProgress
+              percent={progressPercent}
+              strokeColor="#10b981"
+              trailColor="rgba(255,255,255,0.1)"
+              showInfo={false}
+              style={{ flex: 1, margin: 0 }}
+            />
+            <Text style={{ color: "#9CA3AF", fontSize: 13, minWidth: 40 }}>
+              {progressPercent}%
             </Text>
           </div>
           <Button
@@ -419,155 +542,129 @@ const LearningPage = () => {
         </div>
       </header>
 
-      {/* ── Body ─── */}
+      {/* ── Body ── */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* ── Sidebar LEFT ─── */}
+        {/* Sidebar */}
         {sidebarOpen && (
           <div
             style={{
-              width: 300,
+              width: 320,
               flexShrink: 0,
               background: "#111827",
               borderRight: "1px solid rgba(255,255,255,0.08)",
               display: "flex",
               flexDirection: "column",
-              overflow: "hidden",
             }}
           >
             <div
               style={{
-                padding: "12px 16px",
+                padding: "16px 20px",
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              <Text
-                style={{
-                  color: "rgba(255,255,255,0.4)",
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  letterSpacing: 1,
-                  display: "block",
-                }}
-              >
+              <Text strong style={{ color: "#fff", fontSize: 14 }}>
                 Nội dung khóa học
               </Text>
-              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
-                {completed.length}/{lessonItems.length} bài hoàn thành
+              <Text
+                style={{
+                  color: "#9CA3AF",
+                  fontSize: 13,
+                  display: "block",
+                  marginTop: 4,
+                }}
+              >
+                Đã hoàn thành {completed.length}/{lessonItems.length} bài học
               </Text>
             </div>
+
             <div style={{ flex: 1, overflowY: "auto" }}>
               {sectionsWithIdx.map((sec, si) => (
-                <div
-                  key={sec._id || si}
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-                >
+                <div key={sec._id || si}>
                   <div
                     style={{
-                      padding: "10px 16px",
-                      background: "rgba(255,255,255,0.03)",
+                      padding: "12px 20px",
+                      background: "#1F2937",
+                      borderBottom: "1px solid rgba(255,255,255,0.04)",
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "rgba(255,255,255,0.5)",
-                        fontSize: 11,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.8,
-                      }}
-                    >
+                    <Text strong style={{ color: "#D1D5DB", fontSize: 13 }}>
                       {sec.title}
                     </Text>
                   </div>
                   {sec.mappedItems.map((item) => {
-                    const isDone =
-                      item.itemType === "lesson" &&
-                      completed.includes(item.flatIdx);
+                    const isDone = completed.includes(item.flatIdx);
                     const isActive = item.flatIdx === activeIdx;
                     const isQuiz = item.itemType === "quiz";
+
                     return (
                       <div
                         key={item._id || item.flatIdx}
                         onClick={() => goTo(item.flatIdx)}
                         style={{
                           display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "10px 16px",
+                          gap: 12,
+                          padding: "12px 20px",
                           cursor: "pointer",
                           background: isActive
-                            ? "rgba(102,126,234,0.15)"
+                            ? "rgba(99,102,241,0.15)"
                             : "transparent",
                           borderLeft: isActive
-                            ? "2px solid #667eea"
-                            : "2px solid transparent",
-                          transition: "all 0.15s",
+                            ? "3px solid #6366f1"
+                            : "3px solid transparent",
+                          borderBottom: "1px solid rgba(255,255,255,0.02)",
+                          transition: "background 0.2s",
                         }}
                       >
                         <div
                           style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            fontSize: 10,
-                            fontWeight: 700,
-                            background: isDone
+                            marginTop: 2,
+                            color: isDone
                               ? "#10b981"
-                              : isQuiz
-                                ? "rgba(139,92,246,0.2)"
-                                : isActive
-                                  ? "#667eea"
-                                  : "rgba(255,255,255,0.08)",
-                            color:
-                              isDone || isActive
-                                ? "#fff"
-                                : isQuiz
-                                  ? "#8B5CF6"
-                                  : "rgba(255,255,255,0.4)",
+                              : isActive
+                                ? "#6366f1"
+                                : "#6B7280",
                           }}
                         >
                           {isDone ? (
-                            <CheckCircleFilled style={{ fontSize: 12 }} />
+                            <CheckCircleFilled />
                           ) : isQuiz ? (
-                            <QuestionCircleOutlined style={{ fontSize: 12 }} />
+                            <QuestionCircleOutlined />
                           ) : (
-                            item.flatIdx + 1
+                            <PlayCircleOutlined />
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <Text
                             style={{
-                              color: isActive
-                                ? "#fff"
-                                : "rgba(255,255,255,0.6)",
-                              fontSize: 12,
-                              fontWeight: isActive ? 600 : 400,
+                              color: isActive ? "#fff" : "#D1D5DB",
+                              fontSize: 13,
+                              fontWeight: isActive ? 500 : 400,
                               display: "block",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
+                              marginBottom: 4,
                             }}
                           >
                             {item.title}
                           </Text>
-                          {item.itemId?.duration > 0 && (
-                            <Text
-                              style={{
-                                color: "rgba(255,255,255,0.3)",
-                                fontSize: 10,
-                              }}
-                            >
-                              {fmtTime(item.itemId.duration)}
-                            </Text>
-                          )}
-                          {isQuiz && (
-                            <Text style={{ color: "#8B5CF6", fontSize: 10 }}>
-                              Quiz
-                            </Text>
-                          )}
+                          <Space size={12}>
+                            {item.itemId?.duration > 0 && (
+                              <Text style={{ color: "#6B7280", fontSize: 12 }}>
+                                {fmtTime(item.itemId.duration)}
+                              </Text>
+                            )}
+                            {isQuiz && (
+                              <Tag
+                                color="purple"
+                                style={{
+                                  margin: 0,
+                                  fontSize: 10,
+                                  lineHeight: "16px",
+                                  border: "none",
+                                }}
+                              >
+                                Quiz
+                              </Tag>
+                            )}
+                          </Space>
                         </div>
                       </div>
                     );
@@ -578,66 +675,38 @@ const LearningPage = () => {
           </div>
         )}
 
-        {/* Content area RIGHT */}
+        {/* Content Area */}
         <div
           style={{
             flex: 1,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            position: "relative",
           }}
         >
+          {/* Main Viewer */}
           {activeItem?.itemType === "quiz" ? (
             <QuizPlayer
               quiz={activeItem.itemId}
               courseId={courseId}
-              onComplete={handleComplete}
-            />
-          ) : activeItem?.itemId?.videoUrl ? (
-            <video
-              key={activeItem.itemId._id ?? activeIdx}
-              src={activeItem.itemId.videoUrl}
-              controls
-              style={{
-                flex: 1,
-                width: "100%",
-                background: "#000",
-                objectFit: "contain",
-              }}
-              onEnded={handleComplete}
+              onComplete={markCurrentAsComplete}
+              onNext={handleNext}
             />
           ) : (
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "#111827",
-              }}
-            >
-              <PlayCircleOutlined
-                style={{
-                  fontSize: 48,
-                  color: "rgba(255,255,255,0.2)",
-                  marginBottom: 12,
-                }}
-              />
-              <Text style={{ color: "rgba(255,255,255,0.5)" }}>
-                {activeItem
-                  ? "Bài học này chưa có video"
-                  : "Chọn bài học để bắt đầu"}
-              </Text>
-            </div>
+            <TrackedVideoPlayer
+              url={activeItem?.itemId?.videoUrl}
+              onComplete={markCurrentAsComplete}
+              onEnded={handleNext}
+            />
           )}
 
-          {/* Controls */}
-          {activeItem && activeItem.itemType !== "quiz" && (
+          {/* Bottom Bar (Only for video to show manual controls) */}
+          {activeItem?.itemType !== "quiz" && (
             <div
               style={{
-                padding: "12px 24px",
-                background: "#1f2937",
+                padding: "16px 24px",
+                background: "#111827",
                 borderTop: "1px solid rgba(255,255,255,0.08)",
                 display: "flex",
                 alignItems: "center",
@@ -646,23 +715,25 @@ const LearningPage = () => {
               }}
             >
               <div>
-                <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
-                  {activeIdx + 1} / {flatItems.length}
+                <Text
+                  style={{
+                    color: "#9CA3AF",
+                    fontSize: 13,
+                    display: "block",
+                    marginBottom: 4,
+                  }}
+                >
+                  Bài {activeIdx + 1} / {flatItems.length}
                 </Text>
                 <Title level={5} style={{ color: "#fff", margin: 0 }}>
-                  {activeItem.title}
+                  {activeItem?.title}
                 </Title>
-                {activeItem.itemId?.duration > 0 && (
-                  <Text
-                    style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}
-                  >
-                    {fmtTime(activeItem.itemId.duration)}
-                  </Text>
-                )}
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+
+              <div style={{ display: "flex", gap: 12 }}>
                 <Button
                   icon={<LeftOutlined />}
+                  size="large"
                   disabled={activeIdx === 0}
                   onClick={() => goTo(Math.max(0, activeIdx - 1))}
                   style={{
@@ -671,15 +742,17 @@ const LearningPage = () => {
                     color: "#fff",
                   }}
                 />
+
                 <Button
                   type="primary"
-                  onClick={handleComplete}
+                  size="large"
+                  onClick={handleNext}
                   style={{
                     background: completed.includes(activeIdx)
                       ? "#10b981"
                       : "linear-gradient(135deg,#667eea,#764ba2)",
                     border: "none",
-                    borderRadius: 10,
+                    minWidth: 140,
                   }}
                   icon={
                     completed.includes(activeIdx) ? (
@@ -689,12 +762,12 @@ const LearningPage = () => {
                 >
                   {completed.includes(activeIdx)
                     ? "Đã hoàn thành"
-                    : activeIdx === flatItems.length - 1
-                      ? "Hoàn thành khóa học"
-                      : "Xong & tiếp theo"}
+                    : "Hoàn thành & Tiếp"}
                 </Button>
+
                 <Button
                   icon={<RightOutlined />}
+                  size="large"
                   disabled={activeIdx === flatItems.length - 1}
                   onClick={() =>
                     goTo(Math.min(flatItems.length - 1, activeIdx + 1))
