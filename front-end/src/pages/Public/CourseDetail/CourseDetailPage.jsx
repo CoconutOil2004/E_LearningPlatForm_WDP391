@@ -100,51 +100,24 @@ const CourseDetailPage = () => {
       .finally(() => setEnrollChecked(true));
   }, [isAuthenticated, id]);
 
-  // ── Load course data ───────────────────────────────────────────────────────
-  // Compatible với cả BE mới (optionalAuth) lẫn BE cũ (protect + 403 cho unenrolled)
+  // ── Load course data — chỉ gọi preview (public, không cần login) ────────────
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-
-    const load = async () => {
-      try {
-        const { course: data, isEnrolled: serverEnrolled } =
-          await CourseService.getCourseDetail(id);
-        if (!data) throw new Error("Not found");
-        setCourse(data);
-        if (serverEnrolled && data._id) {
-          const courseIdStr = data._id.toString();
-          const current = useCourseStore.getState().enrolledCourseIds ?? [];
-          if (!current.includes(courseIdStr)) {
-            setEnrolledCourseIds([...current, courseIdStr]);
-          }
-        }
-      } catch (err) {
-        const status = err?.response?.status;
-        if (status === 403 || status === 401) {
-          // BE cũ: student chưa enroll hoặc guest → fallback về preview public
-          try {
-            const preview = await CourseService.getCoursePreview(id);
-            if (preview) {
-              setCourse(preview);
-            } else {
-              message.error("Không tìm thấy khóa học");
-              navigate(ROUTES.COURSES);
-            }
-          } catch {
-            message.error("Không tìm thấy khóa học");
-            navigate(ROUTES.COURSES);
-          }
-        } else {
+    CourseService.getCoursePreview(id)
+      .then((data) => {
+        if (!data) {
           message.error("Không tìm thấy khóa học");
           navigate(ROUTES.COURSES);
+          return;
         }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
+        setCourse(data);
+      })
+      .catch(() => {
+        message.error("Không tìm thấy khóa học");
+        navigate(ROUTES.COURSES);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   // ── Loading state ──────────────────────────────────────────────────────────

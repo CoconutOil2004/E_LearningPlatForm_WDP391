@@ -353,7 +353,7 @@ const AdminUsersPage = () => {
         extra={
           tab === TABS.INSTRUCTOR && (
             <Button
-              type="primary"
+              type="default"
               icon={<PlusOutlined />}
               size="large"
               onClick={openCreateModal}

@@ -1,14 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-/**
- * Course store — tracks enrollments, wishlist, and learning progress.
- *
- * NOTE: enrolledCourseIds and lessonProgress are CACHED from the server.
- * They are refreshed from /enrollments/my-courses on each session start
- * (see CourseDetailPage and LearningPage).
- * Do NOT pre-seed fake IDs here — that breaks the enrollment check.
- */
 const useCourseStore = create(
   persist(
     (set, get) => ({
