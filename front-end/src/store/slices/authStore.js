@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import useCourseStore from "./courseStore";
 
 /**
  * Auth store — persisted to localStorage
@@ -24,6 +25,7 @@ const useAuthStore = create(
       logout: () => {
         localStorage.removeItem("token");
         localStorage.removeItem("accessToken");
+        useCourseStore.getState().setEnrolledCourseIds([]);
         set({ user: null, token: null, role: "guest", isAuthenticated: false });
       },
 
