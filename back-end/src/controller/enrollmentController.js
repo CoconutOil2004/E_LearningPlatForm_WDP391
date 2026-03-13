@@ -5,9 +5,6 @@ exports.getMyCourses = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    /* =========================
-       GET PAID ENROLLMENTS
-    ========================= */
     const enrollments = await Enrollment.find({
       userId,
       paymentStatus: "paid",
@@ -30,9 +27,9 @@ exports.getMyCourses = async (req, res) => {
       (course?.sections || []).forEach((sec) => {
         (sec.items || [])
           .filter((i) => i.itemType === "lesson")
-          .forEach((i) => items.push({ ...i, orderIndex: i.orderIndex }));
+          .forEach((i) => items.push(i));
       });
-      items.sort((a, b) => a.orderIndex - b.orderIndex);
+      items.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
       return items;
     }
 
@@ -41,21 +38,26 @@ exports.getMyCourses = async (req, res) => {
       .map((e) => {
         const course = e.courseId;
         const lessonItems = getLessonItems(course);
+
+        /* Build set of completed lesson IDs */
         const completedIds = new Set(
           (e.lessonsProgress || [])
             .filter((l) => l.completed && l.lessonId)
             .map((l) => l.lessonId.toString()),
         );
 
+        /* Find first incomplete lesson — itemId is an ObjectId stored directly */
         let continueLesson = null;
         if (lessonItems.length) {
-          continueLesson =
-            lessonItems.find(
-              (item) =>
-                !completedIds.has(
-                  (item.itemId || item.itemId?._id)?.toString(),
-                ),
-            ) || lessonItems[0];
+          const next = lessonItems.find(
+            (item) => !completedIds.has(item.itemId?.toString()),
+          );
+          const target = next || lessonItems[0];
+          continueLesson = {
+            lessonId: target.itemId?.toString(),
+            title: target.title,
+            order: target.orderIndex,
+          };
         }
 
         return {
@@ -63,13 +65,7 @@ exports.getMyCourses = async (req, res) => {
           progress: e.progress,
           completed: e.completed,
           lastUpdated: e.updatedAt,
-          continueLesson: continueLesson
-            ? {
-                lessonId: continueLesson.itemId?._id || continueLesson.itemId,
-                title: continueLesson.title,
-                order: continueLesson.orderIndex,
-              }
-            : null,
+          continueLesson,
           course: {
             _id: course._id,
             title: course.title,
@@ -77,7 +73,9 @@ exports.getMyCourses = async (req, res) => {
             rating: course.rating,
             enrollmentCount: course.enrollmentCount,
             totalDuration: course.totalDuration,
+            sections: course.sections,
             instructor: course.instructorId,
+            category: course.category,
           },
         };
       });
@@ -98,19 +96,12 @@ exports.getMyCourses = async (req, res) => {
    ENROLL FREE COURSE
    POST /api/enrollments/enroll-free
    Body: { courseId }
-   
-   Chức năng:
-   - Đăng ký khóa học MIỄN PHÍ (price = 0) trực tiếp
-   - Tạo Enrollment với paymentStatus = "paid" ngay lập tức
-   - Không qua payment gateway
-   - Tăng enrollmentCount của course
 ================================*/
 exports.enrollFreeCourse = async (req, res) => {
   try {
     const userId = req.user._id;
     const { courseId } = req.body;
 
-    // Validation: courseId bắt buộc
     if (!courseId) {
       return res.status(400).json({
         success: false,
@@ -118,7 +109,7 @@ exports.enrollFreeCourse = async (req, res) => {
       });
     }
 
-    // 1. Kiểm tra course tồn tại
+    // 1. Check course exists
     const course = await Course.findById(courseId).select(
       "price enrollmentCount status",
     );
@@ -129,7 +120,7 @@ exports.enrollFreeCourse = async (req, res) => {
       });
     }
 
-    // 2. Kiểm tra course phải là published
+    // 2. Course must be published
     if (course.status !== "published") {
       return res.status(400).json({
         success: false,
@@ -137,7 +128,7 @@ exports.enrollFreeCourse = async (req, res) => {
       });
     }
 
-    // 3. Kiểm tra course là FREE (price === 0)
+    // 3. Course must be FREE
     if (course.price !== 0) {
       return res.status(400).json({
         success: false,
@@ -146,37 +137,48 @@ exports.enrollFreeCourse = async (req, res) => {
       });
     }
 
-    // 4. Kiểm tra đã enroll chưa
-    const existingEnrollment = await Enrollment.findOne({
-      userId,
-      courseId,
-      paymentStatus: "paid",
-    });
+    // 4. Check for ANY existing enrollment (paid OR pending) to avoid unique index conflict
+    const existingEnrollment = await Enrollment.findOne({ userId, courseId });
 
     if (existingEnrollment) {
+      if (existingEnrollment.paymentStatus === "paid") {
+        return res.status(200).json({
+          success: true,
+          message: "You are already enrolled in this course",
+          data: existingEnrollment,
+        });
+      }
+      // Pending enrollment exists (e.g. from a prior failed paid attempt) → upgrade to paid
+      existingEnrollment.paymentStatus = "paid";
+      await existingEnrollment.save();
       return res.status(200).json({
         success: true,
-        message: "You are already enrolled in this course",
-        data: existingEnrollment,
+        message: "Successfully enrolled in free course",
+        data: {
+          enrollmentId: existingEnrollment._id,
+          courseId: existingEnrollment.courseId,
+          paymentStatus: existingEnrollment.paymentStatus,
+          progress: existingEnrollment.progress,
+          createdAt: existingEnrollment.createdAt,
+        },
       });
     }
 
-    // 5. Tạo enrollment mới với paymentStatus = "paid"
+    // 5. Create new enrollment with paymentStatus = "paid"
     const enrollment = await Enrollment.create({
       userId,
       courseId,
-      paymentStatus: "paid", // ← QUAN TRỌNG: Đặt là "paid" ngay
+      paymentStatus: "paid",
       progress: 0,
       completed: false,
       lessonsProgress: [],
     });
 
-    // 6. Tăng enrollmentCount của course
+    // 6. Increment enrollmentCount
     await Course.findByIdAndUpdate(courseId, {
       $inc: { enrollmentCount: 1 },
     });
 
-    // 7. Trả về response thành công
     res.status(201).json({
       success: true,
       message: "Successfully enrolled in free course",
@@ -189,6 +191,20 @@ exports.enrollFreeCourse = async (req, res) => {
       },
     });
   } catch (err) {
+    // Handle MongoDB duplicate key error gracefully
+    if (err.code === 11000) {
+      const existing = await Enrollment.findOne({
+        userId: req.user._id,
+        courseId: req.body.courseId,
+      });
+      if (existing && existing.paymentStatus === "paid") {
+        return res.status(200).json({
+          success: true,
+          message: "You are already enrolled in this course",
+          data: existing,
+        });
+      }
+    }
     console.error("enrollFreeCourse error:", err);
     res.status(500).json({
       success: false,

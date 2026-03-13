@@ -46,3 +46,35 @@ exports.createPaymentUrl = ({ amount, orderId, ipAddr, orderInfo }) => {
     process.env.VNP_URL + "?" + qs.stringify(vnp_Params, { encode: false })
   );
 };
+
+/**
+ * Verify the return URL / IPN from VNPay.
+ * Strips vnp_SecureHash (and vnp_SecureHashType if present) before re-computing the HMAC,
+ * then compares with the hash VNPay sent back.
+ *
+ * @param {object} query  – req.query from the callback route
+ * @returns {{ isVerified, isSuccess, orderId, responseCode, transactionNo }}
+ */
+exports.verifyReturnUrl = (query) => {
+  const params = { ...query };
+
+  const receivedHash = params["vnp_SecureHash"];
+  delete params["vnp_SecureHash"];
+  if (params["vnp_SecureHashType"]) delete params["vnp_SecureHashType"];
+
+  const sorted = sortObject(params);
+  const signData = qs.stringify(sorted, { encode: false });
+
+  const expectedHash = crypto
+    .createHmac("sha512", process.env.VNP_HASH_SECRET)
+    .update(Buffer.from(signData, "utf-8"))
+    .digest("hex");
+
+  return {
+    isVerified: expectedHash === receivedHash,
+    isSuccess: params["vnp_ResponseCode"] === "00",
+    orderId: params["vnp_TxnRef"], // payment._id string
+    responseCode: params["vnp_ResponseCode"],
+    transactionNo: params["vnp_TransactionNo"] || null,
+  };
+};

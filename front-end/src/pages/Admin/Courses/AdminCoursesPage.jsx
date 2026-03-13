@@ -1,343 +1,354 @@
-import { motion } from "framer-motion";
+import {
+  BookOutlined,
+  EyeOutlined,
+  SearchOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import {
+  Avatar,
+  Button,
+  Card,
+  Image,
+  Input,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Icon } from "../../../components/ui";
+import AdminPageLayout from "../../../components/admin/AdminPageLayout";
+import PageHeader from "../../../components/admin/PageHeader";
+import StatsRow from "../../../components/admin/StatsRow";
+import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
-import useAuthStore from "../../../store/slices/authStore";
-import { ROUTES } from "../../../utils/constants";
-import { pageVariants } from "../../../utils/helpers";
+import { COLOR, STATUS_CONFIG } from "../../../styles/adminTheme";
 
-const STATUS_STYLE = {
-  draft: { bg: "bg-gray-100", text: "text-gray-600", label: "Draft" },
-  pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "In Review" },
-  published: { bg: "bg-green-100", text: "text-green-700", label: "Published" },
-  rejected: { bg: "bg-red-100", text: "text-red-700", label: "Rejected" },
-  archived: { bg: "bg-slate-100", text: "text-slate-600", label: "Archived" },
-};
+const { Text } = Typography;
+const { Option } = Select;
 
-const TABS = ["all", "draft", "pending", "published", "rejected"];
+const STATUS_TABS = [
+  "all",
+  "draft",
+  "pending",
+  "published",
+  "rejected",
+  "archived",
+];
 
 const fmtDuration = (s) => {
-  if (!s) return null;
+  if (!s) return "—";
   const h = Math.floor(s / 3600);
   return h > 0 ? `${h}h` : `${Math.floor(s / 60)}m`;
 };
 
-// ─── CourseRow ────────────────────────────────────────────────────────────────
-const CourseRow = ({ course, onSubmit, submitting }) => {
-  const navigate = useNavigate();
-  const st = STATUS_STYLE[course.status] ?? STATUS_STYLE.draft;
-  const duration = fmtDuration(course.totalDuration);
-  const canEdit = ["draft", "rejected"].includes(course.status);
-  const canSubmit = ["draft", "rejected"].includes(course.status);
-
-  return (
-    <motion.tr
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="transition-colors border-b border-border/30 hover:bg-white/30"
-    >
-      {/* Thumbnail + title */}
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 overflow-hidden h-11 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/20 shrink-0">
-            <img
-              src={
-                course.thumbnail ||
-                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&h=80&fit=crop"
-              }
-              alt={course.title}
-              className="object-cover w-full h-full"
-            />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-heading line-clamp-1">
-              {course.title}
-            </p>
-            <p className="text-xs text-muted mt-0.5">
-              {course.category?.name ?? "—"} · {course.level}
-            </p>
-          </div>
-        </div>
-      </td>
-
-      {/* Status */}
-      <td className="px-4 py-4 whitespace-nowrap">
-        <span
-          className={`text-xs font-bold px-3 py-1.5 rounded-full ${st.bg} ${st.text}`}
-        >
-          {st.label}
-        </span>
-      </td>
-
-      {/* Stats */}
-      <td className="px-4 py-4 text-sm text-muted whitespace-nowrap">
-        {course.price === 0 ? "Free" : `$${course.price}`}
-      </td>
-      <td className="px-4 py-4 text-sm text-muted whitespace-nowrap">
-        {(course.enrollmentCount ?? 0).toLocaleString()}
-      </td>
-      <td className="px-4 py-4 text-sm text-muted whitespace-nowrap">
-        {duration ?? "—"}
-      </td>
-
-      {/* Actions */}
-      <td className="px-4 py-4 whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(`/courses/${course._id}`)}
-            className="p-2 transition-all rounded-lg glass-card hover:border-primary/30"
-            title="View"
-          >
-            <Icon name="eye" size={15} color="var(--text-muted)" />
-          </button>
-          {canEdit && (
-            <button
-              onClick={() => navigate(`/instructor/courses/edit/${course._id}`)}
-              className="p-2 transition-all rounded-lg glass-card hover:border-primary/30"
-              title="Edit"
-            >
-              <Icon name="edit" size={15} color="var(--color-primary)" />
-            </button>
-          )}
-          {canSubmit && (
-            <button
-              onClick={() => onSubmit(course._id)}
-              disabled={submitting === course._id}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold btn-aurora disabled:opacity-50 transition-all"
-            >
-              {submitting === course._id ? "…" : "Submit"}
-            </button>
-          )}
-        </div>
-      </td>
-    </motion.tr>
-  );
-};
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
-const InstructorCoursesPage = () => {
-  const navigate = useNavigate();
+const AdminCoursesPage = () => {
   const toast = useToast();
-  const { user } = useAuthStore();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
-  const [submitting, setSubmitting] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
-  useEffect(() => {
+  // modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const fetchCourses = async (
+    page = 1,
+    pageSize = 10,
+    status = "all",
+    keyword = "",
+  ) => {
     setLoading(true);
-    // BE /search trả về published courses của instructor
-    // Kết hợp search (nhiều page) + pending riêng
-    Promise.all([
-      CourseService.searchCourses({ page: 1, limit: 50 }),
-      CourseService.getPendingCourses().catch(() => []),
-    ])
-      .then(([searchRes, pendingList]) => {
-        const myId = user?._id?.toString();
-        // searchCourses trả về published, filter theo instructor
-        const published = (searchRes.courses ?? []).filter(
-          (c) => (c.instructorId?._id ?? c.instructorId)?.toString() === myId,
-        );
-        // pending list đã là của instructor (admin endpoint)
-        const myPending = (pendingList ?? []).filter(
-          (c) => (c.instructorId?._id ?? c.instructorId)?.toString() === myId,
-        );
-        // Merge, tránh trùng
-        const ids = new Set(myPending.map((c) => c._id?.toString()));
-        const merged = [
-          ...myPending,
-          ...published.filter((c) => !ids.has(c._id?.toString())),
-        ];
-        setCourses(merged);
-      })
-      .catch(() => toast.error("Failed to load courses"))
-      .finally(() => setLoading(false));
-  }, [user]);
-
-  const handleSubmit = async (courseId) => {
-    setSubmitting(courseId);
     try {
-      await CourseService.submitCourse(courseId);
-      toast.success("Submitted for review!");
-      setCourses((prev) =>
-        prev.map((c) => (c._id === courseId ? { ...c, status: "pending" } : c)),
-      );
-    } catch (err) {
-      toast.error(err?.response?.data?.message ?? "Submit failed");
+      const res = await CourseService.getAdminAllCourses({
+        page,
+        limit: pageSize,
+        status: status !== "all" ? status : undefined,
+        keyword: keyword.trim() || undefined,
+      });
+      setCourses(res.courses ?? []);
+      setPagination((prev) => ({
+        ...prev,
+        current: page,
+        pageSize,
+        total: res.total ?? 0,
+      }));
+    } catch {
+      toast.error("Failed to load courses");
     } finally {
-      setSubmitting(null);
+      setLoading(false);
     }
   };
 
-  const filtered =
-    activeTab === "all"
-      ? courses
-      : courses.filter((c) => c.status === activeTab);
+  useEffect(() => {
+    fetchCourses(1, pagination.pageSize, filterStatus, search);
+  }, []);
+  useEffect(() => {
+    const t = setTimeout(
+      () => fetchCourses(1, pagination.pageSize, filterStatus, search),
+      300,
+    );
+    return () => clearTimeout(t);
+  }, [filterStatus, search]);
 
-  const stats = {
-    total: courses.length,
-    published: courses.filter((c) => c.status === "published").length,
-    pending: courses.filter((c) => c.status === "pending").length,
-    draft: courses.filter((c) => c.status === "draft").length,
-    students: courses.reduce((a, c) => a + (c.enrollmentCount ?? 0), 0),
+  const handleTableChange = (pag) =>
+    fetchCourses(pag.current, pag.pageSize, filterStatus, search);
+
+  const handleViewDetail = async (record) => {
+    setSelectedCourse(record);
+    setModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const { course: full } = await CourseService.getCourseDetail(record._id);
+      if (full) setSelectedCourse(full);
+    } catch {
+      /* keep basic */
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
-      <div className="max-w-6xl px-6 py-10 mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-heading">
-              My Courses
-            </h1>
-            <p className="mt-1 text-muted">
-              Manage and track your course catalog
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(ROUTES.CREATE_COURSE)}
-            className="flex items-center gap-2 px-6 py-3 btn-aurora"
+  const statusCounts = {
+    published: courses.filter((c) => c.status === "published").length,
+    pending: courses.filter((c) => c.status === "pending").length,
+    enrollments: courses.reduce((a, c) => a + (c.enrollmentCount ?? 0), 0),
+  };
+
+  const stats = [
+    {
+      title: "Total Courses",
+      value: pagination.total,
+      prefix: <BookOutlined />,
+    },
+    {
+      title: "Published (page)",
+      value: statusCounts.published,
+      valueColor: COLOR.green,
+    },
+    {
+      title: "In Review (page)",
+      value: statusCounts.pending,
+      valueColor: COLOR.warning,
+    },
+    {
+      title: "Enrollments (page)",
+      value: statusCounts.enrollments.toLocaleString(),
+      prefix: <TeamOutlined />,
+    },
+  ];
+
+  const columns = [
+    {
+      title: "Course",
+      key: "course",
+      fixed: "left",
+      width: 320,
+      render: (_, record) => (
+        <Space size={12}>
+          <div
+            style={{
+              width: 72,
+              height: 48,
+              borderRadius: 8,
+              overflow: "hidden",
+              flexShrink: 0,
+              background: "#f0f0f0",
+            }}
           >
-            <Icon name="plus" size={18} color="white" /> New Course
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-8 md:grid-cols-4">
-          {[
-            { label: "Total Courses", value: stats.total, icon: "book" },
-            { label: "Published", value: stats.published, icon: "check" },
-            { label: "In Review", value: stats.pending, icon: "clock" },
-            { label: "Total Students", value: stats.students, icon: "users" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="flex items-center gap-4 p-5 glass-card rounded-2xl"
+            <Image
+              src={
+                record.thumbnail ||
+                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=80&h=56&fit=crop"
+              }
+              width={72}
+              height={48}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              preview={false}
+            />
+          </div>
+          <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
+            <Text
+              strong
+              style={{ color: COLOR.ocean, display: "block", maxWidth: 200 }}
+              ellipsis={{ tooltip: record.title }}
             >
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 shrink-0">
-                <Icon name={s.icon} size={18} color="var(--color-primary)" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-heading">
-                  {s.value.toLocaleString()}
-                </p>
-                <p className="text-xs font-medium text-muted">{s.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+              {record.title}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              {record.category?.name ?? "—"} · {record.level ?? "—"}
+            </Text>
+          </Space>
+        </Space>
+      ),
+    },
+    {
+      title: "Instructor",
+      key: "instructor",
+      width: 180,
+      render: (_, record) => {
+        const name =
+          record.instructorId?.fullname ?? record.instructorId?.email ?? "—";
+        return (
+          <Space size={8}>
+            <Avatar
+              size={28}
+              style={{
+                background: `linear-gradient(135deg, ${COLOR.teal}, ${COLOR.ocean})`,
+                fontSize: 11,
+                flexShrink: 0,
+              }}
+            >
+              {name[0]?.toUpperCase()}
+            </Avatar>
+            <Text style={{ fontSize: 13 }}>{name}</Text>
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 130,
+      render: (status) => {
+        const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
+        return (
+          <Tag
+            color={cfg.antdColor}
+            style={{ fontWeight: 700, borderRadius: 8 }}
+          >
+            {cfg.label}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Price",
+      dataIndex: "price",
+      key: "price",
+      width: 90,
+      render: (p) => (
+        <Text strong style={{ color: COLOR.ocean }}>
+          {p === 0 ? "Free" : `$${p}`}
+        </Text>
+      ),
+    },
+    {
+      title: "Students",
+      dataIndex: "enrollmentCount",
+      key: "students",
+      width: 100,
+      render: (v) => (
+        <Text style={{ color: COLOR.gray700 }}>
+          {(v ?? 0).toLocaleString()}
+        </Text>
+      ),
+    },
+    {
+      title: "Duration",
+      dataIndex: "totalDuration",
+      key: "duration",
+      width: 100,
+      render: (v) => (
+        <Text style={{ color: COLOR.gray600 }}>{fmtDuration(v)}</Text>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      fixed: "right",
+      width: 100,
+      render: (_, record) => (
+        <Button
+          icon={<EyeOutlined />}
+          size="small"
+          onClick={() => handleViewDetail(record)}
+          style={{ borderRadius: 8 }}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 pb-1 mb-6 overflow-x-auto">
-          {TABS.map((tab) => {
-            const count =
-              tab === "all"
-                ? courses.length
-                : courses.filter((c) => c.status === tab).length;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold capitalize whitespace-nowrap transition-all ${
-                  activeTab === tab
-                    ? "btn-aurora"
-                    : "glass-card hover:border-primary/30"
-                }`}
-              >
-                {tab === "all" ? "All Courses" : tab}
-                {count > 0 && (
-                  <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full font-black ${activeTab === tab ? "bg-white/30" : "bg-white/60"}`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+  return (
+    <AdminPageLayout>
+      <PageHeader
+        title="Course Management"
+        subtitle="View and manage all courses across the platform"
+      />
+      <StatsRow items={stats} />
+      <Card
+        bordered={false}
+        style={{ borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+      >
+        <Space
+          style={{
+            marginBottom: 16,
+            width: "100%",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+        >
+          <Input
+            placeholder="Search courses..."
+            prefix={<SearchOutlined />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 260, borderRadius: 8 }}
+            allowClear
+          />
+          <Select
+            value={filterStatus}
+            onChange={setFilterStatus}
+            style={{ width: 160 }}
+          >
+            {STATUS_TABS.map((s) => (
+              <Option key={s} value={s}>
+                {s === "all" ? "All Status" : (STATUS_CONFIG[s]?.label ?? s)}
+              </Option>
+            ))}
+          </Select>
+        </Space>
+        <Table
+          columns={columns}
+          dataSource={courses}
+          loading={loading}
+          rowKey="_id"
+          scroll={{ x: 1100 }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true,
+            showTotal: (t) => `Total ${t} courses`,
+            pageSizeOptions: ["10", "20", "50"],
+          }}
+          onChange={handleTableChange}
+        />
+      </Card>
 
-        {/* Table */}
-        <div className="overflow-hidden glass-card rounded-3xl">
-          {loading ? (
-            <div className="p-8 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 animate-pulse">
-                  <div className="w-16 h-11 rounded-xl bg-white/40" />
-                  <div className="flex-1 h-4 rounded-full bg-white/40" />
-                  <div className="w-20 h-4 rounded-full bg-white/30" />
-                  <div className="w-16 h-4 rounded-full bg-white/30" />
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-20 text-center">
-              <Icon name="book" size={40} color="var(--text-muted)" />
-              <p className="mt-4 font-medium text-muted">
-                {activeTab === "all"
-                  ? "No courses yet. Create your first course!"
-                  : `No ${activeTab} courses.`}
-              </p>
-              {activeTab === "all" && (
-                <button
-                  onClick={() => navigate(ROUTES.CREATE_COURSE)}
-                  className="mt-4 btn-aurora px-6 py-2.5 text-sm"
-                >
-                  Create Course
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/40 bg-white/30">
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Course
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Price
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Students
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Duration
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((course) => (
-                    <CourseRow
-                      key={course._id}
-                      course={course}
-                      onSubmit={handleSubmit}
-                      submitting={submitting}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-    </motion.div>
+      <CourseDetailModal
+        course={selectedCourse}
+        open={modalOpen}
+        loading={detailLoading}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedCourse(null);
+        }}
+      />
+    </AdminPageLayout>
   );
 };
 
-export default InstructorCoursesPage;
+export default AdminCoursesPage;

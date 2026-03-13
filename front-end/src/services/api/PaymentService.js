@@ -38,6 +38,18 @@ class PaymentService {
       .post("/enrollments/enroll-free", { courseId })
       .then((r) => r.data);
   }
+
+  /**
+   * Mark a lesson as completed and persist progress to the backend.
+   * POST /api/enrollments/:courseId/complete-lesson
+   * Body: { lessonId }  ← the actual Lesson ObjectId (itemId from course.sections)
+   * Response: { progress, completed }
+   */
+  completeLesson(courseId, lessonId) {
+    return api
+      .post(`/enrollments/${courseId}/complete-lesson`, { lessonId })
+      .then((r) => r.data);
+  }
 }
 
 export default new PaymentService();

@@ -7,7 +7,8 @@
     "start": "nodemon server",
     "test": "echo \"Error: no test specified\" && exit 1",
     "import-data": "node scripts/import-data.js",
-    "test:create-course": "node scripts/test-create-course.js"
+    "test:create-course": "node scripts/test-create-course.js",
+    "test:upload": "node scripts/test-upload-api.js"
   },
   "keywords": [
     "nodejs",
@@ -17,6 +18,7 @@
   "author": "FPTU",
   "license": "ISC",
   "devDependencies": {
+    "form-data": "^4.0.5",
     "nodemon": "^3.0.1"
   },
   "dependencies": {

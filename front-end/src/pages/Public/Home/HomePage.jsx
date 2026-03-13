@@ -681,7 +681,6 @@ const HomePage = () => {
           {/* Error */}
           {!sectionsLoading && sectionsError && (
             <div className="py-16 text-center">
-              <Icon name="wifi-off" size={40} color="var(--text-muted)" />
               <p className="mt-4 font-medium text-muted">
                 Could not load courses. Please try again.
               </p>

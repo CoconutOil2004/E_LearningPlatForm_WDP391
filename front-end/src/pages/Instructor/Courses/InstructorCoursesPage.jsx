@@ -1,182 +1,123 @@
+import {
+  BookOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  SendOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Col,
+  Row,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+} from "antd";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Icon } from "../../../components/ui";
-import { useToast } from "../../../contexts/ToastContext";
+import {
+  INSTRUCTOR_COLORS,
+  INSTRUCTOR_STATUS_CONFIG,
+} from "../../../../src/styles/instructorTheme";
+import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import CourseService from "../../../services/api/CourseService";
 import useAuthStore from "../../../store/slices/authStore";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
-const STATUS_STYLE = {
-  draft: { bg: "bg-gray-100", text: "text-gray-600", label: "Draft" },
-  pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "In Review" },
-  published: { bg: "bg-green-100", text: "text-green-700", label: "Published" },
-  rejected: { bg: "bg-red-100", text: "text-red-700", label: "Rejected" },
-  archived: { bg: "bg-slate-100", text: "text-slate-600", label: "Archived" },
-};
+const { Title, Text } = Typography;
 
-const TABS = ["all", "draft", "pending", "published", "rejected"];
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "draft", label: "Draft" },
+  { key: "pending", label: "In Review" },
+  { key: "published", label: "Published" },
+  { key: "rejected", label: "Rejected" },
+];
 
 const fmtDuration = (s) => {
-  if (!s) return null;
-  const h = Math.floor(s / 3600);
-  return h > 0 ? `${h}h` : `${Math.floor(s / 60)}m`;
+  if (!s) return "—";
+  const h = Math.floor(s / 3600),
+    m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-// ─── CourseRow ────────────────────────────────────────────────────────────────
-const CourseRow = ({ course, onSubmit, submitting }) => {
-  const navigate = useNavigate();
-  const st = STATUS_STYLE[course.status] ?? STATUS_STYLE.draft;
-  const duration = fmtDuration(course.totalDuration);
-  const canEdit = ["draft", "rejected"].includes(course.status);
-  const canSubmit = ["draft", "rejected"].includes(course.status);
-  const isPending = course.status === "pending";
-
-  const handleRowClick = () => {
-    navigate(`/courses/${course._id}`);
-  };
-
-  return (
-    <motion.tr
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      onClick={handleRowClick}
-      className="transition-colors border-b border-border/30 hover:bg-white/30 cursor-pointer"
-    >
-      {/* Thumbnail + title */}
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 overflow-hidden h-11 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/20 shrink-0">
-            <img
-              src={
-                course.thumbnail ||
-                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&h=80&fit=crop"
-              }
-              alt={course.title}
-              className="object-cover w-full h-full"
-            />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-heading line-clamp-1">
-              {course.title}
-            </p>
-            <p className="text-xs text-muted mt-0.5">
-              {course.category?.name ?? "—"} · {course.level}
-            </p>
-          </div>
-        </div>
-      </td>
-
-      {/* Status */}
-      <td className="px-4 py-4 whitespace-nowrap">
-        <span
-          className={`text-xs font-bold px-3 py-1.5 rounded-full ${st.bg} ${st.text}`}
-        >
-          {st.label}
-        </span>
-      </td>
-
-      {/* Stats */}
-      <td className="px-4 py-4 text-sm text-muted whitespace-nowrap">
-        {course.price === 0 ? "Free" : `$${course.price}`}
-      </td>
-      <td className="px-4 py-4 text-sm text-muted whitespace-nowrap">
-        {(course.enrollmentCount ?? 0).toLocaleString()}
-      </td>
-      <td className="px-4 py-4 text-sm text-muted whitespace-nowrap">
-        {duration ?? "—"}
-      </td>
-
-      {/* Actions */}
-      <td className="px-4 py-4 whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/courses/${course._id}`);
-            }}
-            className="p-2 transition-all rounded-lg glass-card hover:border-primary/30"
-            title="View"
-          >
-            <Icon name="eye" size={15} color="var(--text-muted)" />
-          </button>
-          {canEdit && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/instructor/courses/edit/${course._id}`);
-              }}
-              className="p-2 transition-all rounded-lg glass-card hover:border-primary/30"
-              title="Edit"
-            >
-              <Icon name="edit" size={15} color="var(--color-primary)" />
-            </button>
-          )}
-          {isPending && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/instructor/courses/edit/${course._id}`);
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold glass-card hover:border-primary/30 transition-all"
-            >
-              Update
-            </button>
-          )}
-          {canSubmit && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSubmit(course._id);
-              }}
-              disabled={submitting === course._id}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold btn-aurora disabled:opacity-50 transition-all"
-            >
-              {submitting === course._id ? "…" : "Submit"}
-            </button>
-          )}
-        </div>
-      </td>
-    </motion.tr>
-  );
-};
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 const InstructorCoursesPage = () => {
   const navigate = useNavigate();
-  const toast = useToast();
   const { user } = useAuthStore();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [submitting, setSubmitting] = useState(null);
+  const [submittingId, setSubmittingId] = useState(null);
+
+  // shared modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    CourseService.getInstructorCourses()
-      .then((list) => setCourses(list ?? []))
-      .catch(() => toast.error("Failed to load courses"))
-      .finally(() => setLoading(false));
+    loadCourses();
   }, [user]);
 
-  const handleSubmit = async (courseId) => {
-    setSubmitting(courseId);
+  const loadCourses = async () => {
+    setLoading(true);
     try {
-      await CourseService.submitCourse(courseId);
-      toast.success("Submitted for review!");
-      setCourses((prev) =>
-        prev.map((c) => (c._id === courseId ? { ...c, status: "pending" } : c)),
-      );
-    } catch (err) {
-      toast.error(err?.response?.data?.message ?? "Submit failed");
+      const list = await CourseService.getInstructorCourses();
+      setCourses(list ?? []);
+    } catch {
+      message.error("Error loading course list");
     } finally {
-      setSubmitting(null);
+      setLoading(false);
     }
   };
 
-  const filtered =
+  const handleViewDetail = async (record) => {
+    setSelectedCourse(record);
+    setModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const { course: full } = await CourseService.getCourseDetail(record._id);
+      if (full) setSelectedCourse(full);
+    } catch {
+      /* keep basic */
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleSubmit = async (courseId) => {
+    setSubmittingId(courseId);
+    try {
+      await CourseService.submitCourse(courseId);
+      message.success("Course submitted for review!");
+      setCourses((prev) =>
+        prev.map((c) => (c._id === courseId ? { ...c, status: "pending" } : c)),
+      );
+      if (selectedCourse?._id === courseId)
+        setSelectedCourse((prev) =>
+          prev ? { ...prev, status: "pending" } : prev,
+        );
+    } catch (err) {
+      message.error(
+        err?.response?.data?.message || "Failed to submit for review",
+      );
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
+  const filteredCourses =
     activeTab === "all"
       ? courses
       : courses.filter((c) => c.status === activeTab);
@@ -185,9 +126,204 @@ const InstructorCoursesPage = () => {
     total: courses.length,
     published: courses.filter((c) => c.status === "published").length,
     pending: courses.filter((c) => c.status === "pending").length,
-    draft: courses.filter((c) => c.status === "draft").length,
-    students: courses.reduce((a, c) => a + (c.enrollmentCount ?? 0), 0),
+    students: courses.reduce((s, c) => s + (c.enrollmentCount || 0), 0),
   };
+
+  const statCards = [
+    {
+      label: "Total Courses",
+      value: stats.total,
+      icon: <BookOutlined />,
+      color: INSTRUCTOR_COLORS.primary,
+      bg: `${INSTRUCTOR_COLORS.primary}15`,
+    },
+    {
+      label: "Published",
+      value: stats.published,
+      icon: <CheckCircleOutlined />,
+      color: INSTRUCTOR_COLORS.success,
+      bg: `${INSTRUCTOR_COLORS.success}15`,
+    },
+    {
+      label: "Pending Review",
+      value: stats.pending,
+      icon: <ClockCircleOutlined />,
+      color: INSTRUCTOR_COLORS.warning,
+      bg: `${INSTRUCTOR_COLORS.warning}15`,
+    },
+    {
+      label: "Total Students",
+      value: stats.students,
+      icon: <TeamOutlined />,
+      color: INSTRUCTOR_COLORS.accent,
+      bg: `${INSTRUCTOR_COLORS.accent}15`,
+    },
+  ];
+
+  const columns = [
+    {
+      title: "COURSE",
+      key: "course",
+      render: (_, record) => (
+        <div className="flex items-center gap-4">
+          <div className="w-20 overflow-hidden bg-gray-100 border border-gray-200 rounded-lg h-14 shrink-0">
+            <img
+              src={
+                record.thumbnail ||
+                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=160&h=112&fit=crop"
+              }
+              alt={record.title}
+              className="object-cover w-full h-full"
+              onError={(e) => (e.target.style.display = "none")}
+            />
+          </div>
+          <div className="flex flex-col max-w-[250px]">
+            <Text
+              className="font-bold text-gray-900 truncate"
+              title={record.title}
+            >
+              {record.title}
+            </Text>
+            <div className="flex items-center gap-2 mt-1">
+              <Text type="secondary" className="text-xs truncate">
+                {record.category?.name || "Uncategorized"}
+              </Text>
+              <Text type="secondary" className="text-xs">
+                •
+              </Text>
+              <Text className="text-xs font-semibold text-purple-600 capitalize">
+                {record.level}
+              </Text>
+            </div>
+            {record.status === "rejected" && record.rejectionReason && (
+              <Tooltip title={record.rejectionReason} placement="bottom">
+                <div className="flex items-center gap-1 mt-1 cursor-help">
+                  <CloseCircleOutlined
+                    style={{ color: "#DC2626", fontSize: 11 }}
+                  />
+                  <Text
+                    style={{ color: "#DC2626", fontSize: 11 }}
+                    className="truncate max-w-[180px]"
+                  >
+                    {record.rejectionReason}
+                  </Text>
+                </div>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "STATUS",
+      dataIndex: "status",
+      key: "status",
+      width: 130,
+      render: (status) => {
+        const cfg =
+          INSTRUCTOR_STATUS_CONFIG[status] || INSTRUCTOR_STATUS_CONFIG.draft;
+        return (
+          <Tag
+            className="px-3 py-1 font-semibold border-none rounded-md"
+            style={{ backgroundColor: cfg.bg, color: cfg.text }}
+          >
+            {cfg.label}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "PRICE",
+      dataIndex: "price",
+      key: "price",
+      width: 90,
+      render: (price) => (
+        <span className="font-bold text-gray-900">
+          {price === 0 ? (
+            <span className="text-green-500">Free</span>
+          ) : (
+            `$${price}`
+          )}
+        </span>
+      ),
+    },
+    {
+      title: "STUDENTS",
+      dataIndex: "enrollmentCount",
+      key: "enrollmentCount",
+      width: 110,
+      render: (count) => (
+        <Space className="font-semibold text-gray-700">
+          <TeamOutlined className="text-gray-400" />{" "}
+          {(count || 0).toLocaleString()}
+        </Space>
+      ),
+    },
+    {
+      title: "DURATION",
+      dataIndex: "totalDuration",
+      key: "duration",
+      width: 100,
+      render: (d) => (
+        <Text type="secondary" className="text-sm">
+          {fmtDuration(d)}
+        </Text>
+      ),
+    },
+    {
+      title: "ACTIONS",
+      key: "actions",
+      align: "right",
+      width: 160,
+      render: (_, record) => {
+        const canEdit = ["draft", "rejected"].includes(record.status);
+        const canSubmit = ["draft", "rejected"].includes(record.status);
+        const isPending = record.status === "pending";
+        return (
+          <Space>
+            <Tooltip title="View details">
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                className="text-purple-600 hover:bg-purple-50"
+                onClick={() => handleViewDetail(record)}
+              />
+            </Tooltip>
+            {(canEdit || isPending) && (
+              <Tooltip title="Edit course">
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  className="text-blue-500 hover:bg-blue-50"
+                  onClick={() =>
+                    navigate(`/instructor/courses/edit/${record._id}`)
+                  }
+                />
+              </Tooltip>
+            )}
+            {canSubmit && (
+              <Button
+                type="primary"
+                size="small"
+                icon={<SendOutlined />}
+                loading={submittingId === record._id}
+                onClick={() => handleSubmit(record._id)}
+                style={{
+                  background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Submit
+              </Button>
+            )}
+          </Space>
+        );
+      },
+    },
+  ];
 
   return (
     <motion.div
@@ -195,150 +331,102 @@ const InstructorCoursesPage = () => {
       initial="initial"
       animate="animate"
       exit="exit"
+      className="p-8"
     >
-      <div className="max-w-6xl px-6 py-10 mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-heading">
-              My Courses
-            </h1>
-            <p className="mt-1 text-muted">
-              Manage and track your course catalog
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(ROUTES.CREATE_COURSE)}
-            className="flex items-center gap-2 px-6 py-3 btn-aurora"
-          >
-            <Icon name="plus" size={18} color="white" /> New Course
-          </button>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <Title level={2} className="m-0 font-black text-gray-900">
+            My Courses
+          </Title>
+          <Text type="secondary" className="text-base">
+            Manage and track your content performance
+          </Text>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-8 md:grid-cols-4">
-          {[
-            { label: "Total Courses", value: stats.total, icon: "book" },
-            { label: "Published", value: stats.published, icon: "check" },
-            { label: "In Review", value: stats.pending, icon: "clock" },
-            { label: "Total Students", value: stats.students, icon: "users" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="flex items-center gap-4 p-5 glass-card rounded-2xl"
-            >
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 shrink-0">
-                <Icon name={s.icon} size={18} color="var(--color-primary)" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-heading">
-                  {s.value.toLocaleString()}
-                </p>
-                <p className="text-xs font-medium text-muted">{s.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filter tabs */}
-        <div className="flex gap-2 pb-1 mb-6 overflow-x-auto">
-          {TABS.map((tab) => {
-            const count =
-              tab === "all"
-                ? courses.length
-                : courses.filter((c) => c.status === tab).length;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold capitalize whitespace-nowrap transition-all ${
-                  activeTab === tab
-                    ? "btn-aurora"
-                    : "glass-card hover:border-primary/30"
-                }`}
-              >
-                {tab === "all" ? "All Courses" : tab}
-                {count > 0 && (
-                  <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full font-black ${activeTab === tab ? "bg-white/30" : "bg-white/60"}`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Table */}
-        <div className="overflow-hidden glass-card rounded-3xl">
-          {loading ? (
-            <div className="p-8 space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 animate-pulse">
-                  <div className="w-16 h-11 rounded-xl bg-white/40" />
-                  <div className="flex-1 h-4 rounded-full bg-white/40" />
-                  <div className="w-20 h-4 rounded-full bg-white/30" />
-                  <div className="w-16 h-4 rounded-full bg-white/30" />
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="mt-4 font-medium text-muted">
-                {activeTab === "all"
-                  ? "No courses yet. Create your first course!"
-                  : `No ${activeTab} courses.`}
-              </p>
-              {activeTab === "all" && (
-                <button
-                  onClick={() => navigate(ROUTES.CREATE_COURSE)}
-                  className="mt-4 btn-aurora px-6 py-2.5 text-sm"
-                >
-                  Create Course
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/40 bg-white/30">
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Course
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Price
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Students
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Duration
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-widest text-left uppercase text-muted">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((course) => (
-                    <CourseRow
-                      key={course._id}
-                      course={course}
-                      onSubmit={handleSubmit}
-                      submitting={submitting}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <Button
+          type="primary"
+          size="large"
+          icon={<PlusOutlined />}
+          onClick={() => navigate(ROUTES.CREATE_COURSE)}
+          className="font-bold transition-all border-none shadow-md rounded-xl hover:shadow-lg"
+          style={{
+            background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
+          }}
+        >
+          Create Course
+        </Button>
       </div>
+
+      {/* Stats */}
+      <Row gutter={[16, 16]} className="mb-8">
+        {statCards.map((stat, idx) => (
+          <Col xs={24} sm={12} lg={6} key={idx}>
+            <Card
+              className="transition-all border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-sm"
+              bodyStyle={{ padding: "20px" }}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="flex items-center justify-center w-12 h-12 text-xl rounded-xl"
+                  style={{ backgroundColor: stat.bg, color: stat.color }}
+                >
+                  {stat.icon}
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-gray-900">
+                    {stat.value.toLocaleString()}
+                  </div>
+                  <div className="text-xs font-medium text-gray-500 uppercase mt-0.5">
+                    {stat.label}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Table */}
+      <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={TABS.map((tab) => ({
+            key: tab.key,
+            label: (
+              <span className="text-sm font-semibold">
+                {tab.label}
+                <Tag className="ml-2 text-gray-600 bg-gray-100 border-none rounded-full">
+                  {tab.key === "all"
+                    ? courses.length
+                    : courses.filter((c) => c.status === tab.key).length}
+                </Tag>
+              </span>
+            ),
+          }))}
+          className="mb-4 instructor-tabs"
+        />
+        <Table
+          columns={columns}
+          dataSource={filteredCourses}
+          rowKey="_id"
+          loading={loading}
+          pagination={{ pageSize: 10, className: "mt-6" }}
+          className="instructor-table"
+          locale={{ emptyText: "You have no courses in this status." }}
+        />
+      </div>
+
+      {/* Shared modal */}
+      <CourseDetailModal
+        course={selectedCourse}
+        open={modalOpen}
+        loading={detailLoading}
+        onClose={() => {
+          setModalOpen(false);
+          setSelectedCourse(null);
+        }}
+      />
     </motion.div>
   );
 };
