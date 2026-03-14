@@ -56,6 +56,9 @@ const ROUTES = {
   INSTRUCTOR_PROFILE: "/instructor/profile",
   INSTRUCTOR_BLOG: "/instructor/blog",
   INSTRUCTOR_BLOG_CREATE: "/instructor/blog/create",
+  INSTRUCTOR_BLOG_EDIT: "/instructor/blog/edit/:id",
+BLOG_LIST: "/blog",
+BLOG_DETAIL: "/blog/:id",
 
   // Admin
   ADMIN_DASHBOARD: "/admin/dashboard",
@@ -67,6 +70,7 @@ const ROUTES = {
   ADMIN_REPORTS: "/admin/reports",
   ADMIN_SETTINGS: "/admin/settings",
   ADMIN_LOGS: "/admin/logs",
+  ADMIN_BLOG: "/admin/blog",
 };
 
 export { API_BASE_URL, BACKEND_API_URI, formatCurrency, formatUSD, ROLES, ROUTES };
