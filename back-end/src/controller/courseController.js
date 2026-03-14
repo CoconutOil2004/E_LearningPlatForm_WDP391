@@ -183,6 +183,7 @@ exports.searchCourses = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({
+      success: false,
       message: error.message,
     });
   }
@@ -274,27 +275,28 @@ exports.createCourse = async (req, res) => {
     if (!title || typeof title !== "string" || !title.trim()) {
       return res
         .status(400)
-        .json({ message: "title: Bắt buộc, không được để trống." });
+        .json({ success: false, message: "title: Bắt buộc, không được để trống." });
     }
     const trimmedTitle = title.trim();
     if (trimmedTitle.length > 60) {
-      return res.status(400).json({ message: "title: Tối đa 60 ký tự." });
+      return res.status(400).json({ success: false, message: "title: Tối đa 60 ký tự." });
     }
 
     if (!categoryId) {
       return res
         .status(400)
-        .json({ message: "categoryId: Bắt buộc phải chọn thể loại." });
+        .json({ success: false, message: "categoryId: Bắt buộc phải chọn thể loại." });
     }
     const categoryValidation = await validateCategoryId(categoryId);
     if (!categoryValidation.valid) {
       return res
         .status(400)
-        .json({ message: "categoryId: " + categoryValidation.error });
+        .json({ success: false, message: "categoryId: " + categoryValidation.error });
     }
 
     if (!level || !LEVEL_ENUM.includes(level)) {
       return res.status(400).json({
+        success: false,
         message:
           "level: Bắt buộc, giá trị phải là một trong: " +
           LEVEL_ENUM.join(", "),
@@ -325,9 +327,9 @@ exports.createCourse = async (req, res) => {
     if (err.name === "ValidationError") {
       return res
         .status(400)
-        .json({ message: err.message || "Dữ liệu không hợp lệ." });
+        .json({ success: false, message: err.message || "Dữ liệu không hợp lệ." });
     }
-    res.status(500).json({ message: err.message || "Lỗi server." });
+    res.status(500).json({ success: false, message: err.message || "Lỗi server." });
   }
 };
 
@@ -339,7 +341,7 @@ exports.getCoursePreview = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid course id" });
+      return res.status(400).json({ success: false, message: "Invalid course id" });
     }
 
     // Dòng .select() — thêm "thumbnail"
@@ -353,7 +355,7 @@ exports.getCoursePreview = async (req, res) => {
       .lean();
 
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     // Response object — thêm thumbnail
@@ -375,7 +377,7 @@ exports.getCoursePreview = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -388,7 +390,7 @@ exports.getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid course id" });
+      return res.status(400).json({ success: false, message: "Invalid course id" });
     }
 
     const course = await Course.findById(id)
@@ -398,7 +400,7 @@ exports.getCourseById = async (req, res) => {
       .lean();
 
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     const instructorIdStr =
@@ -419,12 +421,12 @@ exports.getCourseById = async (req, res) => {
     if (!enrollment) {
       return res
         .status(403)
-        .json({ message: "Bạn cần mua khóa học để xem nội dung." });
+        .json({ success: false, message: "Bạn cần mua khóa học để xem nội dung." });
     }
 
     res.json({ success: true, data: course });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -449,20 +451,21 @@ exports.updateCourse = async (req, res) => {
     } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ message: "Invalid course id" });
+      return res.status(400).json({ success: false, message: "Invalid course id" });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     if (course.instructorId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not the course instructor" });
+      return res.status(403).json({ success: false, message: "Not the course instructor" });
     }
 
     if (["pending", "published"].includes(course.status)) {
       return res.status(400).json({
+        success: false,
         message: `Cannot update course while it is ${course.status}. Please move it back to draft first.`,
       });
     }
@@ -470,7 +473,7 @@ exports.updateCourse = async (req, res) => {
     if (categoryId !== undefined) {
       const categoryValidation = await validateCategoryId(categoryId || null);
       if (!categoryValidation.valid) {
-        return res.status(400).json({ message: categoryValidation.error });
+        return res.status(400).json({ success: false, message: categoryValidation.error });
       }
       course.category = categoryValidation.category?._id || null;
     }
@@ -604,9 +607,9 @@ exports.updateCourse = async (req, res) => {
     res.json({ success: true, data: populated });
   } catch (err) {
     if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message });
+      return res.status(400).json({ success: false, message: err.message });
     }
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -616,12 +619,12 @@ exports.uploadVideo = async (req, res) => {
     if (!req.file || !req.file.buffer) {
       return res
         .status(400)
-        .json({ message: "Cần gửi file video (field: video)." });
+        .json({ success: false, message: "Cần gửi file video (field: video)." });
     }
     const data = await uploadVideoToCloudinary(req.file.buffer);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ message: err.message || "Upload video thất bại." });
+    res.status(500).json({ success: false, message: err.message || "Upload video thất bại." });
   }
 };
 
@@ -633,20 +636,21 @@ exports.submitCourse = async (req, res) => {
     const { courseId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ message: "Invalid course id" });
+      return res.status(400).json({ success: false, message: "Invalid course id" });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     if (course.instructorId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not the course instructor" });
+      return res.status(403).json({ success: false, message: "Not the course instructor" });
     }
 
     if (!["draft", "rejected"].includes(course.status)) {
       return res.status(400).json({
+        success: false,
         message: `Cannot submit course with status: ${course.status}`,
       });
     }
@@ -660,7 +664,7 @@ exports.submitCourse = async (req, res) => {
       data: course,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -681,7 +685,7 @@ exports.getPendingCourses = async (req, res) => {
       data: courses,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -693,16 +697,17 @@ exports.approveCourse = async (req, res) => {
     const { courseId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ message: "Invalid course id" });
+      return res.status(400).json({ success: false, message: "Invalid course id" });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     if (course.status !== "pending") {
       return res.status(400).json({
+        success: false,
         message: `Cannot approve course with status: ${course.status}`,
       });
     }
@@ -716,7 +721,7 @@ exports.approveCourse = async (req, res) => {
       data: course,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -761,7 +766,7 @@ exports.getAdminAllCourses = async (req, res) => {
       data: courses,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 exports.rejectCourse = async (req, res) => {
@@ -770,22 +775,24 @@ exports.rejectCourse = async (req, res) => {
     const { reason } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ message: "Invalid course id" });
+      return res.status(400).json({ success: false, message: "Invalid course id" });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     if (course.status !== "pending") {
       return res.status(400).json({
+        success: false,
         message: `Cannot reject course with status: ${course.status}`,
       });
     }
 
     if (!reason || !String(reason).trim()) {
       return res.status(400).json({
+        success: false,
         message: "A rejection reason is required.",
       });
     }
@@ -806,7 +813,7 @@ exports.rejectCourse = async (req, res) => {
       data: populated,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -840,6 +847,6 @@ exports.getInstructorCourses = async (req, res) => {
       data: courses,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
