@@ -54,6 +54,8 @@ import InstructorDashboard from "./pages/Instructor/Dashboard/InstructorDashboar
 import InstructorProfilePage from "./pages/Instructor/Profile/InstructorProfilePage";
 import InstructorRevenuePage from "./pages/Instructor/Revenue/InstructorRevenuePage";
 import InstructorStudentsPage from "./pages/Instructor/Students/InstructorStudentsPage";
+import InstructorBlogPage from "./pages/Instructor/Blog/InstructorBlogPage";
+import CreateBlogPage from "./pages/Instructor/Blog/CreateBlogPage";
 
 // ─── Admin Pages ──────────────────────────────────────────────────────────────
 import AdminAnalyticsPage from "./pages/Admin/Analytics/AdminAnalyticsPage";
@@ -153,11 +155,14 @@ const router = createBrowserRouter(
           path="/instructor/students"
           element={<InstructorStudentsPage />}
         />
+        <Route path="/instructor/blog" element={<InstructorBlogPage />} />
+        <Route path="/instructor/blog/create" element={<CreateBlogPage />} />
         <Route
           path="/instructor/analytics"
           element={<InstructorAnalyticsPage />}
         />
         <Route path="/instructor/profile" element={<InstructorProfilePage />} />
+        
       </Route>
 
       {/* Admin Routes */}

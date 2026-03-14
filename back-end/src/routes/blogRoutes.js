@@ -10,6 +10,7 @@ const {
   rejectBlog,
   softDeleteBlog,
   getBlogById,
+  getMyBlogs,
 } = require("../controller/blogController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -20,6 +21,14 @@ router.post(
   protect,
   authorize("instructor"),
   createBlog
+);
+
+// Instructor lấy danh sách blog của mình
+router.get(
+  "/my",
+  protect,
+  authorize("instructor"),
+  getMyBlogs
 );
 
 router.put(

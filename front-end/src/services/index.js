@@ -76,6 +76,8 @@ api.interceptors.response.use(
         requestUrl.includes("/courses/") ||
         requestUrl.includes("/enrollments/") ||
         requestUrl.includes("/lessons/") ||
+        requestUrl.includes("/blogs/") ||
+        requestUrl.startsWith("/blogs") ||
         // Hoặc message liên quan đến enrollment
         (responseData.message &&
           (responseData.message.includes("mua") ||

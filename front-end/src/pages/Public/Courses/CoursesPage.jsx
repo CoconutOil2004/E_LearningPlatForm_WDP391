@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+// ANTD: chỉ thêm Input, Select, Spin — thay 3 custom widget nhỏ
+import { Input, Select, Spin } from "antd";
 import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
@@ -24,18 +26,11 @@ const LEVEL_COLORS = {
   Advanced: { bg: "rgba(139,92,246,0.12)", text: "#8B5CF6" },
 };
 
-// ─── CourseCard (inline, dùng trực tiếp BE fields) ───────────────────────────
-const CourseCard = ({
-  course,
-  onEnroll,
-  onWishlist,
-  isEnrolled,
-  isWishlisted,
-}) => {
+// ─── CourseCard — giữ nguyên 100% ────────────────────────────────────────────
+const CourseCard = ({ course, onEnroll, onWishlist, isEnrolled, isWishlisted }) => {
   const navigate = useNavigate();
   const level = LEVEL_COLORS[course.level] || LEVEL_COLORS.Beginner;
-  const instructor =
-    course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
+  const instructor = course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
   const duration = course.totalDuration
     ? `${Math.floor(course.totalDuration / 3600)}h ${Math.floor((course.totalDuration % 3600) / 60)}m`
     : null;
@@ -54,13 +49,9 @@ const CourseCard = ({
       style={{ boxShadow: "0 8px 32px -8px rgba(16,185,129,0.1)" }}
       onClick={() => navigate(`/courses/${course._id}`)}
     >
-      {/* Thumbnail */}
       <div className="relative w-full overflow-hidden aspect-video bg-gradient-to-br from-primary/10 to-secondary/20 group">
         <img
-          src={
-            course.thumbnail ||
-            "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop"
-          }
+          src={course.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop"}
           alt={course.title}
           className="absolute inset-0 object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
         />
@@ -70,21 +61,13 @@ const CourseCard = ({
           </div>
         )}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onWishlist(course._id);
-          }}
+          onClick={(e) => { e.stopPropagation(); onWishlist(course._id); }}
           className="absolute flex items-center justify-center w-8 h-8 transition-all rounded-full top-3 right-3 bg-white/80 backdrop-blur hover:scale-110"
         >
-          <Icon
-            name="heart"
-            size={15}
-            color={isWishlisted ? "#EF4444" : "var(--text-muted)"}
-          />
+          <Icon name="heart" size={15} color={isWishlisted ? "#EF4444" : "var(--text-muted)"} />
         </button>
       </div>
 
-      {/* Body */}
       <div className="flex flex-col flex-1 p-6">
         <div className="flex items-center justify-between mb-3">
           <span
@@ -114,19 +97,16 @@ const CourseCard = ({
         <div className="flex items-center gap-4 mb-4 text-xs font-medium text-muted">
           {duration && (
             <span className="flex items-center gap-1">
-              <Icon name="clock" size={13} />
-              {duration}
+              <Icon name="clock" size={13} /> {duration}
             </span>
           )}
           {lessonCount > 0 && (
             <span className="flex items-center gap-1">
-              <Icon name="book" size={13} />
-              {lessonCount} lessons
+              <Icon name="book" size={13} /> {lessonCount} lessons
             </span>
           )}
           <span className="flex items-center gap-1">
-            <Icon name="user" size={13} />
-            {instructor}
+            <Icon name="user" size={13} /> {instructor}
           </span>
         </div>
 
@@ -137,18 +117,12 @@ const CourseCard = ({
                 ${(course.price * 1.4).toFixed(2)}
               </span>
             )}
-            <span
-              className="text-2xl font-black gradient-text"
-              style={{ letterSpacing: "-0.02em" }}
-            >
+            <span className="text-2xl font-black gradient-text" style={{ letterSpacing: "-0.02em" }}>
               {course.price === 0 ? "Free" : `$${course.price}`}
             </span>
           </div>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEnroll(course);
-            }}
+            onClick={(e) => { e.stopPropagation(); onEnroll(course); }}
             className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all ${
               isEnrolled
                 ? "bg-secondary/10 text-secondary border border-secondary/30"
@@ -168,22 +142,14 @@ const CoursesPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } =
-    useCourseStore();
+  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } = useCourseStore();
   const toast = useToast();
 
-  // Filter state — sync with URL params
   const [keyword, setKeyword] = useState(searchParams.get("q") ?? "");
-  const [activeCategory, setActiveCategory] = useState(
-    searchParams.get("category") ?? "",
-  );
-  const [activeLevel, setActiveLevel] = useState(
-    searchParams.get("level") ?? "All",
-  );
+  const [activeCategory, setActiveCategory] = useState(searchParams.get("category") ?? "");
+  const [activeLevel, setActiveLevel] = useState(searchParams.get("level") ?? "All");
   const [sortBy, setSortBy] = useState(searchParams.get("sort") ?? "popular");
-  const [showSortMenu, setShowSortMenu] = useState(false);
 
-  // Data state
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [total, setTotal] = useState(0);
@@ -192,31 +158,23 @@ const CoursesPage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Load categories once
   useEffect(() => {
-    CourseService.getCategories()
-      .then(setCategories)
-      .catch(() => {});
+    CourseService.getCategories().then(setCategories).catch(() => {});
   }, []);
 
-  // Fetch courses (debounced on keyword)
   const fetchCourses = useCallback(
     (p = 1, append = false) => {
       const setter = append ? setLoadingMore : setLoading;
       setter(true);
       const params = {
-        sortBy,
-        page: p,
-        limit: 9,
+        sortBy, page: p, limit: 9,
         ...(keyword.trim() && { keyword: keyword.trim() }),
         ...(activeCategory && { category: activeCategory }),
         ...(activeLevel !== "All" && { level: activeLevel }),
       };
       CourseService.searchCourses(params)
         .then((res) => {
-          setCourses((prev) =>
-            append ? [...prev, ...res.courses] : res.courses,
-          );
+          setCourses((prev) => append ? [...prev, ...res.courses] : res.courses);
           setTotal(res.total);
           setPage(p);
           setTotalPages(res.pages);
@@ -227,16 +185,11 @@ const CoursesPage = () => {
     [keyword, activeCategory, activeLevel, sortBy],
   );
 
-  // Debounce keyword changes
   useEffect(() => {
-    const t = setTimeout(() => {
-      fetchCourses(1);
-      setPage(1);
-    }, 400);
+    const t = setTimeout(() => { fetchCourses(1); setPage(1); }, 400);
     return () => clearTimeout(t);
   }, [fetchCourses]);
 
-  // Sync URL params
   useEffect(() => {
     const p = {};
     if (keyword) p.q = keyword;
@@ -247,58 +200,29 @@ const CoursesPage = () => {
   }, [keyword, activeCategory, activeLevel, sortBy]);
 
   const handleEnroll = (course) => {
-    if (!isAuthenticated) {
-      navigate(ROUTES.LOGIN);
-      return;
-    }
+    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
     enroll(course._id);
     toast.success(`Enrolled in "${course.title}"!`);
     navigate(`/student/learning/${course._id}`);
   };
 
   const handleWishlist = (courseId) => {
-    if (!isAuthenticated) {
-      navigate(ROUTES.LOGIN);
-      return;
-    }
+    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
     toggleWishlist(courseId);
-    toast.success(
-      wishlistIds.includes(courseId)
-        ? "Removed from wishlist"
-        : "Added to wishlist",
-    );
+    toast.success(wishlistIds.includes(courseId) ? "Removed from wishlist" : "Added to wishlist");
   };
 
-  const handleFilter = (setter, value) => {
-    setter(value);
-    setPage(1);
-  };
-  const clearFilters = () => {
-    setKeyword("");
-    setActiveCategory("");
-    setActiveLevel("All");
-    setSortBy("popular");
-  };
-
-  const currentSortLabel =
-    SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Most Popular";
+  const handleFilter = (setter, value) => { setter(value); setPage(1); };
+  const clearFilters = () => { setKeyword(""); setActiveCategory(""); setActiveLevel("All"); setSortBy("popular"); };
   const hasFilters = keyword || activeCategory || activeLevel !== "All";
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
+    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <div className="px-6 pt-10 pb-20 mx-auto max-w-7xl">
+
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col justify-between gap-6 mb-10 md:flex-row md:items-end">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <h1 className="mb-4 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
               All Courses
               <br />
@@ -309,65 +233,36 @@ const CoursesPage = () => {
             </p>
           </motion.div>
 
-          {/* Search + Sort */}
+          {/* Search + Sort — thay custom input + custom dropdown bằng ANTD */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
             className="flex flex-wrap items-center gap-3"
           >
-            <div className="flex items-center glass-card rounded-full px-4 py-2.5 gap-2 min-w-[220px]">
-              <Icon name="search" size={16} color="var(--text-muted)" />
-              <input
-                value={keyword}
-                onChange={(e) => handleFilter(setKeyword, e.target.value)}
-                placeholder="Search courses..."
-                className="w-full text-sm bg-transparent border-none outline-none text-body placeholder:text-muted"
-              />
-              {keyword && (
-                <button onClick={() => handleFilter(setKeyword, "")}>
-                  <Icon name="x" size={14} color="var(--text-muted)" />
-                </button>
-              )}
-            </div>
+            {/* ANTD Input.Search thay thế custom input trong glass-card */}
+            <Input
+              prefix={<Icon name="search" size={16} color="var(--text-muted)" />}
+              value={keyword}
+              onChange={(e) => handleFilter(setKeyword, e.target.value)}
+              placeholder="Search courses..."
+              allowClear
+              className="rounded-full min-w-[220px]"
+              style={{ borderRadius: 999 }}
+            />
 
-            <div className="relative">
-              <button
-                onClick={() => setShowSortMenu((v) => !v)}
-                className="flex items-center gap-2 glass-card rounded-full px-5 py-2.5 text-sm font-bold hover:border-primary/30 transition-all"
-              >
-                {currentSortLabel}{" "}
-                <Icon name="chevronDown" size={15} color="var(--text-muted)" />
-              </button>
-              <AnimatePresence>
-                {showSortMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                    className="absolute right-0 top-full mt-2 glass-card rounded-2xl overflow-hidden z-30 min-w-[180px]"
-                    style={{ boxShadow: "var(--shadow-lg)" }}
-                  >
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          handleFilter(setSortBy, opt.value);
-                          setShowSortMenu(false);
-                        }}
-                        className={`w-full text-left px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10 ${sortBy === opt.value ? "text-primary" : "text-body"}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* ANTD Select thay thế custom AnimatePresence dropdown */}
+            <Select
+              value={sortBy}
+              onChange={(val) => handleFilter(setSortBy, val)}
+              options={SORT_OPTIONS}
+              style={{ minWidth: 180, borderRadius: 999 }}
+              className="rounded-full"
+            />
           </motion.div>
         </div>
 
-        {/* ── Category tabs ───────────────────────────────────────────────── */}
+        {/* ── Category tabs — giữ nguyên 100% ─────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -391,7 +286,7 @@ const CoursesPage = () => {
           ))}
         </motion.div>
 
-        {/* ── Level tabs ──────────────────────────────────────────────────── */}
+        {/* ── Level tabs — giữ nguyên 100% ────────────────────────────────── */}
         <div className="flex gap-2 mb-8">
           {LEVEL_OPTIONS.map((lvl) => (
             <button
@@ -404,12 +299,11 @@ const CoursesPage = () => {
           ))}
         </div>
 
-        {/* ── Result count ────────────────────────────────────────────────── */}
+        {/* ── Result count — giữ nguyên 100% ──────────────────────────────── */}
         {!loading && (
           <div className="flex items-center justify-between mb-8">
             <p className="text-sm font-medium text-muted">
-              Showing{" "}
-              <span className="font-bold text-heading">{courses.length}</span>{" "}
+              Showing <span className="font-bold text-heading">{courses.length}</span>{" "}
               of <span className="font-bold text-heading">{total}</span> courses
             </p>
             {hasFilters && (
@@ -417,21 +311,17 @@ const CoursesPage = () => {
                 onClick={clearFilters}
                 className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
               >
-                <Icon name="x" size={12} color="var(--color-primary)" /> Clear
-                filters
+                <Icon name="x" size={12} color="var(--color-primary)" /> Clear filters
               </button>
             )}
           </div>
         )}
 
-        {/* ── Grid ────────────────────────────────────────────────────────── */}
+        {/* ── Grid — giữ nguyên 100% ───────────────────────────────────────── */}
         {loading ? (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(9)].map((_, i) => (
-              <div
-                key={i}
-                className="glass-card rounded-[1.5rem] overflow-hidden animate-pulse"
-              >
+              <div key={i} className="glass-card rounded-[1.5rem] overflow-hidden animate-pulse">
                 <div className="aspect-video bg-white/40" />
                 <div className="p-6 space-y-3">
                   <div className="w-3/4 h-5 rounded-full bg-white/40" />
@@ -444,15 +334,10 @@ const CoursesPage = () => {
           </div>
         ) : courses.length === 0 ? (
           <div className="py-24 text-center">
-            <p className="mt-4 text-lg font-medium text-muted">
-              No courses match your search.
-            </p>
+            <p className="mt-4 text-lg font-medium text-muted">No courses match your search.</p>
           </div>
         ) : (
-          <motion.div
-            layout
-            className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
-          >
+          <motion.div layout className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence mode="popLayout">
               {courses.map((course) => (
                 <CourseCard
@@ -468,7 +353,7 @@ const CoursesPage = () => {
           </motion.div>
         )}
 
-        {/* ── Load More ───────────────────────────────────────────────────── */}
+        {/* ── Load More — thay custom spinner bằng ANTD Spin ───────────────── */}
         {!loading && page < totalPages && (
           <div className="flex justify-center mt-14">
             <button
@@ -477,19 +362,15 @@ const CoursesPage = () => {
               className="flex items-center gap-3 px-10 py-4 font-bold transition-all glass-card rounded-2xl hover:bg-white/60"
             >
               {loadingMore ? (
-                <>
-                  <div className="w-4 h-4 border-2 rounded-full border-primary border-t-transparent animate-spin" />
-                  Loading...
-                </>
+                <Spin size="small" />
               ) : (
-                <>
-                  <Icon name="refresh" size={20} color="var(--text-body)" />
-                  Load more courses
-                </>
+                <Icon name="refresh" size={20} color="var(--text-body)" />
               )}
+              {loadingMore ? "Loading..." : "Load more courses"}
             </button>
           </div>
         )}
+
       </div>
     </motion.div>
   );

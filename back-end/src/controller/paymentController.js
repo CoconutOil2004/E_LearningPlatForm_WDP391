@@ -336,3 +336,160 @@ exports.getRevenueByCourse = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/* ===============================
+   ADMIN REVENUE SUMMARY (1)
+   GET /api/payments/admin/revenue/summary?from=&to=
+================================*/
+exports.getRevenueSummary = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    const dateFilter = {};
+    if (from || to) {
+      dateFilter.$and = [];
+      const range = {};
+      if (from) range.$gte = new Date(from);
+      if (to) range.$lte = new Date(to);
+      dateFilter.$and.push({ paymentDate: range });
+    }
+
+    const matchStage = {
+      status: "success",
+    };
+
+    if (dateFilter.$and) {
+      Object.assign(matchStage, dateFilter.$and[0]);
+    }
+
+    const [result] = await Payment.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue: result?.totalRevenue || 0,
+        totalOrders: result?.totalOrders || 0,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ===============================
+   ADMIN REVENUE BY DATE (2)
+   GET /api/payments/admin/revenue/daily?from=&to=&groupBy=day|month
+================================*/
+exports.getRevenueByDate = async (req, res) => {
+  try {
+    const { from, to, groupBy = "day" } = req.query;
+
+    const match = {
+      status: "success",
+    };
+
+    if (from || to) {
+      match.paymentDate = {};
+      if (from) match.paymentDate.$gte = new Date(from);
+      if (to) match.paymentDate.$lte = new Date(to);
+    }
+
+    const format = groupBy === "month" ? "%Y-%m" : "%Y-%m-%d";
+
+    const result = await Payment.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format, date: "$paymentDate" },
+          },
+          totalRevenue: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    res.json({
+      success: true,
+      data: result.map((r) => ({
+        date: r._id,
+        totalRevenue: r.totalRevenue,
+        totalOrders: r.totalOrders,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ===============================
+   ADMIN REVENUE BY COURSE (3)
+   GET /api/payments/admin/revenue/by-course?from=&to=
+================================*/
+exports.getRevenueByCourse = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    const match = {
+      status: "success",
+    };
+
+    if (from || to) {
+      match.paymentDate = {};
+      if (from) match.paymentDate.$gte = new Date(from);
+      if (to) match.paymentDate.$lte = new Date(to);
+    }
+
+    const result = await Payment.aggregate([
+      { $match: match },
+      {
+        $lookup: {
+          from: "enrollments",
+          localField: "enrollmentId",
+          foreignField: "_id",
+          as: "enrollment",
+        },
+      },
+      { $unwind: "$enrollment" },
+      {
+        $group: {
+          _id: "$enrollment.courseId",
+          totalRevenue: { $sum: "$amount" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "_id",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      { $unwind: { path: "$course", preserveNullAndEmptyArrays: true } },
+      { $sort: { totalRevenue: -1 } },
+    ]);
+
+    res.json({
+      success: true,
+      data: result.map((r) => ({
+        courseId: r._id,
+        title: r.course?.title || "Unknown course",
+        totalRevenue: r.totalRevenue,
+        totalOrders: r.totalOrders,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

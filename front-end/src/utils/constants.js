@@ -54,6 +54,8 @@ const ROUTES = {
   INSTRUCTOR_STUDENTS: "/instructor/students",
   INSTRUCTOR_ANALYTICS: "/instructor/analytics",
   INSTRUCTOR_PROFILE: "/instructor/profile",
+  INSTRUCTOR_BLOG: "/instructor/blog",
+  INSTRUCTOR_BLOG_CREATE: "/instructor/blog/create",
 
   // Admin
   ADMIN_DASHBOARD: "/admin/dashboard",
