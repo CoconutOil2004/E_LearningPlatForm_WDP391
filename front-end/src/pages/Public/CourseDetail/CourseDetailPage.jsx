@@ -31,22 +31,166 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+
 import CourseService from "../../../services/api/CourseService";
 import PaymentService from "../../../services/api/PaymentService";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
-import { pageVariants } from "../../../utils/helpers";
+import {
+  formatDuration,
+  formatThousands,
+  pageVariants,
+} from "../../../utils/helpers";
 
 const { Title, Text, Paragraph } = Typography;
 
-const fmtDuration = (s) => {
-  if (!s) return null;
-  const h = Math.floor(s / 3600),
-    m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+/* ─── CourseMeta ──────────────────────────────────────────────────────────── */
+const CourseMeta = ({
+  instructor,
+  course,
+  duration,
+  totalLessons,
+  totalQuizzes,
+}) => (
+  <Space wrap size="large">
+    <Space>
+      <TeamOutlined />
+      <Text>{instructor}</Text>
+    </Space>
+    <Space>
+      <StarFilled style={{ color: "#F59E0B" }} />
+      <Text strong>{Number(course.rating ?? 0).toFixed(1)}</Text>
+      <Text type="secondary">
+        ({formatThousands(course.enrollmentCount ?? 0)} students)
+      </Text>
+    </Space>
+    {duration && (
+      <Space>
+        <ClockCircleOutlined />
+        <Text>{duration}</Text>
+      </Space>
+    )}
+    <Space>
+      <BookOutlined />
+      <Text>
+        {totalLessons} lessons · {totalQuizzes} quizzes
+      </Text>
+    </Space>
+  </Space>
+);
+
+/* ─── CourseOverviewCards ─────────────────────────────────────────────────── */
+const CourseOverviewCards = ({
+  totalLessons,
+  totalQuizzes,
+  duration,
+  enrollmentCount,
+}) => {
+  const items = [
+    { icon: <BookOutlined />, label: `${totalLessons} Lessons` },
+    { icon: <QuestionCircleOutlined />, label: `${totalQuizzes} Quizzes` },
+    { icon: <ClockCircleOutlined />, label: duration || "—" },
+    {
+      icon: <TeamOutlined />,
+      label: `${formatThousands(enrollmentCount)} Students`,
+    },
+  ];
+  return (
+    <Row gutter={[16, 16]}>
+      {items.map((item) => (
+        <Col xs={12} sm={6} key={item.label}>
+          <Card size="small" style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: 20,
+                marginBottom: 4,
+                color: "var(--color-primary,#667eea)",
+              }}
+            >
+              {item.icon}
+            </div>
+            <Text strong>{item.label}</Text>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
 };
 
+/* ─── CourseInfoSidebar ───────────────────────────────────────────────────── */
+const CourseInfoSidebar = ({ totalLessons, totalQuizzes, duration }) => {
+  const items = [
+    { icon: <BookOutlined />, text: `${totalLessons} lessons` },
+    { icon: <QuestionCircleOutlined />, text: `${totalQuizzes} quizzes` },
+    { icon: <ClockCircleOutlined />, text: duration || "—" },
+    { icon: <GlobalOutlined />, text: "Lifetime access" },
+    { icon: <TrophyOutlined />, text: "Certificate of completion" },
+  ];
+  return (
+    <Space direction="vertical" style={{ width: "100%" }}>
+      {items.map((item) => (
+        <Space key={item.text}>
+          <span style={{ color: "var(--color-primary,#667eea)" }}>
+            {item.icon}
+          </span>
+          <Text>{item.text}</Text>
+        </Space>
+      ))}
+    </Space>
+  );
+};
+
+/* ─── PriceBlock ──────────────────────────────────────────────────────────── */
+const PriceBlock = ({ isEnrolled, isFree, course }) => {
+  if (isEnrolled) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 14px",
+          background: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
+          borderRadius: 12,
+          marginBottom: 4,
+        }}
+      >
+        <CheckCircleOutlined style={{ color: "#059669", fontSize: 18 }} />
+        <Text strong style={{ color: "#065f46" }}>
+          You are enrolled in this course
+        </Text>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {!isFree && (
+        <Text
+          delete
+          type="secondary"
+          style={{ display: "block", fontSize: 13 }}
+        >
+          {formatThousands(Math.round(course.price * 1.4))}
+        </Text>
+      )}
+      <Title
+        level={2}
+        style={{
+          margin: 0,
+          background: "linear-gradient(135deg,#667eea,#764ba2)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }}
+      >
+        {isFree ? "Free" : formatThousands(course.price)}
+      </Title>
+    </>
+  );
+};
+
+/* ─── CourseDetailPage ────────────────────────────────────────────────────── */
 const CourseDetailPage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -66,61 +210,58 @@ const CourseDetailPage = () => {
   const [paying, setPaying] = useState(false);
   const [tab, setTab] = useState("overview");
 
-  // ── Handle VNPay payment callback ─────────────────────────────────────────
+  // Handle VNPay payment callback
   useEffect(() => {
     const payment = searchParams.get("payment");
     const courseId = searchParams.get("courseId");
     if (payment === "success" && courseId) {
-      message.success("Thanh toán thành công! Bạn có thể bắt đầu học ngay.");
+      message.success("Payment successful! You can start learning now.");
       enroll(courseId);
       PaymentService.getEnrolledCourseIds()
         .then(setEnrolledCourseIds)
         .catch(() => {});
       navigate(`/courses/${courseId}`, { replace: true });
     } else if (payment === "failed") {
-      message.error("Thanh toán thất bại. Vui lòng thử lại.");
+      message.error("Payment failed. Please try again.");
       navigate(`/courses/${id}`, { replace: true });
     } else if (payment === "error") {
-      message.error("Có lỗi xảy ra trong quá trình thanh toán.");
+      message.error("An error occurred during payment.");
       navigate(`/courses/${id}`, { replace: true });
     }
   }, [searchParams]);
 
-  // ── Sync enrollment from server (fresh check every time) ──────────────────
+  // Sync enrollment from server
   useEffect(() => {
     if (!isAuthenticated) {
       setEnrollChecked(true);
       return;
     }
     PaymentService.getEnrolledCourseIds()
-      .then((ids) => {
-        setEnrolledCourseIds(ids);
-      })
+      .then(setEnrolledCourseIds)
       .catch(() => {})
       .finally(() => setEnrollChecked(true));
   }, [isAuthenticated, id]);
 
-  // ── Load course data — chỉ gọi preview (public, không cần login) ────────────
+  // Load course data
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     CourseService.getCoursePreview(id)
       .then((data) => {
         if (!data) {
-          message.error("Không tìm thấy khóa học");
+          message.error("Course not found");
           navigate(ROUTES.COURSES);
           return;
         }
         setCourse(data);
       })
       .catch(() => {
-        message.error("Không tìm thấy khóa học");
+        message.error("Course not found");
         navigate(ROUTES.COURSES);
       })
       .finally(() => setLoading(false));
   }, [id]);
 
-  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading || !enrollChecked) {
     return (
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
@@ -131,27 +272,19 @@ const CourseDetailPage = () => {
 
   if (!course) return null;
 
-  // ── Derived state ──────────────────────────────────────────────────────────
+  // Derived state
   const courseId = course._id?.toString();
   const instructor =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
   const categoryName = course.category?.name ?? "";
   const isFree = course.price === 0;
-
-  // isEnrolled = student đã mua & có paymentStatus=paid
   const isEnrolled = enrolledCourseIds.includes(courseId);
-
-  // isOwner = instructor sở hữu khóa này
   const isOwner =
     !!user?._id &&
     (course.instructorId?._id?.toString() === user._id?.toString() ||
       course.instructorId?.toString() === user._id?.toString());
-
   const isAdmin = user?.role === "admin";
-
-  // isUnlocked = có quyền xem nội dung đầy đủ (cho syllabus display)
   const isUnlocked = isEnrolled || isOwner || isAdmin;
-
   const isWishlisted = wishlistIds.includes(courseId);
 
   const totalLessons = (course.sections ?? []).reduce(
@@ -162,94 +295,63 @@ const CourseDetailPage = () => {
     (a, s) => a + (s.items?.filter((i) => i.itemType === "quiz").length ?? 0),
     0,
   );
-  const duration = fmtDuration(course.totalDuration);
+  const duration = formatDuration(course.totalDuration);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // Handlers
   const handleBuy = async () => {
-    // 1. Kiểm tra đăng nhập
     if (!isAuthenticated) {
-      message.info("Vui lòng đăng nhập để tiếp tục");
+      message.info("Please log in to continue");
       navigate(ROUTES.LOGIN);
       return;
     }
 
-    // 2. XỬ LÝ KHÓA HỌC FREE
     if (isFree) {
       setPaying(true);
       try {
-        // ✅ GỌI API ENROLL-FREE
         const res = await PaymentService.enrollFreeCourse(course._id);
-
         if (res?.success) {
-          // Cập nhật local state
           enroll(courseId);
-
-          // Refresh danh sách enrolled courses từ server
           try {
             const ids = await PaymentService.getEnrolledCourseIds();
             setEnrolledCourseIds(ids);
-          } catch (err) {
-            console.warn("Failed to refresh enrolled courses:", err);
-          }
-
-          // Hiển thị thông báo thành công
-          message.success("Đăng ký khóa học miễn phí thành công!");
-
-          // Navigate đến trang học
+          } catch (_) {}
+          message.success("Enrolled in free course successfully!");
           navigate(`/student/learning/${course._id}`);
         } else {
-          message.error(res?.message || "Đăng ký thất bại. Vui lòng thử lại.");
+          message.error(res?.message || "Enrollment failed. Please try again.");
         }
       } catch (err) {
-        console.error("Enroll free course error:", err);
-
-        // Xử lý các loại lỗi cụ thể
-        const errorMessage = err?.response?.data?.message || err?.message;
-
-        if (err?.response?.status === 400) {
-          // Course không phải FREE hoặc đã enroll
-          message.warning(errorMessage || "Không thể đăng ký khóa học này");
-        } else if (err?.response?.status === 404) {
-          message.error("Không tìm thấy khóa học");
-        } else {
-          message.error(errorMessage || "Có lỗi xảy ra khi đăng ký khóa học");
-        }
+        const msg = err?.response?.data?.message || err?.message;
+        if (err?.response?.status === 400)
+          message.warning(msg || "Cannot enroll in this course");
+        else if (err?.response?.status === 404)
+          message.error("Course not found");
+        else message.error(msg || "An error occurred while enrolling");
       } finally {
         setPaying(false);
       }
       return;
     }
 
-    // 3. XỬ LÝ KHÓA HỌC TRẢ PHÍ → VNPAY
     setPaying(true);
     try {
       const res = await PaymentService.createPayment(course._id, "vnpay");
-
       if (res?.paymentUrl) {
-        // Redirect đến VNPay payment gateway
         window.location.href = res.paymentUrl;
       } else {
-        message.error("Không thể tạo đơn thanh toán. Vui lòng thử lại.");
+        message.error("Could not create payment. Please try again.");
       }
     } catch (err) {
-      console.error("Create payment error:", err);
-
-      const errorMessage = err?.response?.data?.message || err?.message;
-
-      if (err?.response?.status === 400) {
-        // Đã mua khóa học hoặc lỗi validation
-        message.warning(errorMessage || "Không thể tạo đơn thanh toán");
-      } else {
-        message.error(errorMessage || "Có lỗi xảy ra khi tạo đơn thanh toán");
-      }
+      const msg = err?.response?.data?.message || err?.message;
+      if (err?.response?.status === 400)
+        message.warning(msg || "Cannot create payment");
+      else message.error(msg || "An error occurred while creating payment");
     } finally {
       setPaying(false);
     }
   };
 
-  const handleLearn = () => {
-    navigate(`/student/learning/${course._id}`);
-  };
+  const handleLearn = () => navigate(`/student/learning/${course._id}`);
 
   const handleWishlist = () => {
     if (!isAuthenticated) {
@@ -258,13 +360,11 @@ const CourseDetailPage = () => {
     }
     toggleWishlist(courseId);
     message.success(
-      isWishlisted
-        ? "Đã xóa khỏi danh sách yêu thích"
-        : "Đã thêm vào yêu thích",
+      isWishlisted ? "Removed from wishlist" : "Added to wishlist",
     );
   };
 
-  // ── Curriculum collapse items ──────────────────────────────────────────────
+  // Curriculum collapse items
   const collapseItems = (course.sections ?? []).map((sec, idx) => {
     const lessons = sec.items?.filter((i) => i.itemType === "lesson") ?? [];
     const quizzes = sec.items?.filter((i) => i.itemType === "quiz") ?? [];
@@ -274,7 +374,7 @@ const CourseDetailPage = () => {
         <Space>
           <Text strong>{sec.title}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {lessons.length} bài học · {quizzes.length} quiz
+            {lessons.length} lessons · {quizzes.length} quizzes
           </Text>
         </Space>
       ),
@@ -305,7 +405,7 @@ const CourseDetailPage = () => {
                 <Text style={{ flex: 1 }}>{item.title}</Text>
                 {dur > 0 && (
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {fmtDuration(dur)}
+                    {formatDuration(dur)}
                   </Text>
                 )}
                 {!isUnlocked && !isQuiz && (
@@ -314,7 +414,7 @@ const CourseDetailPage = () => {
                     color="default"
                     style={{ margin: 0 }}
                   >
-                    Mua để xem
+                    Purchase to view
                   </Tag>
                 )}
               </div>
@@ -325,7 +425,6 @@ const CourseDetailPage = () => {
     };
   });
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <motion.div
       variants={pageVariants}
@@ -356,7 +455,7 @@ const CourseDetailPage = () => {
         </Space>
 
         <Row gutter={[32, 32]}>
-          {/* ── LEFT: Course info ── */}
+          {/* Left: Course info */}
           <Col xs={24} lg={16}>
             <Space direction="vertical" size="large" style={{ width: "100%" }}>
               {/* Thumbnail */}
@@ -385,7 +484,7 @@ const CourseDetailPage = () => {
                   <Tag>{course.level}</Tag>
                   {isEnrolled && (
                     <Tag icon={<UnlockOutlined />} color="success">
-                      Đã đăng ký
+                      Enrolled
                     </Tag>
                   )}
                   {!isEnrolled && !isOwner && !isAdmin && (
@@ -404,31 +503,13 @@ const CourseDetailPage = () => {
               </div>
 
               {/* Meta */}
-              <Space wrap size="large">
-                <Space>
-                  <TeamOutlined />
-                  <Text>{instructor}</Text>
-                </Space>
-                <Space>
-                  <StarFilled style={{ color: "#F59E0B" }} />
-                  <Text strong>{Number(course.rating ?? 0).toFixed(1)}</Text>
-                  <Text type="secondary">
-                    ({(course.enrollmentCount ?? 0).toLocaleString()} học viên)
-                  </Text>
-                </Space>
-                {duration && (
-                  <Space>
-                    <ClockCircleOutlined />
-                    <Text>{duration}</Text>
-                  </Space>
-                )}
-                <Space>
-                  <BookOutlined />
-                  <Text>
-                    {totalLessons} bài học · {totalQuizzes} quiz
-                  </Text>
-                </Space>
-              </Space>
+              <CourseMeta
+                instructor={instructor}
+                course={course}
+                duration={duration}
+                totalLessons={totalLessons}
+                totalQuizzes={totalQuizzes}
+              />
 
               {/* Tabs */}
               <div>
@@ -456,50 +537,24 @@ const CourseDetailPage = () => {
                         borderRadius: 0,
                       }}
                     >
-                      {t === "overview" ? "Tổng quan" : "Chương trình học"}
+                      {t === "overview" ? "Overview" : "Curriculum"}
                     </Button>
                   ))}
                 </Space>
 
                 {tab === "overview" && (
-                  <Row gutter={[16, 16]}>
-                    {[
-                      {
-                        icon: <BookOutlined />,
-                        label: `${totalLessons} Bài học`,
-                      },
-                      {
-                        icon: <QuestionCircleOutlined />,
-                        label: `${totalQuizzes} Quiz`,
-                      },
-                      { icon: <ClockCircleOutlined />, label: duration || "—" },
-                      {
-                        icon: <TeamOutlined />,
-                        label: `${(course.enrollmentCount ?? 0).toLocaleString()} Học viên`,
-                      },
-                    ].map((item) => (
-                      <Col xs={12} sm={6} key={item.label}>
-                        <Card size="small" style={{ textAlign: "center" }}>
-                          <div
-                            style={{
-                              fontSize: 20,
-                              marginBottom: 4,
-                              color: "var(--color-primary,#667eea)",
-                            }}
-                          >
-                            {item.icon}
-                          </div>
-                          <Text strong>{item.label}</Text>
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
+                  <CourseOverviewCards
+                    totalLessons={totalLessons}
+                    totalQuizzes={totalQuizzes}
+                    duration={duration}
+                    enrollmentCount={course.enrollmentCount ?? 0}
+                  />
                 )}
 
                 {tab === "curriculum" && (
                   <div>
                     {collapseItems.length === 0 ? (
-                      <Text type="secondary">Chưa có nội dung khóa học.</Text>
+                      <Text type="secondary">No course content yet.</Text>
                     ) : (
                       <Collapse
                         items={collapseItems}
@@ -512,7 +567,7 @@ const CourseDetailPage = () => {
             </Space>
           </Col>
 
-          {/* ── RIGHT: Action card ── */}
+          {/* Right: Action card */}
           <Col xs={24} lg={8}>
             <div style={{ position: "sticky", top: 90 }}>
               <Card
@@ -523,54 +578,15 @@ const CourseDetailPage = () => {
               >
                 {/* Price */}
                 <div style={{ marginBottom: 20 }}>
-                  {isEnrolled ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "10px 14px",
-                        background: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
-                        borderRadius: 12,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <CheckCircleOutlined
-                        style={{ color: "#059669", fontSize: 18 }}
-                      />
-                      <Text strong style={{ color: "#065f46" }}>
-                        Bạn đã đăng ký khóa học này
-                      </Text>
-                    </div>
-                  ) : (
-                    <>
-                      {!isFree && (
-                        <Text
-                          delete
-                          type="secondary"
-                          style={{ display: "block", fontSize: 13 }}
-                        >
-                          ${(course.price * 1.4).toFixed(2)}
-                        </Text>
-                      )}
-                      <Title
-                        level={2}
-                        style={{
-                          margin: 0,
-                          background: "linear-gradient(135deg,#667eea,#764ba2)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                        }}
-                      >
-                        {isFree ? "Miễn phí" : `$${course.price}`}
-                      </Title>
-                    </>
-                  )}
+                  <PriceBlock
+                    isEnrolled={isEnrolled}
+                    isFree={isFree}
+                    course={course}
+                  />
                 </div>
 
-                {/* ── MAIN CTA: Học / Mua ─────────────────────────── */}
+                {/* CTA */}
                 {isEnrolled ? (
-                  /* ✅ Đã mua → Bắt đầu học */
                   <Button
                     type="primary"
                     size="large"
@@ -586,10 +602,9 @@ const CourseDetailPage = () => {
                       border: "none",
                     }}
                   >
-                    Bắt đầu học
+                    Start Learning
                   </Button>
                 ) : (
-                  /* ❌ Chưa mua → Mua ngay / Đăng ký miễn phí */
                   <Button
                     type="primary"
                     size="large"
@@ -606,11 +621,11 @@ const CourseDetailPage = () => {
                       border: "none",
                     }}
                   >
-                    {isFree ? "Đăng ký miễn phí" : "Mua ngay"}
+                    {isFree ? "Enroll for Free" : "Buy Now"}
                   </Button>
                 )}
 
-                {/* Wishlist button (chỉ khi chưa đăng ký) */}
+                {/* Wishlist */}
                 {!isEnrolled && (
                   <Button
                     block
@@ -625,11 +640,11 @@ const CourseDetailPage = () => {
                     }
                     onClick={handleWishlist}
                   >
-                    {isWishlisted ? "Đã lưu" : "Lưu khóa học"}
+                    {isWishlisted ? "Saved" : "Save Course"}
                   </Button>
                 )}
 
-                {/* Owner/Admin: nút chỉnh sửa riêng biệt (secondary) */}
+                {/* Owner/Admin edit */}
                 {(isOwner || isAdmin) && (
                   <Button
                     block
@@ -640,14 +655,14 @@ const CourseDetailPage = () => {
                       navigate(`/instructor/courses/edit/${course._id}`)
                     }
                   >
-                    {isAdmin ? "Quản lý khóa học" : "Chỉnh sửa khóa học"}
+                    {isAdmin ? "Manage Course" : "Edit Course"}
                   </Button>
                 )}
 
                 {/* 30-day guarantee */}
                 {!isFree && !isEnrolled && (
                   <Alert
-                    message="Đảm bảo hoàn tiền 30 ngày"
+                    message="30-day money-back guarantee"
                     type="info"
                     showIcon
                     style={{ marginTop: 12, borderRadius: 10 }}
@@ -655,27 +670,11 @@ const CourseDetailPage = () => {
                 )}
 
                 <Divider />
-
-                {/* Course info list */}
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  {[
-                    { icon: <BookOutlined />, text: `${totalLessons} bài học` },
-                    {
-                      icon: <QuestionCircleOutlined />,
-                      text: `${totalQuizzes} quiz`,
-                    },
-                    { icon: <ClockCircleOutlined />, text: duration || "—" },
-                    { icon: <GlobalOutlined />, text: "Truy cập trọn đời" },
-                    { icon: <TrophyOutlined />, text: "Chứng chỉ hoàn thành" },
-                  ].map((item) => (
-                    <Space key={item.text}>
-                      <span style={{ color: "var(--color-primary,#667eea)" }}>
-                        {item.icon}
-                      </span>
-                      <Text>{item.text}</Text>
-                    </Space>
-                  ))}
-                </Space>
+                <CourseInfoSidebar
+                  totalLessons={totalLessons}
+                  totalQuizzes={totalQuizzes}
+                  duration={duration}
+                />
               </Card>
             </div>
           </Col>

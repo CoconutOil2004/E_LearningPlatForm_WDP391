@@ -107,7 +107,7 @@ const VideoPlayer = ({ url, lessonKey, onReached80, onEnded }) => {
           style={{ fontSize: 48, color: "rgba(255,255,255,0.2)" }}
         />
         <Text style={{ color: "rgba(255,255,255,0.5)" }}>
-          Bài học này chưa có video
+          This lesson has no video yet
         </Text>
       </div>
     );

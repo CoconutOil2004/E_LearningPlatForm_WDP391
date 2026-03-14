@@ -1,9 +1,8 @@
 /**
- * AdminDashboard — Redesigned
+ * AdminDashboard
  * - Revenue summary cards (real API)
- * - Biểu đồ doanh thu đẹp theo ngày / tháng (real API)
- * - Bảng top khóa học theo doanh thu (real API)
- * - Đã bỏ: EngagementProgress, InstructorsTable (chưa có API)
+ * - Revenue chart by day / month (real API)
+ * - Top courses by revenue table (real API)
  */
 
 import {
@@ -18,20 +17,11 @@ import { useEffect, useState } from "react";
 
 import PaymentService from "../../../services/api/PaymentService";
 import { adminTheme, COLOR } from "../../../styles/adminTheme";
-import { pageVariants } from "../../../utils/helpers";
+import { formatThousands, pageVariants } from "../../../utils/helpers";
 
 const { Text, Title } = Typography;
 
-/* ─── Helpers ───────────────────────────────────────────────────────────────── */
-
-const fmtVND = (n = 0) => {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B ₫`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M ₫`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K ₫`;
-  return `${n.toLocaleString()} ₫`;
-};
-
-/* ─── Summary Card ──────────────────────────────────────────────────────────── */
+/* ─── SummaryCard ────────────────────────────────────────────────────────────── */
 const SummaryCard = ({
   icon: Icon,
   label,
@@ -122,12 +112,41 @@ const SummaryCard = ({
   </motion.div>
 );
 
-/* ─── Revenue Chart ─────────────────────────────────────────────────────────── */
+/* ─── RevenueChart ───────────────────────────────────────────────────────────── */
 const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
   const [hovered, setHovered] = useState(null);
-
   const max = Math.max(...data.map((d) => d.totalRevenue), 1);
   const CHART_H = 220;
+
+  const GROUP_TABS = [
+    { key: "month", label: "By Month" },
+    { key: "day", label: "By Day" },
+  ];
+
+  const statStrip = [
+    {
+      label: "Highest",
+      value: formatThousands(Math.max(...data.map((d) => d.totalRevenue))),
+      color: COLOR.ocean,
+    },
+    {
+      label: "Avg / period",
+      value: formatThousands(
+        Math.round(data.reduce((s, d) => s + d.totalRevenue, 0) / data.length),
+      ),
+      color: COLOR.gray700,
+    },
+    {
+      label: "Lowest",
+      value: formatThousands(Math.min(...data.map((d) => d.totalRevenue))),
+      color: COLOR.gray500,
+    },
+    {
+      label: "Total Orders",
+      value: data.reduce((s, d) => s + d.totalOrders, 0).toLocaleString(),
+      color: COLOR.teal,
+    },
+  ];
 
   return (
     <motion.div
@@ -155,7 +174,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
             level={4}
             style={{ margin: 0, color: COLOR.gray900, fontWeight: 800 }}
           >
-            Doanh Thu Theo Thời Gian
+            Revenue Over Time
           </Title>
           <Text
             style={{
@@ -165,9 +184,9 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
               display: "block",
             }}
           >
-            Tổng cộng:{" "}
+            Total:{" "}
             <span style={{ color: COLOR.ocean, fontWeight: 700, fontSize: 15 }}>
-              {fmtVND(totalRevenue)}
+              {formatThousands(totalRevenue)}
             </span>
           </Text>
         </div>
@@ -182,10 +201,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
             gap: 2,
           }}
         >
-          {[
-            { key: "month", label: "Theo tháng" },
-            { key: "day", label: "Theo ngày" },
-          ].map((t) => (
+          {GROUP_TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => onGroupBy(t.key)}
@@ -234,13 +250,12 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
         >
           <DollarOutlined style={{ fontSize: 38, color: COLOR.gray300 }} />
           <Text style={{ color: COLOR.gray400 }}>
-            Chưa có dữ liệu doanh thu
+            No revenue data available
           </Text>
         </div>
       ) : (
         <>
           <div style={{ position: "relative" }}>
-            {/* Y grid lines */}
             {[0, 25, 50, 75, 100].map((pct) => (
               <div
                 key={pct}
@@ -256,7 +271,6 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
               />
             ))}
 
-            {/* Y axis value labels */}
             {[0, 50, 100].map((pct) => (
               <div
                 key={pct}
@@ -270,11 +284,10 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                   whiteSpace: "nowrap",
                 }}
               >
-                {fmtVND(Math.round((max * pct) / 100))}
+                {formatThousands(Math.round((max * pct) / 100))}
               </div>
             ))}
 
-            {/* Bars */}
             <div
               style={{
                 height: CHART_H,
@@ -285,7 +298,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                 overflowX: data.length > 30 ? "auto" : "visible",
                 position: "relative",
                 zIndex: 1,
-                marginLeft: 70, // space for y-axis labels
+                marginLeft: 70,
               }}
             >
               {data.map((d, i) => {
@@ -309,7 +322,6 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                     onMouseEnter={() => setHovered(i)}
                     onMouseLeave={() => setHovered(null)}
                   >
-                    {/* Tooltip */}
                     {isHov && (
                       <div
                         style={{
@@ -344,7 +356,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                             fontSize: 14,
                           }}
                         >
-                          {fmtVND(d.totalRevenue)}
+                          {formatThousands(d.totalRevenue)}
                         </div>
                         <div
                           style={{
@@ -353,7 +365,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                             marginTop: 2,
                           }}
                         >
-                          {d.totalOrders} đơn hàng
+                          {d.totalOrders} orders
                         </div>
                         <div
                           style={{
@@ -371,7 +383,6 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                       </div>
                     )}
 
-                    {/* Bar itself */}
                     <div
                       style={{
                         width: "100%",
@@ -393,7 +404,6 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
             </div>
           </div>
 
-          {/* X labels */}
           {data.length <= 18 && (
             <div
               style={{
@@ -424,7 +434,6 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
             </div>
           )}
 
-          {/* Stats summary strip */}
           <div
             style={{
               display: "flex",
@@ -435,34 +444,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
               flexWrap: "wrap",
             }}
           >
-            {[
-              {
-                label: "Cao nhất",
-                value: fmtVND(Math.max(...data.map((d) => d.totalRevenue))),
-                color: COLOR.ocean,
-              },
-              {
-                label: "Trung bình / kỳ",
-                value: fmtVND(
-                  Math.round(
-                    data.reduce((s, d) => s + d.totalRevenue, 0) / data.length,
-                  ),
-                ),
-                color: COLOR.gray700,
-              },
-              {
-                label: "Thấp nhất",
-                value: fmtVND(Math.min(...data.map((d) => d.totalRevenue))),
-                color: COLOR.gray500,
-              },
-              {
-                label: "Tổng đơn hàng",
-                value: data
-                  .reduce((s, d) => s + d.totalOrders, 0)
-                  .toLocaleString(),
-                color: COLOR.teal,
-              },
-            ].map((s) => (
+            {statStrip.map((s) => (
               <div key={s.label}>
                 <Text
                   style={{
@@ -488,11 +470,11 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
   );
 };
 
-/* ─── Top Courses Table ─────────────────────────────────────────────────────── */
+/* ─── TopCoursesTable ────────────────────────────────────────────────────────── */
 const TopCoursesTable = ({ data, loading }) => {
   const columns = [
     {
-      title: "Hạng",
+      title: "Rank",
       width: 64,
       render: (_, __, i) => {
         const medals = ["🥇", "🥈", "🥉"];
@@ -510,7 +492,7 @@ const TopCoursesTable = ({ data, loading }) => {
       },
     },
     {
-      title: "Tên khóa học",
+      title: "Course Name",
       dataIndex: "title",
       ellipsis: true,
       render: (t) => (
@@ -531,7 +513,7 @@ const TopCoursesTable = ({ data, loading }) => {
       ),
     },
     {
-      title: "Doanh thu",
+      title: "Revenue",
       dataIndex: "totalRevenue",
       width: 170,
       defaultSortOrder: "descend",
@@ -539,7 +521,7 @@ const TopCoursesTable = ({ data, loading }) => {
       render: (v) => (
         <div>
           <Text style={{ fontWeight: 700, color: COLOR.ocean, fontSize: 14 }}>
-            {fmtVND(v)}
+            {formatThousands(v)}
           </Text>
           <div
             style={{
@@ -563,7 +545,7 @@ const TopCoursesTable = ({ data, loading }) => {
       ),
     },
     {
-      title: "Đơn hàng",
+      title: "Orders",
       dataIndex: "totalOrders",
       width: 110,
       sorter: (a, b) => a.totalOrders - b.totalOrders,
@@ -626,10 +608,10 @@ const TopCoursesTable = ({ data, loading }) => {
             level={4}
             style={{ margin: 0, color: COLOR.gray900, fontWeight: 800 }}
           >
-            Top Khóa Học Theo Doanh Thu
+            Top Courses by Revenue
           </Title>
           <Text style={{ fontSize: 13, color: COLOR.gray500 }}>
-            {data.length} khóa học có giao dịch thành công
+            {data.length} courses with successful transactions
           </Text>
         </div>
       </div>
@@ -659,7 +641,7 @@ const TopCoursesTable = ({ data, loading }) => {
   );
 };
 
-/* ─── Main ──────────────────────────────────────────────────────────────────── */
+/* ─── AdminDashboard ─────────────────────────────────────────────────────────── */
 const AdminDashboard = () => {
   const [summary, setSummary] = useState({ totalRevenue: 0, totalOrders: 0 });
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -701,36 +683,36 @@ const AdminDashboard = () => {
   const CARDS = [
     {
       icon: DollarOutlined,
-      label: "Tổng Doanh Thu",
-      value: fmtVND(summary.totalRevenue),
-      sub: "Tất cả thời gian",
+      label: "Total Revenue",
+      value: formatThousands(summary.totalRevenue),
+      sub: "All time",
       accent: COLOR.ocean,
       loading: summaryLoading,
       delay: 0.08,
     },
     {
       icon: ShoppingCartOutlined,
-      label: "Tổng Đơn Hàng",
+      label: "Total Orders",
       value: summary.totalOrders.toLocaleString(),
-      sub: "Giao dịch thành công",
+      sub: "Successful transactions",
       accent: COLOR.teal,
       loading: summaryLoading,
       delay: 0.16,
     },
     {
       icon: BookOutlined,
-      label: "Khóa Học Có Doanh Thu",
+      label: "Courses with Revenue",
       value: courseLoading ? "—" : courseRevenue.length.toString(),
-      sub: "Đã được mua",
+      sub: "Have been purchased",
       accent: "#8b5cf6",
       loading: courseLoading,
       delay: 0.24,
     },
     {
       icon: ArrowUpOutlined,
-      label: "Giá Trị Đơn TB",
-      value: fmtVND(avgOrderValue),
-      sub: "Mỗi giao dịch",
+      label: "Avg. Order Value",
+      value: formatThousands(avgOrderValue),
+      sub: "Per transaction",
       accent: "#f59e0b",
       loading: summaryLoading,
       delay: 0.32,
@@ -750,7 +732,7 @@ const AdminDashboard = () => {
           minHeight: "100vh",
         }}
       >
-        {/* Title */}
+        {/* Page title */}
         <motion.div
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
@@ -769,7 +751,7 @@ const AdminDashboard = () => {
             Dashboard
           </h1>
           <p style={{ color: COLOR.gray500, fontSize: 13, margin: "4px 0 0" }}>
-            Thống kê doanh thu theo thời gian thực
+            Real-time revenue statistics
           </p>
         </motion.div>
 

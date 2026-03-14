@@ -17,6 +17,7 @@ import {
   Typography,
 } from "antd";
 import { useEffect, useState } from "react";
+
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
 import StatsRow from "../../../components/admin/StatsRow";
@@ -24,6 +25,7 @@ import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR, STATUS_CONFIG } from "../../../styles/adminTheme";
+import { formatDuration, formatThousands } from "../../../utils/helpers";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -36,12 +38,6 @@ const STATUS_TABS = [
   "rejected",
   "archived",
 ];
-
-const fmtDuration = (s) => {
-  if (!s) return "—";
-  const h = Math.floor(s / 3600);
-  return h > 0 ? `${h}h` : `${Math.floor(s / 60)}m`;
-};
 
 const AdminCoursesPage = () => {
   const toast = useToast();
@@ -56,7 +52,6 @@ const AdminCoursesPage = () => {
     total: 0,
   });
 
-  // modal
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -92,6 +87,7 @@ const AdminCoursesPage = () => {
   useEffect(() => {
     fetchCourses(1, pagination.pageSize, filterStatus, search);
   }, []);
+
   useEffect(() => {
     const t = setTimeout(
       () => fetchCourses(1, pagination.pageSize, filterStatus, search),
@@ -238,7 +234,7 @@ const AdminCoursesPage = () => {
       width: 90,
       render: (p) => (
         <Text strong style={{ color: COLOR.ocean }}>
-          {p === 0 ? "Free" : `$${p}`}
+          {p === 0 ? "Free" : formatThousands(p)}
         </Text>
       ),
     },
@@ -259,7 +255,7 @@ const AdminCoursesPage = () => {
       key: "duration",
       width: 100,
       render: (v) => (
-        <Text style={{ color: COLOR.gray600 }}>{fmtDuration(v)}</Text>
+        <Text style={{ color: COLOR.gray600 }}>{formatDuration(v) ?? "—"}</Text>
       ),
     },
     {

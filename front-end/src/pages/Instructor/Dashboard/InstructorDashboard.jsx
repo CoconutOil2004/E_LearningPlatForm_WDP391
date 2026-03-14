@@ -237,7 +237,7 @@ const InstructorDashboard = () => {
                         <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 11 }}>vs last month</Text>
                       </div>
                     </div>
-                    <Text style={{ color: "white", fontWeight: 900, fontSize: 28, display: "block", lineHeight: 1 }}>$4,280</Text>
+                    <Text style={{ color: "white", fontWeight: 900, fontSize: 28, display: "block", lineHeight: 1 }}>29.800.000 ₫</Text>
                     <Text style={{ color: "#10b981", fontWeight: 700, fontSize: 13, display: "block", marginTop: 6 }}>
                       <ArrowUpOutlined /> +22% from last month
                     </Text>
@@ -308,9 +308,9 @@ const InstructorDashboard = () => {
                   headStyle={{ padding: "14px 22px", borderBottom: "1px solid #f1f0fe" }}
                 >
                   {[
-                    { rank: 1, title: "Advanced Python for Data Science", students: "4,280", rating: "4.9", rev: "$1,240", growth: "+18%", clr: C.primary, bg: C.primaryBg, bar: 92 },
-                    { rank: 2, title: "Mastering React Patterns in 2024", students: "3,120", rating: "4.8", rev: "$980", growth: "+12%", clr: C.mint, bg: C.mintBg, bar: 70 },
-                    { rank: 3, title: "UX/UI Foundations Complete", students: "2,840", rating: "4.7", rev: "$760", growth: "Stable", clr: C.amber, bg: C.amberBg, bar: 55 },
+                    { rank: 1, title: "Advanced Python for Data Science", students: "4,280", rating: "4.9", rev: "8.680.000 ₫", growth: "+18%", clr: C.primary, bg: C.primaryBg, bar: 92 },
+                    { rank: 2, title: "Mastering React Patterns in 2024", students: "3,120", rating: "4.8", rev: "6.860.000 ₫", growth: "+12%", clr: C.mint, bg: C.mintBg, bar: 70 },
+                    { rank: 3, title: "UX/UI Foundations Complete", students: "2,840", rating: "4.7", rev: "5.320.000 ₫", growth: "Stable", clr: C.amber, bg: C.amberBg, bar: 55 },
                   ].map((c, i) => (
                     <motion.div key={c.rank} {...up(0.34 + i * 0.07)}>
                       <div
@@ -433,7 +433,7 @@ const InstructorDashboard = () => {
                     {[
                       { label: "New Students", cur: 840, total: 1000, clr: C.primary, fmt: (c, t) => `${c} / ${t}` },
                       { label: "Blogs Published", cur: 6, total: 8, clr: C.mint, fmt: (c, t) => `${c} / ${t}` },
-                      { label: "Revenue Target", cur: 4200, total: 5000, clr: C.amber, fmt: () => "$4.2k / $5k" },
+                      { label: "Revenue Target", cur: 4200, total: 5000, clr: C.amber, fmt: () => "29,4M ₫ / 35M ₫" },
                     ].map((g) => (
                       <div key={g.label}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -475,7 +475,7 @@ const InstructorDashboard = () => {
                     onMouseEnter={(e) => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.color = "white"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = C.primaryDark; }}
                   >
-                    Upgrade Now — $29/mo
+                    Nâng cấp ngay — 750.000 ₫/tháng
                   </Button>
                 </Card>
               </motion.div>

@@ -8,10 +8,10 @@ const { Text, Title } = Typography;
 /**
  * QuizPlayer
  * Props:
- *   quiz      – quiz object { title, questions: [{ text, options, correctAnswer }] }
- *   courseId  – string
- *   onComplete – () => void  → đánh dấu bài quiz này hoàn thành
- *   onNext     – () => void  → chuyển sang bài tiếp theo
+ *   quiz       – quiz object { title, questions: [{ text, options, correctAnswer }] }
+ *   courseId   – string
+ *   onComplete – () => void  → mark quiz as complete
+ *   onNext     – () => void  → go to next lesson
  */
 const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
   const [answers, setAnswers] = useState({});
@@ -32,17 +32,16 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
       if (answers[qi] === parseInt(q.correctAnswer, 10)) correct++;
     });
 
-    const sc =
-      questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+    const sc = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
     setScore(sc);
     setSubmitted(true);
     saveQuizScore(courseId, sc);
 
     if (sc >= 70) {
-      message.success(`🎉 Chúc mừng! Điểm của bạn: ${sc}/100`);
+      message.success(`🎉 Congratulations! Your score: ${sc}/100`);
       onComplete();
     } else {
-      message.warning(`Điểm: ${sc}/100. Hãy thử lại để đạt ít nhất 70!`);
+      message.warning(`Score: ${sc}/100. Try again to reach at least 70!`);
     }
   };
 
@@ -67,7 +66,7 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
       >
         <QuestionCircleOutlined style={{ fontSize: 48, opacity: 0.5 }} />
         <Text style={{ color: "rgba(255,255,255,0.6)" }}>
-          Quiz này chưa có câu hỏi
+          This quiz has no questions yet
         </Text>
         <Button
           type="primary"
@@ -76,7 +75,7 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
             onNext();
           }}
         >
-          Tiếp tục
+          Continue
         </Button>
       </div>
     );
@@ -84,9 +83,7 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
 
   /* ── Main quiz UI ── */
   return (
-    <div
-      style={{ flex: 1, overflowY: "auto", padding: 32, background: "#111827" }}
-    >
+    <div style={{ flex: 1, overflowY: "auto", padding: 32, background: "#111827" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         {/* Quiz header */}
         <div
@@ -115,8 +112,7 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
           const userAns = answers[qi];
           const correctIdx = parseInt(q.correctAnswer, 10);
           const isCorrect = submitted && userAns === correctIdx;
-          const isWrong =
-            submitted && userAns !== undefined && userAns !== correctIdx;
+          const isWrong = submitted && userAns !== undefined && userAns !== correctIdx;
 
           return (
             <Card
@@ -136,19 +132,12 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
             >
               <Text
                 strong
-                style={{
-                  color: "#fff",
-                  display: "block",
-                  marginBottom: 16,
-                  fontSize: 15,
-                }}
+                style={{ color: "#fff", display: "block", marginBottom: 16, fontSize: 15 }}
               >
                 {qi + 1}. {q.text}
               </Text>
 
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {(q.options ?? []).map((opt, oi) => {
                   const isSelected = userAns === oi;
                   const isCorrectOpt = submitted && oi === correctIdx;
@@ -201,14 +190,10 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
               marginTop: 8,
             }}
           >
-            Nộp bài
+            Submit Quiz
           </Button>
         ) : (
-          <Space
-            style={{ width: "100%", marginTop: 8 }}
-            direction="vertical"
-            size={12}
-          >
+          <Space style={{ width: "100%", marginTop: 8 }} direction="vertical" size={12}>
             {score < 70 && (
               <Button
                 size="large"
@@ -221,7 +206,7 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
                   borderColor: "#4B5563",
                 }}
               >
-                Làm lại
+                Try Again
               </Button>
             )}
             <Button
@@ -229,13 +214,9 @@ const QuizPlayer = ({ quiz, courseId, onComplete, onNext }) => {
               size="large"
               block
               onClick={onNext}
-              style={{
-                borderRadius: 12,
-                background: "#10b981",
-                border: "none",
-              }}
+              style={{ borderRadius: 12, background: "#10b981", border: "none" }}
             >
-              Bài tiếp theo
+              Next Lesson
             </Button>
           </Space>
         )}

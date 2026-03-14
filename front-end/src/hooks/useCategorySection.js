@@ -5,7 +5,7 @@ import CourseService from "../services/api/CourseService";
  * useCategorySection
  * ──────────────────
  * Fetch categories từ BE, sau đó với mỗi category fetch N courses.
- * Dùng cho HomePage section "Khóa học theo chủ đề".
+ * Used for the HomePage "Courses by Topic" section.
  *
  * @param {{ limit?: number, sortBy?: string, maxCategories?: number }} options
  *   - limit:          số course mỗi category (default 4)

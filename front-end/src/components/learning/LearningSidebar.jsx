@@ -6,21 +6,16 @@ import {
 } from "@ant-design/icons";
 import { Space, Tag, Tooltip, Typography } from "antd";
 
-const { Text } = Typography;
+import { formatDurationShort } from "../../utils/helpers";
 
-const fmtTime = (s) => {
-  if (!s) return "0:00";
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${String(sec).padStart(2, "0")}`;
-};
+const { Text } = Typography;
 
 /**
  * LearningSidebar
  * Props:
  *   sectionsWithIdx  – [{ title, mappedItems: [{ flatIdx, itemType, title, itemId, ... }] }]
  *   completed        – number[] (flatIdx list of completed lessons)
- *   watched80        – Set<number> (flatIdx của các bài đã xem ≥80%)
+ *   watched80        – Set<number> (flatIdx of lessons watched ≥ 80%)
  *   activeIdx        – current flatIdx
  *   totalLessons     – number
  *   onGoTo           – (flatIdx) => void
@@ -34,15 +29,14 @@ const LearningSidebar = ({
   onGoTo,
 }) => {
   /**
-   * Kiểm tra bài học có thể truy cập không.
-   * Quy tắc: Bài đầu tiên luôn mở. Các bài sau chỉ mở khi
-   * bài liền trước đó (flatIdx - 1) đã completed (xem ≥80%).
+   * A lesson is unlocked if:
+   *   - it's the first lesson, OR
+   *   - it's already completed, OR
+   *   - the previous lesson has been completed or watched ≥ 80%
    */
   const isUnlocked = (flatIdx) => {
     if (flatIdx === 0) return true;
-    // Tất cả bài đã hoàn thành → luôn được click
     if (completed.includes(flatIdx)) return true;
-    // Bài trước đã được xem ≥ 80% thì mở khóa bài này
     return completed.includes(flatIdx - 1) || watched80.has(flatIdx - 1);
   };
 
@@ -58,24 +52,12 @@ const LearningSidebar = ({
       }}
     >
       {/* Sidebar header */}
-      <div
-        style={{
-          padding: "16px 20px",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <Text strong style={{ color: "#fff", fontSize: 14 }}>
-          Nội dung khóa học
+          Course Content
         </Text>
-        <Text
-          style={{
-            color: "#9CA3AF",
-            fontSize: 13,
-            display: "block",
-            marginTop: 4,
-          }}
-        >
-          Đã hoàn thành {completed.length}/{totalLessons} bài học
+        <Text style={{ color: "#9CA3AF", fontSize: 13, display: "block", marginTop: 4 }}>
+          {completed.length}/{totalLessons} lessons completed
         </Text>
       </div>
 
@@ -107,9 +89,7 @@ const LearningSidebar = ({
               return (
                 <Tooltip
                   key={item._id || item.flatIdx}
-                  title={
-                    !unlocked ? "Hoàn thành bài trước để mở khóa" : undefined
-                  }
+                  title={!unlocked ? "Complete the previous lesson to unlock" : undefined}
                   placement="right"
                 >
                   <div
@@ -119,12 +99,8 @@ const LearningSidebar = ({
                       gap: 12,
                       padding: "12px 20px",
                       cursor: unlocked ? "pointer" : "not-allowed",
-                      background: isActive
-                        ? "rgba(99,102,241,0.15)"
-                        : "transparent",
-                      borderLeft: isActive
-                        ? "3px solid #6366f1"
-                        : "3px solid transparent",
+                      background: isActive ? "rgba(99,102,241,0.15)" : "transparent",
+                      borderLeft: isActive ? "3px solid #6366f1" : "3px solid transparent",
                       borderBottom: "1px solid rgba(255,255,255,0.02)",
                       transition: "background 0.2s",
                       opacity: unlocked ? 1 : 0.45,
@@ -170,32 +146,21 @@ const LearningSidebar = ({
                       <Space size={12}>
                         {item.itemId?.duration > 0 && (
                           <Text style={{ color: "#6B7280", fontSize: 12 }}>
-                            {fmtTime(item.itemId.duration)}
+                            {formatDurationShort(item.itemId.duration)}
                           </Text>
                         )}
                         {isQuiz && (
                           <Tag
                             color="purple"
-                            style={{
-                              margin: 0,
-                              fontSize: 10,
-                              lineHeight: "16px",
-                              border: "none",
-                            }}
+                            style={{ margin: 0, fontSize: 10, lineHeight: "16px", border: "none" }}
                           >
                             Quiz
                           </Tag>
                         )}
-                        {/* Hiển thị tiến độ xem nếu chưa done */}
                         {!isDone && hasWatched && (
                           <Tag
                             color="cyan"
-                            style={{
-                              margin: 0,
-                              fontSize: 10,
-                              lineHeight: "16px",
-                              border: "none",
-                            }}
+                            style={{ margin: 0, fontSize: 10, lineHeight: "16px", border: "none" }}
                           >
                             ≥80%
                           </Tag>

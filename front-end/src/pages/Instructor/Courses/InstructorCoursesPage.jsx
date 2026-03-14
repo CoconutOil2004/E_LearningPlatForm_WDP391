@@ -25,6 +25,7 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   INSTRUCTOR_COLORS,
   INSTRUCTOR_STATUS_CONFIG,
@@ -33,11 +34,15 @@ import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import CourseService from "../../../services/api/CourseService";
 import useAuthStore from "../../../store/slices/authStore";
 import { ROUTES } from "../../../utils/constants";
-import { pageVariants } from "../../../utils/helpers";
+import {
+  formatDurationClock,
+  formatThousands,
+  pageVariants,
+} from "../../../utils/helpers";
 
 const { Title, Text } = Typography;
 
-const TABS = [
+const FILTER_TABS = [
   { key: "all", label: "All" },
   { key: "draft", label: "Draft" },
   { key: "pending", label: "In Review" },
@@ -45,23 +50,84 @@ const TABS = [
   { key: "rejected", label: "Rejected" },
 ];
 
-const fmtDuration = (seconds) => {
-  if (!seconds || isNaN(seconds)) return "00:00";
+/* ─── StatCards ───────────────────────────────────────────────────────────── */
+const StatCards = ({ stats }) => (
+  <Row gutter={[16, 16]} className="mb-8">
+    {stats.map((stat, idx) => (
+      <Col xs={24} sm={12} lg={6} key={idx}>
+        <Card
+          className="transition-all border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-sm"
+          bodyStyle={{ padding: "20px" }}
+        >
+          <div className="flex items-center gap-4">
+            <div
+              className="flex items-center justify-center w-12 h-12 text-xl rounded-xl"
+              style={{ backgroundColor: stat.bg, color: stat.color }}
+            >
+              {stat.icon}
+            </div>
+            <div>
+              <div className="text-2xl font-black text-gray-900">
+                {stat.value.toLocaleString()}
+              </div>
+              <div className="text-xs font-medium text-gray-500 uppercase mt-0.5">
+                {stat.label}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </Col>
+    ))}
+  </Row>
+);
 
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
+/* ─── CourseRow (table cell renderer) ────────────────────────────────────── */
+const CourseRow = ({ record }) => (
+  <div className="flex items-center gap-4">
+    <div className="w-20 overflow-hidden bg-gray-100 border border-gray-200 rounded-lg h-14 shrink-0">
+      <img
+        src={
+          record.thumbnail ||
+          "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=160&h=112&fit=crop"
+        }
+        alt={record.title}
+        className="object-cover w-full h-full"
+        onError={(e) => (e.target.style.display = "none")}
+      />
+    </div>
+    <div className="flex flex-col max-w-[250px]">
+      <Text className="font-bold text-gray-900 truncate" title={record.title}>
+        {record.title}
+      </Text>
+      <div className="flex items-center gap-2 mt-1">
+        <Text type="secondary" className="text-xs truncate">
+          {record.category?.name || "Uncategorized"}
+        </Text>
+        <Text type="secondary" className="text-xs">
+          •
+        </Text>
+        <Text className="text-xs font-semibold text-purple-600 capitalize">
+          {record.level}
+        </Text>
+      </div>
+      {record.status === "rejected" && record.rejectionReason && (
+        <Tooltip title={record.rejectionReason} placement="bottom">
+          <div className="flex items-center gap-1 mt-1 cursor-help">
+            <CloseCircleOutlined style={{ color: "#DC2626", fontSize: 11 }} />
+            <Text
+              style={{ color: "#DC2626", fontSize: 11 }}
+              className="truncate max-w-[180px]"
+            >
+              {record.rejectionReason}
+            </Text>
+          </div>
+        </Tooltip>
+      )}
+    </div>
+  </div>
+);
 
-  // Nếu có giờ thì hiển thị hh:mm:ss, không thì mm:ss
-  const parts = [
-    h > 0 ? h : null,
-    m.toString().padStart(2, "0"),
-    s.toString().padStart(2, "0"),
-  ].filter(Boolean); // Loại bỏ phần giờ nếu bằng null
-
-  return parts.join(":");
-};
-
+/* ─── InstructorCoursesPage ───────────────────────────────────────────────── */
 const InstructorCoursesPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -71,7 +137,6 @@ const InstructorCoursesPage = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [submittingId, setSubmittingId] = useState(null);
 
-  // shared modal
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -172,60 +237,12 @@ const InstructorCoursesPage = () => {
 
   const columns = [
     {
-      title: "COURSE",
+      title: "Course",
       key: "course",
-      render: (_, record) => (
-        <div className="flex items-center gap-4">
-          <div className="w-20 overflow-hidden bg-gray-100 border border-gray-200 rounded-lg h-14 shrink-0">
-            <img
-              src={
-                record.thumbnail ||
-                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=160&h=112&fit=crop"
-              }
-              alt={record.title}
-              className="object-cover w-full h-full"
-              onError={(e) => (e.target.style.display = "none")}
-            />
-          </div>
-          <div className="flex flex-col max-w-[250px]">
-            <Text
-              className="font-bold text-gray-900 truncate"
-              title={record.title}
-            >
-              {record.title}
-            </Text>
-            <div className="flex items-center gap-2 mt-1">
-              <Text type="secondary" className="text-xs truncate">
-                {record.category?.name || "Uncategorized"}
-              </Text>
-              <Text type="secondary" className="text-xs">
-                •
-              </Text>
-              <Text className="text-xs font-semibold text-purple-600 capitalize">
-                {record.level}
-              </Text>
-            </div>
-            {record.status === "rejected" && record.rejectionReason && (
-              <Tooltip title={record.rejectionReason} placement="bottom">
-                <div className="flex items-center gap-1 mt-1 cursor-help">
-                  <CloseCircleOutlined
-                    style={{ color: "#DC2626", fontSize: 11 }}
-                  />
-                  <Text
-                    style={{ color: "#DC2626", fontSize: 11 }}
-                    className="truncate max-w-[180px]"
-                  >
-                    {record.rejectionReason}
-                  </Text>
-                </div>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      ),
+      render: (_, record) => <CourseRow record={record} />,
     },
     {
-      title: "STATUS",
+      title: "Status",
       dataIndex: "status",
       key: "status",
       width: 130,
@@ -243,7 +260,7 @@ const InstructorCoursesPage = () => {
       },
     },
     {
-      title: "PRICE",
+      title: "Price",
       dataIndex: "price",
       key: "price",
       width: 90,
@@ -252,36 +269,36 @@ const InstructorCoursesPage = () => {
           {price === 0 ? (
             <span className="text-green-500">Free</span>
           ) : (
-            `$${price}`
+            formatThousands(price)
           )}
         </span>
       ),
     },
     {
-      title: "STUDENTS",
+      title: "Students",
       dataIndex: "enrollmentCount",
       key: "enrollmentCount",
       width: 110,
       render: (count) => (
         <Space className="font-semibold text-gray-700">
-          <TeamOutlined className="text-gray-400" />{" "}
+          <TeamOutlined className="text-gray-400" />
           {(count || 0).toLocaleString()}
         </Space>
       ),
     },
     {
-      title: "DURATION",
+      title: "Duration",
       dataIndex: "totalDuration",
       key: "duration",
       width: 100,
       render: (d) => (
         <Text type="secondary" className="text-sm">
-          {fmtDuration(d)}
+          {formatDurationClock(d)}
         </Text>
       ),
     },
     {
-      title: "ACTIONS",
+      title: "Actions",
       key: "actions",
       align: "right",
       width: 160,
@@ -367,41 +384,14 @@ const InstructorCoursesPage = () => {
         </Button>
       </div>
 
-      {/* Stats */}
-      <Row gutter={[16, 16]} className="mb-8">
-        {statCards.map((stat, idx) => (
-          <Col xs={24} sm={12} lg={6} key={idx}>
-            <Card
-              className="transition-all border-gray-100 rounded-2xl hover:border-purple-200 hover:shadow-sm"
-              bodyStyle={{ padding: "20px" }}
-            >
-              <div className="flex items-center gap-4">
-                <div
-                  className="flex items-center justify-center w-12 h-12 text-xl rounded-xl"
-                  style={{ backgroundColor: stat.bg, color: stat.color }}
-                >
-                  {stat.icon}
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-gray-900">
-                    {stat.value.toLocaleString()}
-                  </div>
-                  <div className="text-xs font-medium text-gray-500 uppercase mt-0.5">
-                    {stat.label}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <StatCards stats={statCards} />
 
       {/* Table */}
       <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
-          items={TABS.map((tab) => ({
+          items={FILTER_TABS.map((tab) => ({
             key: tab.key,
             label: (
               <span className="text-sm font-semibold">
@@ -427,7 +417,6 @@ const InstructorCoursesPage = () => {
         />
       </div>
 
-      {/* Shared modal */}
       <CourseDetailModal
         course={selectedCourse}
         open={modalOpen}
