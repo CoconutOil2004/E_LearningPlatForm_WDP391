@@ -27,14 +27,8 @@ import { COLOR } from "../../../styles/adminTheme";
 
 const { Text } = Typography;
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
 const initials = (name = "") =>
-  name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 // ─── CreateInstructorModal ────────────────────────────────────────────────────
 const CreateInstructorModal = ({ open, onClose, onSubmit, loading }) => {
@@ -79,11 +73,7 @@ const CreateInstructorModal = ({ open, onClose, onSubmit, loading }) => {
             { type: "email", message: "Enter a valid email" },
           ]}
         >
-          <Input
-            prefix={<MailOutlined />}
-            placeholder="instructor@example.com"
-            size="large"
-          />
+          <Input prefix={<MailOutlined />} placeholder="instructor@example.com" size="large" />
         </Form.Item>
         <Form.Item
           name="fullname"
@@ -93,11 +83,7 @@ const CreateInstructorModal = ({ open, onClose, onSubmit, loading }) => {
             { min: 3, message: "At least 3 characters" },
           ]}
         >
-          <Input
-            prefix={<UserOutlined />}
-            placeholder="John Doe"
-            size="large"
-          />
+          <Input prefix={<UserOutlined />} placeholder="John Doe" size="large" />
         </Form.Item>
       </Form>
     </Modal>
@@ -112,33 +98,21 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
       dataIndex: "coursesCount",
       key: "courses",
       width: 100,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.ocean }}>
-          {v ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.ocean }}>{v ?? 0}</Text>,
     },
     {
       title: "Students",
       dataIndex: "studentsCount",
       key: "students",
       width: 120,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.ocean }}>
-          {v?.toLocaleString() ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.ocean }}>{v?.toLocaleString() ?? 0}</Text>,
     },
     {
       title: "Revenue",
       dataIndex: "totalRevenue",
       key: "revenue",
       width: 140,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.green }}>
-          ${v?.toLocaleString() ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.green }}>${v?.toLocaleString() ?? 0}</Text>,
     },
   ];
 
@@ -148,22 +122,14 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
       dataIndex: "enrolledCourses",
       key: "enrolled",
       width: 100,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.ocean }}>
-          {v ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.ocean }}>{v ?? 0}</Text>,
     },
     {
       title: "Completed",
       dataIndex: "completedCourses",
       key: "completed",
       width: 120,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.green }}>
-          {v ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.green }}>{v ?? 0}</Text>,
     },
   ];
 
@@ -186,67 +152,70 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
             {initials(name)}
           </Avatar>
           <Space direction="vertical" size={0}>
-            <Text strong style={{ color: COLOR.ocean }}>
-              {name}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.email}
-            </Text>
+            <Text strong style={{ color: COLOR.ocean }}>{name}</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>{record.email}</Text>
           </Space>
         </Space>
       ),
     },
     {
       title: "Status",
-      dataIndex: "isLocked",
+      // BUG FIX 1: đổi dataIndex từ "isLocked" sang "action" — đúng với field BE trả về
+      dataIndex: "action",
       key: "status",
       width: 120,
-      render: (locked) => (
-        <Tag
-          icon={locked ? <LockOutlined /> : null}
-          color={locked ? "error" : "success"}
-          style={{
-            fontWeight: 700,
-            textTransform: "uppercase",
-            padding: "3px 10px",
-            borderRadius: 12,
-          }}
-        >
-          {locked ? "Locked" : "Active"}
-        </Tag>
-      ),
+      render: (action) => {
+        // BUG FIX 1: action === "lock" nghĩa là đang bị khóa
+        const locked = action === "lock";
+        return (
+          <Tag
+            icon={locked ? <LockOutlined /> : null}
+            color={locked ? "error" : "success"}
+            style={{ fontWeight: 700, textTransform: "uppercase", padding: "3px 10px", borderRadius: 12 }}
+          >
+            {locked ? "Locked" : "Active"}
+          </Tag>
+        );
+      },
     },
     ...(type === "instructor" ? instructorCols : studentCols),
     {
-      title: "Actions",
-      key: "actions",
-      fixed: "right",
-      width: 120,
-      render: (_, record) =>
-        record.isLocked ? (
-          <Button
-            type="primary"
-            size="small"
-            icon={<UnlockOutlined />}
-            loading={actionLoading === record._id}
-            onClick={() => onToggleLock(record)}
-            style={{ borderRadius: 8 }}
-          >
-            Unlock
-          </Button>
-        ) : (
-          <Button
-            danger
-            size="small"
-            icon={<LockOutlined />}
-            loading={actionLoading === record._id}
-            onClick={() => onToggleLock(record)}
-            style={{ borderRadius: 8 }}
-          >
-            Lock
-          </Button>
-        ),
-    },
+  title: "Actions",
+  key: "actions",
+  fixed: "right",
+  width: 120,
+  render: (_, record) => {
+    const locked = record.action === "lock";
+    return locked ? (
+      <Button
+        type="primary"
+        size="small"
+        icon={<UnlockOutlined />}
+        loading={actionLoading === record._id}
+        onClick={() => onToggleLock(record)}
+        style={{
+          borderRadius: 8,
+          backgroundColor: COLOR.green,
+          borderColor: COLOR.green,
+          color: "#fff",
+        }}
+      >
+        Unlock
+      </Button>
+    ) : (
+      <Button
+        danger
+        size="small"
+        icon={<LockOutlined />}
+        loading={actionLoading === record._id}
+        onClick={() => onToggleLock(record)}
+        style={{ borderRadius: 8 }}
+      >
+        Lock
+      </Button>
+    );
+  },
+},
   ];
 
   return (
@@ -268,42 +237,21 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
 // ─── AdminUsersPage ───────────────────────────────────────────────────────────
 const AdminUsersPage = () => {
   const {
-    tab,
-    setTab,
-    TABS,
-    instructors,
-    students,
+    tab, setTab, TABS,
+    instructors, students,
     loading,
-    pagination,
-    showCreateModal,
-    isCreating,
-    openCreateModal,
-    closeCreateModal,
-    handleCreate,
+    showCreateModal, isCreating,
+    openCreateModal, closeCreateModal, handleCreate,
     handleToggleLock,
+    // BUG FIX 4: lấy actionLoading từ hook thay vì hardcode null
+    actionLoading,
   } = useAdminUsers();
 
   const stats = [
-    {
-      title: "Total Instructors",
-      value: instructors.length,
-      prefix: <UserOutlined />,
-    },
-    {
-      title: "Active Instructors",
-      value: instructors.filter((i) => !i.isLocked).length,
-      valueColor: COLOR.green,
-    },
-    {
-      title: "Total Students",
-      value: students.length,
-      prefix: <TeamOutlined />,
-    },
-    {
-      title: "Active Students",
-      value: students.filter((s) => !s.isLocked).length,
-      valueColor: COLOR.green,
-    },
+    { title: "Total Instructors", value: instructors.length, prefix: <UserOutlined /> },
+    { title: "Active Instructors", value: instructors.filter((i) => i.action !== "lock").length, valueColor: COLOR.green },
+    { title: "Total Students", value: students.length, prefix: <TeamOutlined /> },
+    { title: "Active Students", value: students.filter((s) => s.action !== "lock").length, valueColor: COLOR.green },
   ];
 
   const tabItems = [
@@ -320,7 +268,7 @@ const AdminUsersPage = () => {
           users={instructors}
           loading={loading}
           onToggleLock={handleToggleLock}
-          actionLoading={null}
+          actionLoading={actionLoading}
           type="instructor"
         />
       ),
@@ -338,7 +286,7 @@ const AdminUsersPage = () => {
           users={students}
           loading={loading}
           onToggleLock={handleToggleLock}
-          actionLoading={null}
+          actionLoading={actionLoading}
           type="student"
         />
       ),
@@ -378,10 +326,7 @@ const AdminUsersPage = () => {
           items={tabItems}
           size="large"
           style={{ padding: "0 24px" }}
-          tabBarStyle={{
-            marginBottom: 0,
-            borderBottom: `1px solid ${COLOR.gray100}`,
-          }}
+          tabBarStyle={{ marginBottom: 0, borderBottom: `1px solid ${COLOR.gray100}` }}
         />
       </Card>
 

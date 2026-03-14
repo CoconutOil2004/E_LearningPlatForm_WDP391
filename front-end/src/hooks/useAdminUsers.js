@@ -1,10 +1,5 @@
 /**
  * useAdminUsers — custom hook quản lý state cho trang Admin Users
- *
- * Tách toàn bộ logic fetch / mutate ra khỏi UI component:
- *   - Page component chỉ gọi hook → nhận data + handlers → render
- *   - Muốn đổi logic → sửa hook, không đụng JSX
- *   - Muốn viết unit test → test hook độc lập
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -13,37 +8,23 @@ import UserService from "../services/api/UserService";
 const TABS = { INSTRUCTOR: "instructor", STUDENT: "student" };
 const PAGE_SIZE = 20;
 
-/**
- * @returns {{
- *   tab, setTab,
- *   instructors, students,
- *   pagination, page, setPage,
- *   loading, error,
- *   isCreating, createError,
- *   openCreateModal, closeCreateModal, showCreateModal,
- *   handleCreate,
- *   handleToggleLock,
- *   refetch
- * }}
- */
 const useAdminUsers = () => {
-  // ── Tab state ──────────────────────────────────────────────────────────────
   const [tab,  setTab]  = useState(TABS.INSTRUCTOR);
   const [page, setPage] = useState(1);
 
-  // ── List data ──────────────────────────────────────────────────────────────
   const [instructors,  setInstructors]  = useState([]);
   const [students,     setStudents]     = useState([]);
   const [pagination,   setPagination]   = useState({ total: 0, totalPages: 1 });
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
 
-  // ── Create modal ───────────────────────────────────────────────────────────
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating,      setIsCreating]      = useState(false);
   const [createError,     setCreateError]     = useState(null);
 
-  // ── Fetch helpers ──────────────────────────────────────────────────────────
+  // BUG FIX 4: thêm actionLoading state (trước đây hardcode null bên JSX)
+  const [actionLoading, setActionLoading] = useState(null);
+
   const fetchInstructors = useCallback(async (p = 1) => {
     setLoading(true);
     setError(null);
@@ -72,10 +53,7 @@ const useAdminUsers = () => {
     }
   }, []);
 
-  // Re-fetch khi đổi tab hoặc page
-  useEffect(() => {
-    setPage(1);
-  }, [tab]);
+  useEffect(() => { setPage(1); }, [tab]);
 
   useEffect(() => {
     if (tab === TABS.INSTRUCTOR) fetchInstructors(page);
@@ -87,7 +65,6 @@ const useAdminUsers = () => {
     else                          fetchStudents(page);
   }, [tab, page, fetchInstructors, fetchStudents]);
 
-  // ── Create instructor ──────────────────────────────────────────────────────
   const openCreateModal  = () => { setCreateError(null); setShowCreateModal(true);  };
   const closeCreateModal = () => { setCreateError(null); setShowCreateModal(false); };
 
@@ -97,7 +74,7 @@ const useAdminUsers = () => {
     try {
       await UserService.createInstructor({ email, fullname });
       closeCreateModal();
-      fetchInstructors(1);      // refresh về trang 1 sau khi tạo
+      fetchInstructors(1);
       setPage(1);
       return { success: true };
     } catch (err) {
@@ -109,34 +86,56 @@ const useAdminUsers = () => {
     }
   };
 
-  // ── Toggle lock / unlock ───────────────────────────────────────────────────
-  const handleToggleLock = async (instructor) => {
-    const nextAction = instructor.action === "lock" ? "unlock" : "lock";
-    // Optimistic update — đổi UI ngay, roll back nếu lỗi
-    setInstructors((prev) =>
-      prev.map((i) => (i._id === instructor._id ? { ...i, action: nextAction } : i))
-    );
+  // BUG FIX 1 + 2 + 3:
+  // - Đọc user.action === "lock" thay vì user.isLocked (field không tồn tại)
+  // - Sửa logic nextAction cho đúng chiều
+  // - Tách instructor vs student (BE không có endpoint student)
+  const handleToggleLock = async (user) => {
+    const isCurrentlyLocked = user.action === "lock";
+    const nextAction = isCurrentlyLocked ? "unlock" : "lock";
+
+    setActionLoading(user._id);
+
+    const updateList = (list, setter) =>
+      setter(list.map((u) => (u._id === user._id ? { ...u, action: nextAction } : u)));
+
+    if (tab === TABS.INSTRUCTOR) {
+      updateList(instructors, setInstructors);
+    } else {
+      updateList(students, setStudents);
+    }
+
     try {
-      await UserService.updateInstructorAction(instructor._id, nextAction);
+      if (tab === TABS.INSTRUCTOR) {
+        await UserService.updateInstructorAction(user._id, nextAction);
+      } else {
+        throw new Error("Chưa có API lock/unlock student. Cần BE bổ sung endpoint.");
+      }
     } catch (err) {
       // Roll back
-      setInstructors((prev) =>
-        prev.map((i) => (i._id === instructor._id ? { ...i, action: instructor.action } : i))
-      );
+      if (tab === TABS.INSTRUCTOR) {
+        setInstructors((prev) =>
+          prev.map((u) => (u._id === user._id ? { ...u, action: user.action } : u))
+        );
+      } else {
+        setStudents((prev) =>
+          prev.map((u) => (u._id === user._id ? { ...u, action: user.action } : u))
+        );
+      }
+      console.error("Toggle lock failed:", err?.message ?? err);
+    } finally {
+      setActionLoading(null);
     }
   };
 
   return {
-    // Tab
     tab, setTab, TABS,
-    // Data
     instructors, students, pagination, page, setPage,
     loading, error,
-    // Create
     showCreateModal, isCreating, createError,
     openCreateModal, closeCreateModal, handleCreate,
-    // Actions
     handleToggleLock,
+    actionLoading,
     refetch,
   };
 };

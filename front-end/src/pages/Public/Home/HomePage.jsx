@@ -1,3 +1,4 @@
+import { Button, Skeleton } from "antd"; // ← CHỈ THÊM 2 component này
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -133,7 +134,6 @@ const HomePage = () => {
     error: sectionsError,
   } = useCategorySection({ limit: 4, sortBy: "popular", maxCategories: 5 });
 
-  // Up Next: 2 popular courses từ API
   const [upNext, setUpNext] = useState([]);
   useEffect(() => {
     CourseService.searchCourses({ sortBy: "popular", limit: 2 })
@@ -335,40 +335,16 @@ const HomePage = () => {
                           style={{ transform: "rotate(-90deg)" }}
                           viewBox="0 0 36 36"
                         >
+                          <circle cx="18" cy="18" r="16" fill="none" stroke="#E2E8F0" strokeWidth="3" />
                           <circle
-                            cx="18"
-                            cy="18"
-                            r="16"
-                            fill="none"
-                            stroke="#E2E8F0"
-                            strokeWidth="3"
-                          />
-                          <circle
-                            cx="18"
-                            cy="18"
-                            r="16"
-                            fill="none"
-                            stroke="url(#pg)"
-                            strokeDasharray="76,100"
-                            strokeLinecap="round"
-                            strokeWidth="3"
+                            cx="18" cy="18" r="16" fill="none"
+                            stroke="url(#pg)" strokeDasharray="76,100"
+                            strokeLinecap="round" strokeWidth="3"
                           />
                           <defs>
-                            <linearGradient
-                              id="pg"
-                              x1="0%"
-                              y1="0%"
-                              x2="100%"
-                              y2="100%"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor="var(--color-primary)"
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor="var(--color-secondary)"
-                              />
+                            <linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="var(--color-primary)" />
+                              <stop offset="100%" stopColor="var(--color-secondary)" />
                             </linearGradient>
                           </defs>
                         </svg>
@@ -383,18 +359,12 @@ const HomePage = () => {
                       </span>
                       <div className="pt-2 space-y-3">
                         {[100, 65, 80].map((w, i) => (
-                          <div
-                            key={i}
-                            className="h-2.5 bg-slate-100 rounded-full overflow-hidden"
-                          >
+                          <div key={i} className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full"
                               style={{
                                 width: `${w}%`,
-                                background:
-                                  i % 2 === 0
-                                    ? "var(--color-primary)"
-                                    : "var(--color-secondary)",
+                                background: i % 2 === 0 ? "var(--color-primary)" : "var(--color-secondary)",
                                 opacity: 0.7,
                               }}
                             />
@@ -406,16 +376,14 @@ const HomePage = () => {
 
                   {/* Up Next — real API */}
                   <div>
-                    <h4 className="mb-4 text-xl font-extrabold text-heading">
-                      Up Next
-                    </h4>
+                    <h4 className="mb-4 text-xl font-extrabold text-heading">Up Next</h4>
                     {upNext.length === 0 ? (
+                      // ANTD Skeleton thay animate-pulse thủ công
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {[...Array(2)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="h-16 rounded-2xl bg-white/40 animate-pulse"
-                          />
+                          <div key={i} className="p-4 rounded-2xl bg-white/40">
+                            <Skeleton active avatar={{ shape: "square" }} paragraph={{ rows: 1 }} />
+                          </div>
                         ))}
                       </div>
                     ) : (
@@ -433,10 +401,7 @@ const HomePage = () => {
                             <div className="flex items-center gap-4">
                               <div className="overflow-hidden w-11 h-11 rounded-xl shrink-0">
                                 <img
-                                  src={
-                                    course.thumbnail ||
-                                    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=88&h=88&fit=crop"
-                                  }
+                                  src={course.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=88&h=88&fit=crop"}
                                   alt={course.title}
                                   className="object-cover w-full h-full"
                                 />
@@ -450,11 +415,7 @@ const HomePage = () => {
                                 </p>
                               </div>
                             </div>
-                            <Icon
-                              name="chevronRight"
-                              size={16}
-                              color="var(--text-muted)"
-                            />
+                            <Icon name="chevronRight" size={16} color="var(--text-muted)" />
                           </button>
                         ))}
                       </div>
@@ -470,8 +431,7 @@ const HomePage = () => {
         <section
           className="relative px-6 py-16 mx-auto max-w-7xl"
           style={{
-            background:
-              "radial-gradient(circle at 50% 50%,rgba(240,253,250,0.5) 0%,transparent 100%)",
+            background: "radial-gradient(circle at 50% 50%,rgba(240,253,250,0.5) 0%,transparent 100%)",
           }}
         >
           <div className="mb-16 text-center">
@@ -490,24 +450,12 @@ const HomePage = () => {
               viewBox="0 0 1200 500"
             >
               <defs>
-                <linearGradient
-                  id="ribbonGrad"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="0%"
-                >
+                <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="var(--color-primary)" />
                   <stop offset="50%" stopColor="var(--color-secondary)" />
                   <stop offset="100%" stopColor="var(--color-success)" />
                 </linearGradient>
-                <filter
-                  id="ribbonGlow"
-                  x="-20%"
-                  y="-20%"
-                  width="140%"
-                  height="140%"
-                >
+                <filter id="ribbonGlow" x="-20%" y="-20%" width="140%" height="140%">
                   <feGaussianBlur stdDeviation="8" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
@@ -515,52 +463,22 @@ const HomePage = () => {
               <path
                 className="opacity-60"
                 d="M 150 400 C 300 400,350 150,450 150 C 550 150,650 375,750 375 C 850 375,950 150,1100 150"
-                fill="none"
-                stroke="url(#ribbonGrad)"
-                strokeWidth="12"
-                strokeLinecap="round"
-                filter="url(#ribbonGlow)"
+                fill="none" stroke="url(#ribbonGrad)" strokeWidth="12"
+                strokeLinecap="round" filter="url(#ribbonGlow)"
               />
               <path
                 className="opacity-80"
                 d="M 150 400 C 300 400,350 150,450 150 C 550 150,650 375,750 375 C 850 375,950 150,1100 150"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray="2 10"
+                fill="none" stroke="white" strokeWidth="2"
+                strokeLinecap="round" strokeDasharray="2 10"
               />
             </svg>
             <div className="absolute inset-0 z-10">
               {[
-                {
-                  ms: MILESTONES[0],
-                  left: "12.5%",
-                  top: "80%",
-                  delay: 0,
-                  animDelay: "0s",
-                },
-                {
-                  ms: MILESTONES[1],
-                  left: "37.5%",
-                  top: "30%",
-                  delay: 0.15,
-                  animDelay: "0.5s",
-                },
-                {
-                  ms: MILESTONES[2],
-                  left: "62.5%",
-                  top: "75%",
-                  delay: 0.3,
-                  animDelay: "1s",
-                },
-                {
-                  ms: MILESTONES[3],
-                  left: "91.7%",
-                  top: "30%",
-                  delay: 0.45,
-                  animDelay: "1.5s",
-                },
+                { ms: MILESTONES[0], left: "12.5%", top: "80%", delay: 0, animDelay: "0s" },
+                { ms: MILESTONES[1], left: "37.5%", top: "30%", delay: 0.15, animDelay: "0.5s" },
+                { ms: MILESTONES[2], left: "62.5%", top: "75%", delay: 0.3, animDelay: "1s" },
+                { ms: MILESTONES[3], left: "91.7%", top: "30%", delay: 0.45, animDelay: "1.5s" },
               ].map(({ ms, left, top, delay, animDelay }) => (
                 <motion.button
                   key={ms.title}
@@ -570,32 +488,16 @@ const HomePage = () => {
                   whileHover={{ scale: 1.08 }}
                   onClick={() => navigate(ms.route)}
                   className="absolute flex flex-col items-center milestone-float"
-                  style={{
-                    left,
-                    top,
-                    transform: "translate(-50%,-50%)",
-                    animationDelay: animDelay,
-                  }}
+                  style={{ left, top, transform: "translate(-50%,-50%)", animationDelay: animDelay }}
                 >
                   <div
                     className="w-40 h-28 glass-card rounded-[2rem] border-2 flex flex-col items-center justify-center p-4"
-                    style={{
-                      borderColor: "rgba(52,211,153,0.5)",
-                      boxShadow: "0 0 30px rgba(52,211,153,0.15)",
-                    }}
+                    style={{ borderColor: "rgba(52,211,153,0.5)", boxShadow: "0 0 30px rgba(52,211,153,0.15)" }}
                   >
-                    <Icon
-                      name={ms.icon}
-                      size={36}
-                      color="var(--color-primary)"
-                    />
-                    <span className="mt-2 text-sm font-bold text-heading">
-                      {ms.title}
-                    </span>
+                    <Icon name={ms.icon} size={36} color="var(--color-primary)" />
+                    <span className="mt-2 text-sm font-bold text-heading">{ms.title}</span>
                   </div>
-                  <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">
-                    {ms.sub}
-                  </p>
+                  <p className="text-[9px] text-muted font-bold uppercase mt-3 tracking-widest">{ms.sub}</p>
                 </motion.button>
               ))}
             </div>
@@ -608,9 +510,7 @@ const HomePage = () => {
             <h2 className="mb-3 text-4xl font-extrabold tracking-tight text-heading">
               Next-gen Learning Tools
             </h2>
-            <p className="font-medium text-muted">
-              AI-powered and simulator-driven environments
-            </p>
+            <p className="font-medium text-muted">AI-powered and simulator-driven environments</p>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {TOOLS.map((tool, i) => (
@@ -630,12 +530,8 @@ const HomePage = () => {
                   >
                     <Icon name={tool.icon} size={26} color={tool.iconColor} />
                   </div>
-                  <h4 className="mb-3 text-xl font-bold text-heading">
-                    {tool.title}
-                  </h4>
-                  <p className="text-sm font-medium leading-relaxed text-muted">
-                    {tool.desc}
-                  </p>
+                  <h4 className="mb-3 text-xl font-bold text-heading">{tool.title}</h4>
+                  <p className="text-sm font-medium leading-relaxed text-muted">{tool.desc}</p>
                 </GlassCard>
               </motion.div>
             ))}
@@ -648,28 +544,20 @@ const HomePage = () => {
             <h2 className="mb-3 text-4xl font-extrabold tracking-tight text-heading">
               Featured Courses
             </h2>
-            <p className="font-medium text-muted">
-              Curated for the latest trends in technology
-            </p>
+            <p className="font-medium text-muted">Curated for the latest trends in technology</p>
           </div>
 
-          {/* Skeleton */}
+          {/* ANTD Skeleton thay animate-pulse thủ công */}
           {sectionsLoading && (
             <div className="space-y-12">
               {[...Array(3)].map((_, si) => (
                 <div key={si}>
-                  <div className="w-40 mb-6 rounded-full h-7 bg-white/50 animate-pulse" />
+                  <Skeleton.Input active style={{ width: 160, marginBottom: 24, borderRadius: 999 }} />
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {[...Array(4)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="glass-card rounded-[2.5rem] overflow-hidden"
-                      >
-                        <div className="h-44 bg-white/40 animate-pulse" />
-                        <div className="p-6 space-y-3">
-                          <div className="h-4 rounded-full bg-white/40 animate-pulse" />
-                          <div className="w-3/4 h-3 rounded-full bg-white/40 animate-pulse" />
-                        </div>
+                      <div key={i} className="glass-card rounded-[2.5rem] overflow-hidden p-4">
+                        <Skeleton.Image active style={{ width: "100%", height: 176, borderRadius: 16 }} />
+                        <Skeleton active paragraph={{ rows: 2 }} style={{ marginTop: 16 }} />
                       </div>
                     ))}
                   </div>
@@ -678,22 +566,22 @@ const HomePage = () => {
             </div>
           )}
 
-          {/* Error */}
+          {/* Error — dùng ANTD Button cho Retry */}
           {!sectionsLoading && sectionsError && (
             <div className="py-16 text-center">
               <p className="mt-4 font-medium text-muted">
                 Could not load courses. Please try again.
               </p>
-              <button
-                className="mt-4 text-sm btn-aurora-outline"
+              <Button
+                className="mt-4"
                 onClick={() => window.location.reload()}
               >
                 Retry
-              </button>
+              </Button>
             </div>
           )}
 
-          {/* Real data */}
+          {/* Real data — giữ nguyên 100% */}
           {!sectionsLoading && !sectionsError && (
             <div className="space-y-16">
               {categorySections.map((section, si) => (
@@ -705,10 +593,7 @@ const HomePage = () => {
                 >
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-1.5 h-8 rounded-full"
-                        style={{ background: "var(--gradient-brand)" }}
-                      />
+                      <div className="w-1.5 h-8 rounded-full" style={{ background: "var(--gradient-brand)" }} />
                       <h3 className="text-2xl font-extrabold tracking-tight text-heading">
                         {section.category.name}
                       </h3>
@@ -717,19 +602,11 @@ const HomePage = () => {
                       </span>
                     </div>
                     <button
-                      onClick={() =>
-                        navigate(
-                          `${ROUTES.COURSES}?category=${section.category._id}`,
-                        )
-                      }
+                      onClick={() => navigate(`${ROUTES.COURSES}?category=${section.category._id}`)}
                       className="flex items-center gap-1.5 text-sm font-bold text-primary hover:gap-3 transition-all duration-200"
                     >
                       View all{" "}
-                      <Icon
-                        name="chevronRight"
-                        size={16}
-                        color="var(--color-primary)"
-                      />
+                      <Icon name="chevronRight" size={16} color="var(--color-primary)" />
                     </button>
                   </div>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -754,19 +631,14 @@ const HomePage = () => {
               ))}
               {categorySections.length === 0 && (
                 <div className="py-20 text-center">
-                  <p className="mt-4 text-lg font-medium text-muted">
-                    No published courses yet.
-                  </p>
+                  <p className="mt-4 text-lg font-medium text-muted">No published courses yet.</p>
                 </div>
               )}
             </div>
           )}
 
           <div className="mt-12 text-center">
-            <button
-              className="btn-aurora-outline"
-              onClick={() => navigate(ROUTES.COURSES)}
-            >
+            <button className="btn-aurora-outline" onClick={() => navigate(ROUTES.COURSES)}>
               Browse All Courses
             </button>
           </div>
@@ -789,15 +661,10 @@ const HomePage = () => {
                 transition={{ delay: s.delay }}
               >
                 <div className="deep-glass p-12 rounded-[3rem] relative overflow-hidden flex flex-col justify-center items-center">
-                  <h3
-                    className="mb-4 text-6xl font-black gradient-text"
-                    style={{ letterSpacing: "-0.05em" }}
-                  >
+                  <h3 className="mb-4 text-6xl font-black gradient-text" style={{ letterSpacing: "-0.05em" }}>
                     {s.value}
                   </h3>
-                  <p className="text-muted font-bold uppercase tracking-[0.2em] text-[10px]">
-                    {s.label}
-                  </p>
+                  <p className="text-muted font-bold uppercase tracking-[0.2em] text-[10px]">{s.label}</p>
                 </div>
               </motion.div>
             ))}
