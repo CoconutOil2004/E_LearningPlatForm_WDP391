@@ -10,7 +10,12 @@ const {
   getMyCourses,
   enrollFreeCourse,
 } = require("../controller/enrollmentController");
-const { completeLesson } = require("../controller/lessonController");
+const {
+  completeLesson,
+  heartbeat,
+  markQuizDone,
+  checkLessonAccess,
+} = require("../controller/lessonController");
 
 console.log("enrollmentRoutes.js - protect:", typeof protect);
 console.log("enrollmentRoutes.js - checkEnrollment:", typeof checkEnrollment);
@@ -34,6 +39,20 @@ router.post(
   protect,
   checkEnrollment,
   completeLesson,
+);
+
+/* Heartbeat: cộng dồn thời gian xem lesson (body: lessonId, watchedSecondsDelta) */
+router.post("/:courseId/heartbeat", protect, checkEnrollment, heartbeat);
+
+/* Đánh dấu đã làm quiz (body: quizId) */
+router.post("/:courseId/quiz-done", protect, checkEnrollment, markQuizDone);
+
+/* Kiểm tra quyền xem lesson (lock → 403) */
+router.get(
+  "/:courseId/lesson/:lessonId/access",
+  protect,
+  checkEnrollment,
+  checkLessonAccess,
 );
 
 module.exports = router;

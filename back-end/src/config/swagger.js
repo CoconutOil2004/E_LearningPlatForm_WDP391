@@ -648,6 +648,63 @@ const swaggerDocument = {
         responses: { "200": { description: "OK" } },
       },
     },
+    "/api/enrollments/{courseId}/heartbeat": {
+      post: {
+        tags: ["Enrollments"],
+        summary: "Heartbeat: cộng dồn thời gian xem lesson (gửi mỗi ~10s)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "courseId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  lessonId: { type: "string" },
+                  watchedSecondsDelta: { type: "number", description: "Số giây vừa xem" },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "OK" } },
+      },
+    },
+    "/api/enrollments/{courseId}/quiz-done": {
+      post: {
+        tags: ["Enrollments"],
+        summary: "Đánh dấu đã làm quiz",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "courseId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { quizId: { type: "string" } },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "OK" } },
+      },
+    },
+    "/api/enrollments/{courseId}/lesson/{lessonId}/access": {
+      get: {
+        tags: ["Enrollments"],
+        summary: "Kiểm tra quyền xem lesson (lock → 403)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "courseId", in: "path", required: true, schema: { type: "string" } },
+          { name: "lessonId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        responses: { "200": { description: "allowed: true" }, "403": { description: "Lesson đang lock" } },
+      },
+    },
 
     /* ========== PAYMENTS ========== */
     "/api/payments/create": {

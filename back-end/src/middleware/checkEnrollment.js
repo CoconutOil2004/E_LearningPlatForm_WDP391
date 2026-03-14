@@ -28,6 +28,7 @@ const checkEnrollment = async (req, res, next) => {
 
     if (!enrollment) {
       return res.status(403).json({
+        success: false,
         message: "You must purchase this course"
       });
     }

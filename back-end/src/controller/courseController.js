@@ -424,7 +424,11 @@ exports.getCourseById = async (req, res) => {
         .json({ success: false, message: "Bạn cần mua khóa học để xem nội dung." });
     }
 
-    res.json({ success: true, data: course });
+    res.json({
+      success: true,
+      data: course,
+      itemsProgress: enrollment.itemsProgress || [],
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
