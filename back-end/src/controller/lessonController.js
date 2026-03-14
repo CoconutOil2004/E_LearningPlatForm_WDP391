@@ -19,12 +19,12 @@ exports.completeLesson = async (req, res) => {
       ? new mongoose.Types.ObjectId(lessonId)
       : null;
     if (!lid) {
-      return res.status(400).json({ message: "Invalid lesson id" });
+      return res.status(400).json({ success: false, message: "Invalid lesson id" });
     }
 
     const course = await Course.findById(enrollment.courseId).select("sections");
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({ success: false, message: "Course not found" });
     }
 
     const totalLessons = countLessonItems(course.sections);
@@ -61,6 +61,6 @@ exports.completeLesson = async (req, res) => {
       completed: enrollment.completed
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };

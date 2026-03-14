@@ -22,12 +22,12 @@ const uploadVideo = multer({
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ message: "File video vượt quá dung lượng cho phép." });
+      return res.status(400).json({ success: false, message: "File video vượt quá dung lượng cho phép." });
     }
-    return res.status(400).json({ message: err.message });
+    return res.status(400).json({ success: false, message: err.message });
   }
   if (err) {
-    return res.status(400).json({ message: err.message || "Lỗi upload file." });
+    return res.status(400).json({ success: false, message: err.message || "Lỗi upload file." });
   }
   next();
 };
