@@ -3,11 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { cardVariants } from "../../utils/helpers";
 import { Badge, Icon, Stars } from "../ui";
 
-const fmtDuration = (secs) => {
-  if (!secs) return null;
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+const fmtDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return "00:00";
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+
+  // Nếu có giờ thì hiển thị hh:mm:ss, không thì mm:ss
+  const parts = [
+    h > 0 ? h : null,
+    m.toString().padStart(2, "0"),
+    s.toString().padStart(2, "0"),
+  ].filter(Boolean); // Loại bỏ phần giờ nếu bằng null
+
+  return parts.join(":");
 };
 
 const countLessons = (sections = []) =>
