@@ -5,6 +5,7 @@ const checkEnrollment = async (req, res, next) => {
 
     if (!req.user) {
       return res.status(401).json({
+        success: false,
         message: "Unauthorized"
       });
     }
@@ -14,6 +15,7 @@ const checkEnrollment = async (req, res, next) => {
 
     if (!courseId) {
       return res.status(400).json({
+        success: false,
         message: "CourseId is required"
       });
     }
@@ -37,6 +39,7 @@ const checkEnrollment = async (req, res, next) => {
 
   } catch (error) {
     res.status(500).json({
+      success: false,
       message: error.message
     });
   }

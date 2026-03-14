@@ -43,14 +43,14 @@ function uploadVideoBufferToCloudinary(buffer) {
 exports.uploadImages = async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "Cần gửi ít nhất một file ảnh (field: images)." });
+      return res.status(400).json({ success: false, message: "Cần gửi ít nhất một file ảnh (field: images)." });
     }
     const results = await Promise.all(
       req.files.map((file) => uploadImageBufferToCloudinary(file.buffer))
     );
     res.json({ success: true, data: results });
   } catch (err) {
-    res.status(500).json({ message: err.message || "Upload ảnh thất bại." });
+    res.status(500).json({ success: false, message: err.message || "Upload ảnh thất bại." });
   }
 };
 
@@ -61,11 +61,11 @@ exports.uploadImages = async (req, res) => {
 exports.uploadVideo = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ message: "Cần gửi file video (field: video)." });
+      return res.status(400).json({ success: false, message: "Cần gửi file video (field: video)." });
     }
     const data = await uploadVideoBufferToCloudinary(req.file.buffer);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ message: err.message || "Upload video thất bại." });
+    res.status(500).json({ success: false, message: err.message || "Upload video thất bại." });
   }
 };
