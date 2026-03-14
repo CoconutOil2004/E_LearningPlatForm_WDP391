@@ -2,6 +2,7 @@ import {
   BarChartOutlined,
   BookOutlined,
   DollarOutlined,
+  EditOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -48,6 +49,11 @@ const NAV_ITEMS = [
     icon: <BarChartOutlined />,
     label: "Analytics",
     path: ROUTES.INSTRUCTOR_ANALYTICS,
+  },
+  {
+    icon: <EditOutlined />,
+    label: "My Blogs",
+    path: ROUTES.INSTRUCTOR_BLOG,
   },
   { icon: <UserOutlined />, label: "Profile", path: ROUTES.INSTRUCTOR_PROFILE },
 ];
