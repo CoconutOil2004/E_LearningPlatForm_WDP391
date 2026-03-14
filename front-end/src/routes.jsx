@@ -108,7 +108,7 @@ const router = createBrowserRouter(
           </ProtectedRoute>
         }
       >
-        <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <Route path="/" element={<StudentDashboard />} />
         <Route path="/student/my-courses" element={<MyCoursesPage />} />
         <Route path="/student/wishlist" element={<WishlistPage />} />
         <Route path="/student/progress" element={<LearningProgressPage />} />
@@ -162,7 +162,7 @@ const router = createBrowserRouter(
           element={<InstructorAnalyticsPage />}
         />
         <Route path="/instructor/profile" element={<InstructorProfilePage />} />
-        
+
       </Route>
 
       {/* Admin Routes */}

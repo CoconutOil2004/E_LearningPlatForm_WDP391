@@ -1,31 +1,43 @@
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { setCredentials } from "../../features/auth/authSlice";
+import useAuthStore from "../../store/slices/authStore";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const { setCredentials } = useAuthStore();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const userParam = params.get("user");
-
-    if (!token || !userParam) {
-      navigate("/signin?error=google_failed", { replace: true });
-      return;
-    }
-
     try {
-      const user = JSON.parse(decodeURIComponent(userParam));
+      const params = new URLSearchParams(window.location.search);
 
-      if (!user || !user.role) {
+      const token = params.get("token");
+      const userParam = params.get("user");
+
+      console.log("token:", token);
+      console.log("userParam:", userParam);
+
+      if (!token || !userParam) {
         navigate("/signin?error=google_failed", { replace: true });
         return;
       }
 
-      dispatch(setCredentials({ user, token }));
+      let user;
+
+      try {
+        user = JSON.parse(decodeURIComponent(userParam));
+      } catch (err) {
+        console.error("User parse error:", err);
+        navigate("/signin?error=google_failed", { replace: true });
+        return;
+      }
+
+      console.log("Parsed user:", user);
+
+      // Persist the token to localStorage, exactly what AuthService.login does natively
+      localStorage.setItem("token", token);
+      localStorage.setItem("accessToken", token);
+      
+      setCredentials(user, token);
 
       if (user.mustChangePassword) {
         navigate("/change-password-required", { replace: true });
@@ -47,12 +59,11 @@ const AuthCallback = () => {
         return;
       }
 
-      navigate("/", { replace: true });
     } catch (error) {
-      console.error("Google callback parse error:", error);
+      console.error("Google callback error:", error);
       navigate("/signin?error=google_failed", { replace: true });
     }
-  }, [dispatch, navigate]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-page flex items-center justify-center">

@@ -37,14 +37,28 @@ router.get(
   }),
 );
 
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: `${process.env.CLIENT_URL}/signin?error=google_failed`,
-  }),
-  googleCallback,
-);
+router.get("/google/callback", (req, res, next) => {
+  passport.authenticate("google", { session: false }, (err, user, info) => {
+    console.log("GOOGLE CALLBACK ERR:", err);
+    console.log("GOOGLE CALLBACK USER:", user);
+    console.log("GOOGLE CALLBACK INFO:", info);
+
+    if (err) {
+      return res.redirect(
+        `${process.env.CLIENT_URL}/signin?error=${encodeURIComponent(err.message || "google_failed")}`
+      );
+    }
+
+    if (!user) {
+      return res.redirect(
+        `${process.env.CLIENT_URL}/signin?error=google_failed`
+      );
+    }
+
+    req.user = user;
+    return googleCallback(req, res, next);
+  })(req, res, next);
+});
 
 router.get("/profile", protect, getProfile);
 router.put("/profile", protect, updateProfile);

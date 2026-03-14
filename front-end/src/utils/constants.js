@@ -35,7 +35,7 @@ const ROUTES = {
   RESET_PASSWORD: "/reset-password",
 
   // Student
-  STUDENT_DASHBOARD: "/student/dashboard",
+  STUDENT_DASHBOARD: "/",
   MY_COURSES: "/student/my-courses",
   LEARNING: "/student/learning/:courseId",
   QUIZ: "/student/quiz/:courseId",
