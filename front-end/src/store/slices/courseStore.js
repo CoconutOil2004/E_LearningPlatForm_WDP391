@@ -1,15 +1,33 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/**
+ * courseStore — quản lý enrollment, tiến độ học tập, wishlist.
+ *
+ * Tiến độ lesson được lưu theo lessonId (ObjectId string) để đồng bộ với server.
+ * Khi student quay lại, gọi syncFromServerItemsProgress() để restore từ itemsProgress BE trả về.
+ */
 const useCourseStore = create(
   persist(
     (set, get) => ({
-      enrolledCourseIds: [], // populated from server: string[]
+      enrolledCourseIds: [],
       wishlistIds: [],
-      lessonProgress: {}, // { [courseId]: { completedLessons: string[], currentLesson: number } }
-      quizScores: {}, // { [courseId]: number }
 
-      // Called after server confirms enrollment (free enroll or payment success)
+      /**
+       * lessonProgress:
+       * {
+       *   [courseId]: {
+       *     completedLessonIds: string[],
+       *     currentLessonId: string|null,
+       *     currentFlatIdx: number,
+       *     serverProgress: number,
+       *     itemsProgress: Array,
+       *   }
+       * }
+       */
+      lessonProgress: {},
+      quizScores: {},
+
       enroll: (courseId) =>
         set((state) => ({
           enrolledCourseIds: state.enrolledCourseIds.includes(courseId)
@@ -17,9 +35,10 @@ const useCourseStore = create(
             : [...state.enrolledCourseIds, courseId],
         })),
 
-      // Called on session start to sync from server
       setEnrolledCourseIds: (ids) =>
         set({ enrolledCourseIds: Array.isArray(ids) ? ids : [] }),
+
+      isEnrolled: (courseId) => get().enrolledCourseIds.includes(courseId),
 
       toggleWishlist: (courseId) =>
         set((state) => ({
@@ -28,60 +47,124 @@ const useCourseStore = create(
             : [...state.wishlistIds, courseId],
         })),
 
-      isEnrolled: (courseId) => get().enrolledCourseIds.includes(courseId),
       isWishlisted: (courseId) => get().wishlistIds.includes(courseId),
 
       /**
-       * Mark a lesson complete locally by its actual lessonId (ObjectId string).
-       * The LearningPage also calls the BE API to persist it.
+       * Sync toàn bộ itemsProgress từ server vào store.
+       * Gọi khi mount LearningPage để restore tiến độ.
        */
-      markLessonComplete: (courseId, lessonId) =>
+      syncFromServerItemsProgress: (
+        courseId,
+        itemsProgress,
+        serverProgress,
+        continueLessonId,
+      ) =>
         set((state) => {
-          const prev = state.lessonProgress[courseId] || {
-            completedLessons: [],
-            currentLesson: 0,
-          };
-          const completedLessons = prev.completedLessons.includes(lessonId)
-            ? prev.completedLessons
-            : [...prev.completedLessons, lessonId];
+          const completedLessonIds = (itemsProgress || [])
+            .filter((i) => i.itemType === "lesson" && i.status === "done")
+            .map((i) => i.itemId?.toString());
+
+          const prev = state.lessonProgress[courseId] || {};
           return {
             lessonProgress: {
               ...state.lessonProgress,
-              [courseId]: { ...prev, completedLessons },
+              [courseId]: {
+                ...prev,
+                completedLessonIds,
+                serverProgress: serverProgress ?? prev.serverProgress ?? 0,
+                itemsProgress: itemsProgress ?? prev.itemsProgress ?? [],
+                currentLessonId:
+                  prev.currentLessonId ?? continueLessonId ?? null,
+                currentFlatIdx: prev.currentFlatIdx ?? 0,
+              },
             },
           };
         }),
 
-      setCurrentLesson: (courseId, lessonIdx) =>
+      /**
+       * Cập nhật itemsProgress sau mỗi heartbeat/completeLesson response.
+       */
+      updateItemsProgress: (courseId, itemsProgress, progress, completed) =>
+        set((state) => {
+          const completedLessonIds = (itemsProgress || [])
+            .filter((i) => i.itemType === "lesson" && i.status === "done")
+            .map((i) => i.itemId?.toString());
+
+          const prev = state.lessonProgress[courseId] || {};
+          return {
+            lessonProgress: {
+              ...state.lessonProgress,
+              [courseId]: {
+                ...prev,
+                completedLessonIds,
+                itemsProgress: itemsProgress ?? prev.itemsProgress ?? [],
+                serverProgress: progress ?? prev.serverProgress,
+                serverCompleted: completed ?? prev.serverCompleted,
+              },
+            },
+          };
+        }),
+
+      markLessonComplete: (courseId, lessonId) =>
+        set((state) => {
+          const prev = state.lessonProgress[courseId] || {
+            completedLessonIds: [],
+            currentFlatIdx: 0,
+          };
+          const completedLessonIds = prev.completedLessonIds?.includes(lessonId)
+            ? prev.completedLessonIds
+            : [...(prev.completedLessonIds ?? []), lessonId];
+          return {
+            lessonProgress: {
+              ...state.lessonProgress,
+              [courseId]: { ...prev, completedLessonIds },
+            },
+          };
+        }),
+
+      setCurrentLesson: (courseId, flatIdx, lessonId) =>
         set((state) => ({
           lessonProgress: {
             ...state.lessonProgress,
             [courseId]: {
-              ...(state.lessonProgress[courseId] || { completedLessons: [] }),
-              currentLesson: lessonIdx,
+              ...(state.lessonProgress[courseId] || { completedLessonIds: [] }),
+              currentFlatIdx: flatIdx,
+              currentLessonId: lessonId ?? null,
             },
           },
         })),
+
+      getCurrentFlatIdx: (courseId) =>
+        get().lessonProgress[courseId]?.currentFlatIdx ?? 0,
+
+      getCompletedLessonIds: (courseId) =>
+        get().lessonProgress[courseId]?.completedLessonIds ?? [],
+
+      getItemsProgress: (courseId) =>
+        get().lessonProgress[courseId]?.itemsProgress ?? [],
+
+      getCourseProgress: (courseId, totalLessons) => {
+        const prog = get().lessonProgress[courseId];
+        if (prog?.serverProgress != null) return prog.serverProgress;
+        if (!prog || totalLessons === 0) return 0;
+        return Math.round(
+          ((prog.completedLessonIds?.length ?? 0) / totalLessons) * 100,
+        );
+      },
 
       saveQuizScore: (courseId, score) =>
         set((state) => ({
           quizScores: { ...state.quizScores, [courseId]: score },
         })),
 
-      getCourseProgress: (courseId, totalLessons) => {
-        const prog = get().lessonProgress[courseId];
-        if (!prog || totalLessons === 0) return 0;
-        return Math.round((prog.completedLessons.length / totalLessons) * 100);
-      },
-
-      // Sync server-side progress into local store (called after loading enrollment data)
+      // Legacy compat
       syncProgress: (courseId, completedLessonIds) =>
         set((state) => ({
           lessonProgress: {
             ...state.lessonProgress,
             [courseId]: {
-              ...(state.lessonProgress[courseId] || { currentLesson: 0 }),
-              completedLessons: completedLessonIds,
+              ...(state.lessonProgress[courseId] || { currentFlatIdx: 0 }),
+              completedLessonIds,
             },
           },
         })),

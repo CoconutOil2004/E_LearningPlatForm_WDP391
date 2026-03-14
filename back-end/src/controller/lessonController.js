@@ -6,8 +6,8 @@ const { buildItemsProgress } = require("../utils/buildItemsProgress");
 
 function countLessonItems(sections) {
   let n = 0;
-  (sections || []).forEach(sec => {
-    n += (sec.items || []).filter(i => i.itemType === "lesson").length;
+  (sections || []).forEach((sec) => {
+    n += (sec.items || []).filter((i) => i.itemType === "lesson").length;
   });
   return n;
 }
@@ -16,7 +16,7 @@ function countLessonItems(sections) {
 function recalcProgressFromItemsProgress(enrollment, totalLessons) {
   if (totalLessons === 0) return;
   const doneCount = (enrollment.itemsProgress || []).filter(
-    (i) => i.itemType === "lesson" && i.status === "done"
+    (i) => i.itemType === "lesson" && i.status === "done",
   ).length;
   enrollment.progress = Math.round((doneCount / totalLessons) * 100);
   if (enrollment.progress >= 100) enrollment.completed = true;
@@ -31,12 +31,18 @@ exports.completeLesson = async (req, res) => {
       ? new mongoose.Types.ObjectId(lessonId)
       : null;
     if (!lid) {
-      return res.status(400).json({ success: false, message: "Invalid lesson id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid lesson id" });
     }
 
-    const course = await Course.findById(enrollment.courseId).select("sections");
+    const course = await Course.findById(enrollment.courseId).select(
+      "sections",
+    );
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
     }
 
     const totalLessons = countLessonItems(course.sections);
@@ -45,7 +51,7 @@ exports.completeLesson = async (req, res) => {
         success: true,
         progress: enrollment.progress,
         completed: enrollment.completed,
-        itemsProgress: enrollment.itemsProgress || []
+        itemsProgress: enrollment.itemsProgress || [],
       });
     }
 
@@ -58,7 +64,7 @@ exports.completeLesson = async (req, res) => {
 
     const lidStr = lid.toString();
     const lessonEntry = items.find(
-      (i) => i.itemType === "lesson" && i.itemId?.toString() === lidStr
+      (i) => i.itemType === "lesson" && i.itemId?.toString() === lidStr,
     );
     if (lessonEntry) {
       lessonEntry.status = "done";
@@ -79,7 +85,7 @@ exports.completeLesson = async (req, res) => {
       success: true,
       progress: enrollment.progress,
       completed: enrollment.completed,
-      itemsProgress: enrollment.itemsProgress
+      itemsProgress: enrollment.itemsProgress,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -100,7 +106,9 @@ exports.heartbeat = async (req, res) => {
       ? new mongoose.Types.ObjectId(lessonId)
       : null;
     if (!lid) {
-      return res.status(400).json({ success: false, message: "Invalid lesson id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid lesson id" });
     }
     const delta = Math.max(0, Number(watchedSecondsDelta) || 0);
 
@@ -115,20 +123,30 @@ exports.heartbeat = async (req, res) => {
         success: true,
         progress: enrollment.progress,
         completed: enrollment.completed,
-        itemsProgress: []
+        itemsProgress: [],
       });
     }
 
     const lidStr = lid.toString();
     const lessonEntry = items.find(
-      (i) => i.itemType === "lesson" && i.itemId?.toString() === lidStr
+      (i) => i.itemType === "lesson" && i.itemId?.toString() === lidStr,
     );
     if (!lessonEntry) {
       return res.json({
         success: true,
         progress: enrollment.progress,
         completed: enrollment.completed,
-        itemsProgress: enrollment.itemsProgress
+        itemsProgress: enrollment.itemsProgress,
+      });
+    }
+
+    // Anti-cheat: từ chối heartbeat nếu lesson đang bị lock.
+    // Lesson chỉ được phép nhận watchedSeconds khi status = "progress" hoặc "done".
+    if (lessonEntry.status === "lock") {
+      return res.status(403).json({
+        success: false,
+        message: "Lesson is locked. Complete previous lessons first.",
+        itemsProgress: enrollment.itemsProgress,
       });
     }
 
@@ -136,7 +154,10 @@ exports.heartbeat = async (req, res) => {
     const duration = lessonEntry.duration || 0;
     const threshold = duration * LESSON_COMPLETE_THRESHOLD;
 
-    if (lessonEntry.status !== "done" && lessonEntry.watchedSeconds >= threshold) {
+    if (
+      lessonEntry.status !== "done" &&
+      lessonEntry.watchedSeconds >= threshold
+    ) {
       lessonEntry.status = "done";
       const currentIdx = items.indexOf(lessonEntry);
       const lessonIndexes = items
@@ -156,7 +177,7 @@ exports.heartbeat = async (req, res) => {
       success: true,
       progress: enrollment.progress,
       completed: enrollment.completed,
-      itemsProgress: enrollment.itemsProgress
+      itemsProgress: enrollment.itemsProgress,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -176,7 +197,9 @@ exports.checkLessonAccess = async (req, res) => {
       ? new mongoose.Types.ObjectId(lessonId)
       : null;
     if (!lid) {
-      return res.status(400).json({ success: false, message: "Invalid lesson id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid lesson id" });
     }
 
     const items = enrollment.itemsProgress || [];
@@ -185,7 +208,7 @@ exports.checkLessonAccess = async (req, res) => {
     }
 
     const entry = items.find(
-      (i) => i.itemType === "lesson" && i.itemId?.toString() === lid.toString()
+      (i) => i.itemType === "lesson" && i.itemId?.toString() === lid.toString(),
     );
     if (!entry) {
       return res.json({ success: true, allowed: true });
@@ -216,12 +239,14 @@ exports.markQuizDone = async (req, res) => {
       ? new mongoose.Types.ObjectId(quizId)
       : null;
     if (!qid) {
-      return res.status(400).json({ success: false, message: "Invalid quiz id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid quiz id" });
     }
 
     const items = enrollment.itemsProgress || [];
     const quizEntry = items.find(
-      (i) => i.itemType === "quiz" && i.itemId?.toString() === qid.toString()
+      (i) => i.itemType === "quiz" && i.itemId?.toString() === qid.toString(),
     );
     if (quizEntry) {
       quizEntry.status = "done";
@@ -230,7 +255,7 @@ exports.markQuizDone = async (req, res) => {
 
     res.json({
       success: true,
-      itemsProgress: enrollment.itemsProgress
+      itemsProgress: enrollment.itemsProgress,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

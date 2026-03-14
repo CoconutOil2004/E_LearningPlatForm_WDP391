@@ -1,5 +1,6 @@
 import {
   CheckCircleFilled,
+  LoadingOutlined,
   LockOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
@@ -10,34 +11,26 @@ import { formatDurationClock } from "../../utils/helpers";
 
 const { Text } = Typography;
 
-/**
- * LearningSidebar
- * Props:
- *   sectionsWithIdx  – [{ title, mappedItems: [{ flatIdx, itemType, title, itemId, ... }] }]
- *   completed        – number[] (flatIdx list of completed lessons)
- *   watched80        – Set<number> (flatIdx of lessons watched ≥ 80%)
- *   activeIdx        – current flatIdx
- *   totalLessons     – number
- *   onGoTo           – (flatIdx) => void
- */
 const LearningSidebar = ({
   sectionsWithIdx,
-  completed,
-  watched80,
+  itemsProgress = [],
   activeIdx,
   totalLessons,
+  completedCount,
   onGoTo,
 }) => {
-  /**
-   * A lesson is unlocked if:
-   *   - it's the first lesson, OR
-   *   - it's already completed, OR
-   *   - the previous lesson has been completed or watched ≥ 80%
-   */
-  const isUnlocked = (flatIdx) => {
-    if (flatIdx === 0) return true;
-    if (completed.includes(flatIdx)) return true;
-    return completed.includes(flatIdx - 1) || watched80.has(flatIdx - 1);
+  const getItemStatus = (itemId) => {
+    if (!itemId) return "lock";
+    const idStr = itemId?._id?.toString() ?? itemId?.toString();
+    const found = itemsProgress.find((i) => i.itemId?.toString() === idStr);
+    return found?.status ?? null;
+  };
+
+  const getWatchedSeconds = (itemId, duration) => {
+    if (!itemId || !duration) return 0;
+    const idStr = itemId?._id?.toString() ?? itemId?.toString();
+    const found = itemsProgress.find((i) => i.itemId?.toString() === idStr);
+    return found?.watchedSeconds ?? 0;
   };
 
   return (
@@ -51,7 +44,7 @@ const LearningSidebar = ({
         flexDirection: "column",
       }}
     >
-      {/* Sidebar header */}
+      {/* Header */}
       <div
         style={{
           padding: "16px 20px",
@@ -69,11 +62,11 @@ const LearningSidebar = ({
             marginTop: 4,
           }}
         >
-          {completed.length}/{totalLessons} lessons completed
+          {completedCount}/{totalLessons} lessons completed
         </Text>
       </div>
 
-      {/* Lesson list */}
+      {/* List */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {sectionsWithIdx.map((sec, si) => (
           <div key={sec._id || si}>
@@ -92,19 +85,29 @@ const LearningSidebar = ({
 
             {/* Items */}
             {sec.mappedItems.map((item) => {
-              const isDone = completed.includes(item.flatIdx);
               const isActive = item.flatIdx === activeIdx;
               const isQuiz = item.itemType === "quiz";
-              const unlocked = isUnlocked(item.flatIdx);
-              const hasWatched = watched80.has(item.flatIdx);
+              const serverStatus = getItemStatus(item.itemId);
+
+              // Nếu chưa có itemsProgress từ server, fallback dựa theo vị trí
+              const isDone = serverStatus === "done";
+              const isLocked = serverStatus === "lock";
+              const isInProgress = serverStatus === "progress";
+              const isOpen = serverStatus === "open"; // quiz open
+              const unlocked = !isLocked;
+
+              const lessonDuration = item.itemId?.duration ?? 0;
+              const watchedSec = !isQuiz
+                ? getWatchedSeconds(item.itemId, lessonDuration)
+                : 0;
+              const watchedPct =
+                lessonDuration > 0 ? watchedSec / lessonDuration : 0;
 
               return (
                 <Tooltip
                   key={item._id || item.flatIdx}
                   title={
-                    !unlocked
-                      ? "Complete the previous lesson to unlock"
-                      : undefined
+                    isLocked ? "Hoàn thành bài trước để mở khóa" : undefined
                   }
                   placement="right"
                 >
@@ -124,6 +127,7 @@ const LearningSidebar = ({
                       borderBottom: "1px solid rgba(255,255,255,0.02)",
                       transition: "background 0.2s",
                       opacity: unlocked ? 1 : 0.45,
+                      position: "relative",
                     }}
                   >
                     {/* Status icon */}
@@ -132,17 +136,19 @@ const LearningSidebar = ({
                         marginTop: 2,
                         color: isDone
                           ? "#10b981"
-                          : !unlocked
+                          : isLocked
                             ? "#6B7280"
                             : isActive
                               ? "#6366f1"
                               : "#6B7280",
                       }}
                     >
-                      {!unlocked ? (
+                      {isLocked ? (
                         <LockOutlined />
                       ) : isDone ? (
                         <CheckCircleFilled />
+                      ) : isActive && isInProgress ? (
+                        <LoadingOutlined style={{ color: "#6366f1" }} />
                       ) : isQuiz ? (
                         <QuestionCircleOutlined />
                       ) : (
@@ -163,10 +169,11 @@ const LearningSidebar = ({
                       >
                         {item.title}
                       </Text>
-                      <Space size={12}>
-                        {item.itemId?.duration > 0 && (
+
+                      <Space size={8}>
+                        {lessonDuration > 0 && (
                           <Text style={{ color: "#6B7280", fontSize: 12 }}>
-                            {formatDurationClock(item.itemId.duration)}
+                            {formatDurationClock(lessonDuration)}
                           </Text>
                         )}
                         {isQuiz && (
@@ -182,9 +189,9 @@ const LearningSidebar = ({
                             Quiz
                           </Tag>
                         )}
-                        {!isDone && hasWatched && (
+                        {isInProgress && !isDone && watchedPct > 0 && (
                           <Tag
-                            color="cyan"
+                            color="blue"
                             style={{
                               margin: 0,
                               fontSize: 10,
@@ -192,10 +199,33 @@ const LearningSidebar = ({
                               border: "none",
                             }}
                           >
-                            ≥80%
+                            {Math.round(watchedPct * 100)}% watched
                           </Tag>
                         )}
                       </Space>
+
+                      {/* Progress bar nhỏ cho lesson đang học */}
+                      {!isQuiz && !isDone && watchedPct > 0 && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            height: 2,
+                            background: "rgba(255,255,255,0.1)",
+                            borderRadius: 1,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${Math.min(100, watchedPct * 100)}%`,
+                              background:
+                                watchedPct >= 0.3 ? "#10b981" : "#6366f1",
+                              transition: "width 0.3s",
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Tooltip>
