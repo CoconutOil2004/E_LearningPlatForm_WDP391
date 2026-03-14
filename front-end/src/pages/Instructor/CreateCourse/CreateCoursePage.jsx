@@ -4,6 +4,7 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   DeleteOutlined,
+  LoadingOutlined,
   PictureOutlined,
   PlusOutlined,
   QuestionCircleOutlined,
@@ -24,12 +25,20 @@ import {
   Select,
   Space,
   Tag,
+  Tooltip,
   Typography,
   Upload,
   message,
 } from "antd";
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   INSTRUCTOR_COLORS,
@@ -43,6 +52,12 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
+const UploadingContext = createContext({
+  count: 0,
+  inc: () => {},
+  dec: () => {},
+});
+
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 // Updated the languages, though these often align with what your API expects
 const LANGUAGES = ["English", "Vietnamese", "Japanese", "Chinese", "Korean"];
@@ -52,11 +67,13 @@ const VideoUploadCell = ({ lesson, onUploaded }) => {
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef();
+  const { inc, dec } = useContext(UploadingContext);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    inc(); // Báo có 1 upload mới bắt đầu
     try {
       const res = await CourseService.uploadVideo(file, setProgress);
       if (res) onUploaded(res);
@@ -65,6 +82,7 @@ const VideoUploadCell = ({ lesson, onUploaded }) => {
     } finally {
       setUploading(false);
       setProgress(0);
+      dec(); // Báo upload kết thúc
       e.target.value = ""; // Reset input để có thể chọn lại file cũ nếu cần
     }
   };
@@ -194,7 +212,16 @@ const QuestionEditor = ({ question, onChange, onRemove }) => {
 };
 
 // ─── Section Editor ───────────────────────────────────────────────────────────
-const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
+const SectionEditor = ({
+  section,
+  idx,
+  onChange,
+  onRemove,
+  isLocked,
+  isUploading = false,
+}) => {
+  // Khi đang upload: block mọi thao tác thêm/xoá để tránh mất data
+  const blocked = isLocked || isUploading;
   const addItem = (type) => {
     const newItem =
       type === "lesson"
@@ -263,7 +290,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
           onChange={(e) => onChange({ ...section, title: e.target.value })}
           placeholder="Enter section title..."
           className="px-0 text-lg font-bold border-none shadow-none focus:ring-0"
-          disabled={isLocked}
+          disabled={blocked}
         />
         {!isLocked && (
           <Button
@@ -271,6 +298,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
             danger
             icon={<DeleteOutlined />}
             onClick={onRemove}
+            disabled={isUploading}
             className="transition-opacity opacity-0 group-hover/section:opacity-100"
           />
         )}
@@ -296,7 +324,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                   placeholder="Lesson title..."
                   variant="borderless"
                   className="flex-1 px-0 font-medium bg-transparent focus:ring-0"
-                  disabled={isLocked}
+                  disabled={blocked}
                 />
 
                 {/* Nút Upload Video */}
@@ -327,6 +355,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                     danger
                     icon={<DeleteOutlined />}
                     onClick={() => removeItem(li)}
+                    disabled={isUploading}
                     className="flex items-center justify-center w-8 h-8 transition-opacity opacity-0 shrink-0 group-hover/item:opacity-100 hover:bg-red-50"
                   />
                 )}
@@ -351,7 +380,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                           placeholder="Quiz title..."
                           variant="borderless"
                           className="flex-1 font-medium"
-                          disabled={isLocked}
+                          disabled={blocked}
                           onClick={(e) => e.stopPropagation()}
                         />
                         <Tag
@@ -369,6 +398,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                               e.stopPropagation();
                               removeItem(li);
                             }}
+                            disabled={isUploading}
                             className="opacity-0 group-hover/item:opacity-100"
                           />
                         )}
@@ -391,6 +421,7 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
                             type="dashed"
                             icon={<PlusOutlined />}
                             onClick={() => questionActions.add(li)}
+                            disabled={isUploading}
                             className="w-full mt-2 text-purple-600 border-purple-200 bg-purple-50/50 hover:bg-purple-100"
                           >
                             Add question
@@ -409,15 +440,25 @@ const SectionEditor = ({ section, idx, onChange, onRemove, isLocked }) => {
           <Space className="pt-3">
             <button
               type="button"
-              onClick={() => addItem("lesson")}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm hover:border-purple-300 hover:text-purple-600"
+              onClick={() => !isUploading && addItem("lesson")}
+              disabled={isUploading}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors bg-white border rounded-lg shadow-sm ${
+                isUploading
+                  ? "opacity-40 cursor-not-allowed border-gray-200 text-gray-400"
+                  : "text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600"
+              }`}
             >
               <VideoCameraOutlined /> Add Lesson
             </button>
             <button
               type="button"
-              onClick={() => addItem("quiz")}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors bg-white border border-gray-200 rounded-lg shadow-sm hover:border-pink-300 hover:text-pink-600"
+              onClick={() => !isUploading && addItem("quiz")}
+              disabled={isUploading}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors bg-white border rounded-lg shadow-sm ${
+                isUploading
+                  ? "opacity-40 cursor-not-allowed border-gray-200 text-gray-400"
+                  : "text-gray-600 border-gray-200 hover:border-pink-300 hover:text-pink-600"
+              }`}
             >
               <QuestionCircleOutlined /> Add Quiz
             </button>
@@ -442,6 +483,12 @@ const CreateCoursePage = () => {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const incUploading = useCallback(() => setUploadingCount((c) => c + 1), []);
+  const decUploading = useCallback(
+    () => setUploadingCount((c) => Math.max(0, c - 1)),
+    [],
+  );
 
   const isLocked = ["pending", "published"].includes(status);
   const currentStatus =
@@ -543,6 +590,12 @@ const CreateCoursePage = () => {
   };
 
   const handleSaveDraft = async () => {
+    if (uploadingCount > 0) {
+      message.warning(
+        `Vui lòng đợi ${uploadingCount} video upload xong trước khi lưu!`,
+      );
+      return;
+    }
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -558,6 +611,12 @@ const CreateCoursePage = () => {
   };
 
   const handleSubmitForReview = async () => {
+    if (uploadingCount > 0) {
+      message.warning(
+        `Vui lòng đợi ${uploadingCount} video upload xong trước khi nộp!`,
+      );
+      return;
+    }
     try {
       const values = await form.validateFields();
       setSubmitting(true);
@@ -575,348 +634,415 @@ const CreateCoursePage = () => {
   };
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="pb-20"
+    <UploadingContext.Provider
+      value={{ count: uploadingCount, inc: incUploading, dec: decUploading }}
     >
-      <div className="max-w-5xl px-6 py-10 mx-auto">
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)}
-              className="flex items-center justify-center w-10 h-10 transition-all bg-white border border-gray-200 shadow-sm rounded-xl hover:border-purple-300 hover:text-purple-600"
-            >
-              <ArrowLeftOutlined />
-            </button>
-            <div>
-              <Title level={2} className="m-0 font-black text-gray-900">
-                {isEdit ? "Edit Course" : "Create New Course"}
-              </Title>
-              <Text type="secondary">Build your course curriculum</Text>
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className="pb-20"
+      >
+        <div className="max-w-5xl px-6 py-10 mx-auto">
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)}
+                className="flex items-center justify-center w-10 h-10 transition-all bg-white border border-gray-200 shadow-sm rounded-xl hover:border-purple-300 hover:text-purple-600"
+              >
+                <ArrowLeftOutlined />
+              </button>
+              <div>
+                <Title level={2} className="m-0 font-black text-gray-900">
+                  {isEdit ? "Edit Course" : "Create New Course"}
+                </Title>
+                <Text type="secondary">Build your course curriculum</Text>
+              </div>
             </div>
+
+            {status && (
+              <div
+                className="px-4 py-2 text-sm font-bold border shadow-sm rounded-xl"
+                style={{
+                  backgroundColor: currentStatus.bg,
+                  color: currentStatus.text,
+                  borderColor: currentStatus.border,
+                }}
+              >
+                {currentStatus.label}
+              </div>
+            )}
           </div>
 
-          {status && (
+          {isLocked && (
+            <Alert
+              message={`Course is currently "${currentStatus.label}" — content cannot be edited at this time.`}
+              type="warning"
+              showIcon
+              className="mb-6 rounded-xl border-amber-200 bg-amber-50"
+            />
+          )}
+
+          <Form
+            form={form}
+            layout="vertical"
+            disabled={isLocked}
+            requiredMark={false}
+          >
+            {/* ── Basic Information ── */}
+            <div className="p-8 mb-8 bg-white border border-gray-100 shadow-sm rounded-2xl">
+              <h2 className="flex items-center gap-2 mb-6 text-xl font-bold text-gray-900">
+                <BookOutlined style={{ color: INSTRUCTOR_COLORS.primary }} />{" "}
+                Basic Information
+              </h2>
+              <Row gutter={[24, 16]}>
+                <Col xs={24}>
+                  <Form.Item
+                    name="title"
+                    label={
+                      <span className="font-semibold text-gray-700">
+                        Course Title
+                      </span>
+                    }
+                    rules={[
+                      { required: true, message: "Please enter a title" },
+                      { max: 60, message: "Maximum 60 characters" },
+                    ]}
+                  >
+                    <Input
+                      placeholder="Enter title..."
+                      size="large"
+                      className="rounded-lg"
+                      showCount
+                      maxLength={60}
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24}>
+                  <Form.Item
+                    name="description"
+                    label={
+                      <span className="font-semibold text-gray-700">
+                        Course Description
+                      </span>
+                    }
+                  >
+                    <TextArea
+                      rows={4}
+                      className="rounded-lg"
+                      placeholder="What will students learn?"
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={8}>
+                  <Form.Item
+                    name="categoryId"
+                    label={
+                      <span className="font-semibold text-gray-700">
+                        Category
+                      </span>
+                    }
+                    rules={[{ required: true, message: "Select category" }]}
+                  >
+                    <Select size="large" placeholder="Select category">
+                      {categories.map((c) => (
+                        <Option key={c._id} value={c._id}>
+                          {c.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={8}>
+                  <Form.Item
+                    name="level"
+                    label={
+                      <span className="font-semibold text-gray-700">Level</span>
+                    }
+                    initialValue="Beginner"
+                  >
+                    <Select size="large">
+                      {LEVELS.map((l) => (
+                        <Option key={l} value={l}>
+                          {l}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={8}>
+                  <Form.Item
+                    name="language"
+                    label={
+                      <span className="font-semibold text-gray-700">
+                        Language
+                      </span>
+                    }
+                    initialValue="English"
+                  >
+                    <Select size="large">
+                      {LANGUAGES.map((l) => (
+                        <Option key={l} value={l}>
+                          {l}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="price"
+                    label={
+                      <span className="font-semibold text-gray-700">
+                        Price (USD)
+                      </span>
+                    }
+                    initialValue={0}
+                  >
+                    <InputNumber
+                      min={0}
+                      step={0.01}
+                      size="large"
+                      className="w-full rounded-lg"
+                      addonBefore="$"
+                    />
+                  </Form.Item>
+                  <Text type="secondary" className="text-xs italic">
+                    Enter 0 for free.
+                  </Text>
+                </Col>
+
+                {/* Upload Thumbnail */}
+                <Col xs={24} sm={12}>
+                  <Form.Item name="thumbnail" className="hidden">
+                    <Input />
+                  </Form.Item>
+                  <div className="mb-2 font-semibold text-gray-700">
+                    Course Thumbnail
+                  </div>
+
+                  <Upload
+                    accept="image/*"
+                    listType="picture-card" // Hiển thị dạng thẻ ảnh vuông (chuẩn Ant Design)
+                    maxCount={1}
+                    disabled={isLocked}
+                    // Đồng bộ danh sách ảnh với state thumbnailUrl
+                    fileList={
+                      thumbnailUrl
+                        ? [
+                            {
+                              uid: "-1",
+                              name: "thumbnail.png",
+                              status: "done",
+                              url: thumbnailUrl,
+                            },
+                          ]
+                        : []
+                    }
+                    // Xử lý logic tải ảnh lên server
+                    customRequest={async ({ file, onSuccess, onError }) => {
+                      try {
+                        const uploaded = await CourseService.uploadImages(file);
+                        const url = uploaded[0]?.url || uploaded[0]?.secure_url;
+
+                        if (url) {
+                          form.setFieldsValue({ thumbnail: url });
+                          setThumbnailUrl(url);
+                          onSuccess("ok"); // Báo cho Antd biết đã upload thành công
+                          message.success("Image uploaded successfully");
+                        } else {
+                          throw new Error("No URL returned from server");
+                        }
+                      } catch (error) {
+                        onError(error); // Báo cho Antd hiển thị trạng thái lỗi màu đỏ
+                        message.error("Failed to upload image");
+                      }
+                    }}
+                    // Khi người dùng bấm nút xóa (thùng rác)
+                    onRemove={() => {
+                      form.setFieldsValue({ thumbnail: "" });
+                      setThumbnailUrl("");
+                    }}
+                    // Khi người dùng bấm nút xem trước (con mắt)
+                    onPreview={(file) => {
+                      window.open(file.url || file.thumbUrl, "_blank");
+                    }}
+                  >
+                    {/* Nút upload hiển thị khi chưa có ảnh */}
+                    {!thumbnailUrl && (
+                      <div className="flex flex-col items-center justify-center p-2 text-purple-500 transition-colors hover:text-purple-600">
+                        <PictureOutlined className="mb-2 text-3xl text-purple-400" />
+                        <div className="text-sm font-semibold">
+                          Upload Image
+                        </div>
+                        <div className="mt-1 text-xs font-normal text-gray-400">
+                          JPG / PNG
+                        </div>
+                      </div>
+                    )}
+                  </Upload>
+                </Col>
+              </Row>
+            </div>
+
+            {/* ── Curriculum ── */}
             <div
-              className="px-4 py-2 text-sm font-bold border shadow-sm rounded-xl"
-              style={{
-                backgroundColor: currentStatus.bg,
-                color: currentStatus.text,
-                borderColor: currentStatus.border,
-              }}
+              className="p-8 mb-8 bg-white border border-gray-100 shadow-sm rounded-2xl"
+              style={{ position: "relative" }}
             >
-              {currentStatus.label}
+              {/* Upload-in-progress overlay banner */}
+              {uploadingCount > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 10,
+                    background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                    padding: "10px 24px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    color: "#fff",
+                  }}
+                >
+                  <LoadingOutlined spin style={{ fontSize: 16 }} />
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>
+                    Uploading {uploadingCount} video...
+                  </span>
+                </div>
+              )}
+              {/* Spacer khi banner hiện */}
+              {uploadingCount > 0 && <div style={{ height: 40 }} />}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="flex items-center gap-2 m-0 text-xl font-bold text-gray-900">
+                  <VideoCameraOutlined
+                    style={{ color: INSTRUCTOR_COLORS.accent }}
+                  />{" "}
+                  Curriculum
+                </h2>
+                {!isLocked && (
+                  <button
+                    type="button"
+                    onClick={() => uploadingCount === 0 && addSection()}
+                    disabled={uploadingCount > 0}
+                    className={`flex items-center gap-2 px-4 py-2 font-bold rounded-xl transition-colors ${
+                      uploadingCount > 0
+                        ? "opacity-40 cursor-not-allowed bg-gray-100 text-gray-400"
+                        : "text-purple-600 bg-purple-50 hover:bg-purple-100"
+                    }`}
+                  >
+                    <PlusOutlined /> Add new section
+                  </button>
+                )}
+              </div>
+
+              {sections.length === 0 ? (
+                <div className="py-16 text-center border-2 border-gray-200 border-dashed rounded-2xl bg-gray-50">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full shadow-sm">
+                    <BookOutlined className="text-2xl text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-700">
+                    No content yet
+                  </h3>
+                  <p className="mt-1 text-gray-500">
+                    Start by adding your first section.
+                  </p>
+                  {!isLocked && (
+                    <Button
+                      type="primary"
+                      className="mt-4 border-none rounded-lg"
+                      style={{ background: INSTRUCTOR_COLORS.primary }}
+                      icon={<PlusOutlined />}
+                      onClick={addSection}
+                    >
+                      Add Section
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                sections.map((sec, idx) => (
+                  <SectionEditor
+                    key={idx}
+                    section={sec}
+                    idx={idx}
+                    onChange={(updated) => updateSection(idx, updated)}
+                    onRemove={() => removeSection(idx)}
+                    isLocked={isLocked}
+                    isUploading={uploadingCount > 0}
+                  />
+                ))
+              )}
+            </div>
+          </Form>
+
+          {/* ── Actions Footer ── */}
+          {!isLocked && (
+            <div className="sticky flex items-center justify-end gap-4 p-4 border border-gray-200 shadow-lg bottom-6 bg-white/80 backdrop-blur-md rounded-2xl">
+              <Tooltip
+                title={
+                  uploadingCount > 0
+                    ? `Đang upload ${uploadingCount} video, vui lòng chờ...`
+                    : ""
+                }
+              >
+                <Button
+                  size="large"
+                  icon={
+                    uploadingCount > 0 ? (
+                      <LoadingOutlined spin />
+                    ) : (
+                      <SaveOutlined />
+                    )
+                  }
+                  loading={saving}
+                  disabled={uploadingCount > 0}
+                  onClick={handleSaveDraft}
+                  className="px-6 font-semibold text-gray-700 border-gray-300 rounded-xl hover:text-purple-600 hover:border-purple-300"
+                >
+                  {uploadingCount > 0
+                    ? `Uploading (${uploadingCount})...`
+                    : "Save Draft"}
+                </Button>
+              </Tooltip>
+              <Tooltip
+                title={
+                  uploadingCount > 0
+                    ? `Chờ ${uploadingCount} video upload xong`
+                    : ""
+                }
+              >
+                <button
+                  onClick={handleSubmitForReview}
+                  disabled={submitting || uploadingCount > 0}
+                  className="flex items-center gap-2 px-8 py-3 font-bold text-white transition-all transform shadow-lg rounded-xl hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
+                  }}
+                >
+                  {submitting ? (
+                    <SaveOutlined className="animate-spin" />
+                  ) : (
+                    <SendOutlined />
+                  )}
+                  Submit for Review
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>
-
-        {isLocked && (
-          <Alert
-            message={`Course is currently "${currentStatus.label}" — content cannot be edited at this time.`}
-            type="warning"
-            showIcon
-            className="mb-6 rounded-xl border-amber-200 bg-amber-50"
-          />
-        )}
-
-        <Form
-          form={form}
-          layout="vertical"
-          disabled={isLocked}
-          requiredMark={false}
-        >
-          {/* ── Basic Information ── */}
-          <div className="p-8 mb-8 bg-white border border-gray-100 shadow-sm rounded-2xl">
-            <h2 className="flex items-center gap-2 mb-6 text-xl font-bold text-gray-900">
-              <BookOutlined style={{ color: INSTRUCTOR_COLORS.primary }} />{" "}
-              Basic Information
-            </h2>
-            <Row gutter={[24, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                  name="title"
-                  label={
-                    <span className="font-semibold text-gray-700">
-                      Course Title
-                    </span>
-                  }
-                  rules={[
-                    { required: true, message: "Please enter a title" },
-                    { max: 60, message: "Maximum 60 characters" },
-                  ]}
-                >
-                  <Input
-                    placeholder="Enter title..."
-                    size="large"
-                    className="rounded-lg"
-                    showCount
-                    maxLength={60}
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
-                <Form.Item
-                  name="description"
-                  label={
-                    <span className="font-semibold text-gray-700">
-                      Course Description
-                    </span>
-                  }
-                >
-                  <TextArea
-                    rows={4}
-                    className="rounded-lg"
-                    placeholder="What will students learn?"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={8}>
-                <Form.Item
-                  name="categoryId"
-                  label={
-                    <span className="font-semibold text-gray-700">
-                      Category
-                    </span>
-                  }
-                  rules={[{ required: true, message: "Select category" }]}
-                >
-                  <Select size="large" placeholder="Select category">
-                    {categories.map((c) => (
-                      <Option key={c._id} value={c._id}>
-                        {c.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={8}>
-                <Form.Item
-                  name="level"
-                  label={
-                    <span className="font-semibold text-gray-700">Level</span>
-                  }
-                  initialValue="Beginner"
-                >
-                  <Select size="large">
-                    {LEVELS.map((l) => (
-                      <Option key={l} value={l}>
-                        {l}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={8}>
-                <Form.Item
-                  name="language"
-                  label={
-                    <span className="font-semibold text-gray-700">
-                      Language
-                    </span>
-                  }
-                  initialValue="English"
-                >
-                  <Select size="large">
-                    {LANGUAGES.map((l) => (
-                      <Option key={l} value={l}>
-                        {l}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  name="price"
-                  label={
-                    <span className="font-semibold text-gray-700">
-                      Price (USD)
-                    </span>
-                  }
-                  initialValue={0}
-                >
-                  <InputNumber
-                    min={0}
-                    step={0.01}
-                    size="large"
-                    className="w-full rounded-lg"
-                    addonBefore="$"
-                  />
-                </Form.Item>
-                <Text type="secondary" className="text-xs italic">
-                  Enter 0 for free.
-                </Text>
-              </Col>
-
-              {/* Upload Thumbnail */}
-              <Col xs={24} sm={12}>
-                <Form.Item name="thumbnail" className="hidden">
-                  <Input />
-                </Form.Item>
-                <div className="mb-2 font-semibold text-gray-700">
-                  Course Thumbnail
-                </div>
-
-                <Upload
-                  accept="image/*"
-                  listType="picture-card" // Hiển thị dạng thẻ ảnh vuông (chuẩn Ant Design)
-                  maxCount={1}
-                  disabled={isLocked}
-                  // Đồng bộ danh sách ảnh với state thumbnailUrl
-                  fileList={
-                    thumbnailUrl
-                      ? [
-                          {
-                            uid: "-1",
-                            name: "thumbnail.png",
-                            status: "done",
-                            url: thumbnailUrl,
-                          },
-                        ]
-                      : []
-                  }
-                  // Xử lý logic tải ảnh lên server
-                  customRequest={async ({ file, onSuccess, onError }) => {
-                    try {
-                      const uploaded = await CourseService.uploadImages(file);
-                      const url = uploaded[0]?.url || uploaded[0]?.secure_url;
-
-                      if (url) {
-                        form.setFieldsValue({ thumbnail: url });
-                        setThumbnailUrl(url);
-                        onSuccess("ok"); // Báo cho Antd biết đã upload thành công
-                        message.success("Image uploaded successfully");
-                      } else {
-                        throw new Error("No URL returned from server");
-                      }
-                    } catch (error) {
-                      onError(error); // Báo cho Antd hiển thị trạng thái lỗi màu đỏ
-                      message.error("Failed to upload image");
-                    }
-                  }}
-                  // Khi người dùng bấm nút xóa (thùng rác)
-                  onRemove={() => {
-                    form.setFieldsValue({ thumbnail: "" });
-                    setThumbnailUrl("");
-                  }}
-                  // Khi người dùng bấm nút xem trước (con mắt)
-                  onPreview={(file) => {
-                    window.open(file.url || file.thumbUrl, "_blank");
-                  }}
-                >
-                  {/* Nút upload hiển thị khi chưa có ảnh */}
-                  {!thumbnailUrl && (
-                    <div className="flex flex-col items-center justify-center p-2 text-purple-500 transition-colors hover:text-purple-600">
-                      <PictureOutlined className="mb-2 text-3xl text-purple-400" />
-                      <div className="text-sm font-semibold">Upload Image</div>
-                      <div className="mt-1 text-xs font-normal text-gray-400">
-                        JPG / PNG
-                      </div>
-                    </div>
-                  )}
-                </Upload>
-              </Col>
-            </Row>
-          </div>
-
-          {/* ── Curriculum ── */}
-          <div className="p-8 mb-8 bg-white border border-gray-100 shadow-sm rounded-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="flex items-center gap-2 m-0 text-xl font-bold text-gray-900">
-                <VideoCameraOutlined
-                  style={{ color: INSTRUCTOR_COLORS.accent }}
-                />{" "}
-                Curriculum
-              </h2>
-              {!isLocked && (
-                <button
-                  type="button"
-                  onClick={addSection}
-                  className="flex items-center gap-2 px-4 py-2 font-bold text-purple-600 transition-colors bg-purple-50 rounded-xl hover:bg-purple-100"
-                >
-                  <PlusOutlined /> Add new section
-                </button>
-              )}
-            </div>
-
-            {sections.length === 0 ? (
-              <div className="py-16 text-center border-2 border-gray-200 border-dashed rounded-2xl bg-gray-50">
-                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full shadow-sm">
-                  <BookOutlined className="text-2xl text-gray-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-700">
-                  No content yet
-                </h3>
-                <p className="mt-1 text-gray-500">
-                  Start by adding your first section.
-                </p>
-                {!isLocked && (
-                  <Button
-                    type="primary"
-                    className="mt-4 border-none rounded-lg"
-                    style={{ background: INSTRUCTOR_COLORS.primary }}
-                    icon={<PlusOutlined />}
-                    onClick={addSection}
-                  >
-                    Add Section
-                  </Button>
-                )}
-              </div>
-            ) : (
-              sections.map((sec, idx) => (
-                <SectionEditor
-                  key={idx}
-                  section={sec}
-                  idx={idx}
-                  onChange={(updated) => updateSection(idx, updated)}
-                  onRemove={() => removeSection(idx)}
-                  isLocked={isLocked}
-                />
-              ))
-            )}
-          </div>
-        </Form>
-
-        {/* ── Actions Footer ── */}
-        {!isLocked && (
-          <div className="sticky flex items-center justify-end gap-4 p-4 border border-gray-200 shadow-lg bottom-6 bg-white/80 backdrop-blur-md rounded-2xl">
-            <Button
-              size="large"
-              icon={<SaveOutlined />}
-              loading={saving}
-              onClick={handleSaveDraft}
-              className="px-6 font-semibold text-gray-700 border-gray-300 rounded-xl hover:text-purple-600 hover:border-purple-300"
-            >
-              Save Draft
-            </Button>
-            <button
-              onClick={handleSubmitForReview}
-              disabled={submitting}
-              className="flex items-center gap-2 px-8 py-3 font-bold text-white transition-all transform shadow-lg rounded-xl hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
-              }}
-            >
-              {submitting ? (
-                <SaveOutlined className="animate-spin" />
-              ) : (
-                <SendOutlined />
-              )}
-              Submit for Review
-            </button>
-          </div>
-        )}
-      </div>
-    </motion.div>
+      </motion.div>
+    </UploadingContext.Provider>
   );
 };
 

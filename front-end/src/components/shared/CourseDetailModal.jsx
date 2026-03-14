@@ -20,20 +20,13 @@ import {
 } from "antd";
 import { useState } from "react";
 
-const { Title, Text, Paragraph } = Typography;
+import {
+  formatDurationClock,
+  formatDurationShort,
+  formatThousands,
+} from "../../utils/helpers";
 
-/* ─── helpers ─────────────────────────────────────────────────────────────── */
-const fmtDuration = (s) => {
-  if (!s) return "—";
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
-const fmtShort = (s) => {
-  if (!s) return null;
-  const m = Math.floor(s / 60);
-  return `${m}:${String(s % 60).padStart(2, "0")}`;
-};
+const { Title, Text, Paragraph } = Typography;
 
 const STATUS_STYLE = {
   draft: { bg: "#F9FAFB", color: "#6B7280", border: "#E5E7EB", label: "Draft" },
@@ -159,7 +152,7 @@ const VideoPlayer = ({ url, title }) => {
   );
 };
 
-/* ─── QuizViewer (Admin/Instructor View) ──────────────────────────────────── */
+/* ─── QuizViewer ──────────────────────────────────────────────────────────── */
 const QuizViewer = ({ quiz }) => {
   const questions = quiz?.questions ?? [];
 
@@ -175,91 +168,86 @@ const QuizViewer = ({ quiz }) => {
 
   return (
     <div>
-      {questions.map((q, qi) => {
-        return (
-          <div
-            key={qi}
-            style={{
-              marginBottom: 20,
-              paddingBottom: 20,
-              borderBottom: "1px solid #F3F4F6",
-            }}
-          >
-            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-              <Badge count={qi + 1} style={{ background: "#374151" }} />
-              {/* SỬA LẠI: Gọi đúng trường q.text từ JSON */}
-              <Text strong style={{ flex: 1, fontSize: 14, color: "#1F2937" }}>
-                {q.text}
-              </Text>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {(q.options ?? []).map((opt, oi) => {
-                // SỬA LẠI: Ép kiểu q.correctAnswer từ chuỗi ("0", "1") sang số để so sánh chính xác với oi
-                const isCorrectAnswer = parseInt(q.correctAnswer, 10) === oi;
+      {questions.map((q, qi) => (
+        <div
+          key={qi}
+          style={{
+            marginBottom: 20,
+            paddingBottom: 20,
+            borderBottom: "1px solid #F3F4F6",
+          }}
+        >
+          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+            <Badge count={qi + 1} style={{ background: "#374151" }} />
+            <Text strong style={{ flex: 1, fontSize: 14, color: "#1F2937" }}>
+              {q.text}
+            </Text>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(q.options ?? []).map((opt, oi) => {
+              const isCorrect = parseInt(q.correctAnswer, 10) === oi;
+              const bg = isCorrect ? "#ECFDF5" : "#FFF";
+              const border = isCorrect ? "#6EE7B7" : "#E5E7EB";
+              const color = isCorrect ? "#065F46" : "#4B5563";
 
-                const bg = isCorrectAnswer ? "#ECFDF5" : "#FFF";
-                const border = isCorrectAnswer ? "#6EE7B7" : "#E5E7EB";
-                const color = isCorrectAnswer ? "#065F46" : "#4B5563";
-
-                return (
-                  <div
-                    key={oi}
+              return (
+                <div
+                  key={oi}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: 6,
+                    border: `1px solid ${border}`,
+                    background: bg,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <span
                     style={{
-                      padding: "10px 16px",
-                      borderRadius: 6,
-                      border: `1px solid ${border}`,
-                      background: bg,
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      border: `1px solid ${isCorrect ? border : "#D1D5DB"}`,
+                      background: isCorrect ? "#059669" : "transparent",
                       display: "flex",
                       alignItems: "center",
-                      gap: 12,
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      flexShrink: 0,
+                      color: isCorrect ? "#FFF" : color,
                     }}
                   >
-                    <span
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: "50%",
-                        border: `1px solid ${isCorrectAnswer ? border : "#D1D5DB"}`,
-                        background: isCorrectAnswer ? "#059669" : "transparent",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        flexShrink: 0,
-                        color: isCorrectAnswer ? "#FFF" : color,
-                      }}
-                    >
-                      {String.fromCharCode(65 + oi)}
-                    </span>
-                    <Text
-                      style={{
-                        color,
-                        flex: 1,
-                        fontSize: 14,
-                        fontWeight: isCorrectAnswer ? 500 : 400,
-                      }}
-                    >
-                      {opt}
-                    </Text>
-                    {isCorrectAnswer && (
-                      <CheckCircleOutlined
-                        style={{ color: "#059669", fontSize: 16 }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    {String.fromCharCode(65 + oi)}
+                  </span>
+                  <Text
+                    style={{
+                      color,
+                      flex: 1,
+                      fontSize: 14,
+                      fontWeight: isCorrect ? 500 : 400,
+                    }}
+                  >
+                    {opt}
+                  </Text>
+                  {isCorrect && (
+                    <CheckCircleOutlined
+                      style={{ color: "#059669", fontSize: 16 }}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 };
 
 /* ─── ItemRow ─────────────────────────────────────────────────────────────── */
-const ItemRow = ({ item, ii, expanded, onToggle }) => {
+const ItemRow = ({ item, expanded, onToggle }) => {
   const isLesson = item.itemType === "lesson";
   const dur = item.itemId?.duration;
   const hasVideo = !!item.itemId?.videoUrl;
@@ -310,7 +298,7 @@ const ItemRow = ({ item, ii, expanded, onToggle }) => {
           )}
           {isLesson && dur > 0 && (
             <span style={{ fontSize: 12, color: "#6B7280" }}>
-              {fmtShort(dur)}
+              {formatDurationShort(dur)}
             </span>
           )}
           {!isLesson && item.itemId?.questions?.length > 0 && (
@@ -374,7 +362,6 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
               <ItemRow
                 key={item._id ?? ii}
                 item={item}
-                ii={ii}
                 expanded={expandedItem === key}
                 onToggle={() => handleToggle(key)}
               />
@@ -409,7 +396,7 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
         </div>
       ) : (
         <div style={{ padding: "12px 4px" }}>
-          {/* ── Rejection Alert ── */}
+          {/* Rejection alert */}
           {course.status === "rejected" && (
             <div
               style={{
@@ -436,7 +423,7 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
             </div>
           )}
 
-          {/* ── Top Section (Thumbnail + Core Info) ── */}
+          {/* Thumbnail + Core Info */}
           <Row gutter={[32, 24]} align="middle" style={{ marginBottom: 32 }}>
             <Col xs={24} sm={10}>
               <div
@@ -529,62 +516,40 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
                   }
                   size={16}
                 >
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{
-                        fontSize: 12,
-                        display: "block",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Category
-                    </Text>
-                    <Text strong style={{ color: "#374151" }}>
-                      {course.category?.name ?? "—"}
-                    </Text>
-                  </div>
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{
-                        fontSize: 12,
-                        display: "block",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Level
-                    </Text>
-                    <Text strong style={{ color: "#374151" }}>
-                      {course.level ?? "—"}
-                    </Text>
-                  </div>
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{
-                        fontSize: 12,
-                        display: "block",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Price
-                    </Text>
-                    <Text
-                      strong
-                      style={{
-                        color: course.price === 0 ? "#059669" : "#111827",
-                      }}
-                    >
-                      {course.price === 0 ? "Free" : `$${course.price}`}
-                    </Text>
-                  </div>
+                  {[
+                    { label: "Category", value: course.category?.name ?? "—" },
+                    { label: "Level", value: course.level ?? "—" },
+                    {
+                      label: "Price",
+                      value:
+                        course.price === 0
+                          ? "Free"
+                          : formatThousands(course.price),
+                      color: course.price === 0 ? "#059669" : "#111827",
+                    },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: 12,
+                          display: "block",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                      <Text strong style={{ color: item.color ?? "#374151" }}>
+                        {item.value}
+                      </Text>
+                    </div>
+                  ))}
                 </Space>
               </div>
             </Col>
           </Row>
 
-          {/* ── Stats Row ── */}
+          {/* Stats row */}
           <div
             style={{
               borderTop: "1px solid #F3F4F6",
@@ -597,7 +562,10 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
               {[
                 { label: "Lessons", value: totalLessons },
                 { label: "Quizzes", value: totalQuizzes },
-                { label: "Duration", value: fmtDuration(course.totalDuration) },
+                {
+                  label: "Duration",
+                  value: formatDurationClock(course.totalDuration),
+                },
                 {
                   label: "Students",
                   value: (course.enrollmentCount ?? 0).toLocaleString(),
@@ -631,7 +599,7 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
             </Row>
           </div>
 
-          {/* ── Description ── */}
+          {/* Description */}
           {course.description && (
             <div style={{ marginBottom: 40 }}>
               <Text
@@ -658,7 +626,7 @@ const CourseDetailModal = ({ course, open, loading = false, onClose }) => {
             </div>
           )}
 
-          {/* ── Curriculum ── */}
+          {/* Curriculum */}
           <div>
             <div
               style={{

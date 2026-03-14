@@ -2,7 +2,7 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:9999";
 const BACKEND_API_URI = `${API_BASE_URL}/api`;
 
-// Format tiền tệ VND
+// Format VND currency
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",

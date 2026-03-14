@@ -307,7 +307,7 @@ exports.getRevenueByCourse = async (req, res) => {
           as: "enrollment",
         },
       },
-      { $unwind: "$enrollment" },
+      { $unwind: { path: "$enrollment", preserveNullAndEmptyArrays: true } },
       {
         $group: {
           _id: "$enrollment.courseId",
@@ -331,7 +331,7 @@ exports.getRevenueByCourse = async (req, res) => {
       success: true,
       data: result.map((r) => ({
         courseId: r._id,
-        title: r.course?.title || "Unknown course",
+        title: r.course?.title || "Không xác định",
         totalRevenue: r.totalRevenue,
         totalOrders: r.totalOrders,
       })),
@@ -464,7 +464,7 @@ exports.getRevenueByCourse = async (req, res) => {
           as: "enrollment",
         },
       },
-      { $unwind: "$enrollment" },
+      { $unwind: { path: "$enrollment", preserveNullAndEmptyArrays: true } },
       {
         $group: {
           _id: "$enrollment.courseId",
@@ -488,7 +488,7 @@ exports.getRevenueByCourse = async (req, res) => {
       success: true,
       data: result.map((r) => ({
         courseId: r._id,
-        title: r.course?.title || "Unknown course",
+        title: r.course?.title || "Không xác định",
         totalRevenue: r.totalRevenue,
         totalOrders: r.totalOrders,
       })),

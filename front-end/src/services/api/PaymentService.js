@@ -50,6 +50,47 @@ class PaymentService {
       .post(`/enrollments/${courseId}/complete-lesson`, { lessonId })
       .then((r) => r.data);
   }
+
+  // ─── Admin Revenue APIs ────────────────────────────────────────────────────
+
+  /**
+   * GET /api/payments/admin/revenue/summary?from=&to=
+   * → { totalRevenue: number, totalOrders: number }
+   */
+  getRevenueSummary({ from, to } = {}) {
+    const params = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    return api
+      .get("/payments/admin/revenue/summary", { params })
+      .then((r) => r.data?.data ?? { totalRevenue: 0, totalOrders: 0 });
+  }
+
+  /**
+   * GET /api/payments/admin/revenue/daily?from=&to=&groupBy=day|month
+   * → [{ date: string, totalRevenue: number, totalOrders: number }]
+   */
+  getRevenueByDate({ from, to, groupBy = "month" } = {}) {
+    const params = { groupBy };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    return api
+      .get("/payments/admin/revenue/daily", { params })
+      .then((r) => r.data?.data ?? []);
+  }
+
+  /**
+   * GET /api/payments/admin/revenue/by-course?from=&to=
+   * → [{ courseId, title, totalRevenue, totalOrders }]
+   */
+  getRevenueByCourse({ from, to } = {}) {
+    const params = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    return api
+      .get("/payments/admin/revenue/by-course", { params })
+      .then((r) => r.data?.data ?? []);
+  }
 }
 
 export default new PaymentService();

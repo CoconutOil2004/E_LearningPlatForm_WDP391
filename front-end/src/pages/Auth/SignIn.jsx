@@ -303,7 +303,7 @@ const SignIn = () => {
             className="auth-btn-social"
           >
             <GoogleIcon />
-            Tiếp tục với Google
+            Continue with Google
           </button>
 
           <p
