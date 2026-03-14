@@ -2,6 +2,7 @@ const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const Payment = require("../models/Payment");
 const { createPaymentUrl, verifyReturnUrl } = require("../utils/vnpay");
+const { buildItemsProgress } = require("../utils/buildItemsProgress");
 
 /* ===============================
    CREATE PAYMENT (VNPay)
@@ -128,6 +129,9 @@ exports.paymentCallback = async (req, res) => {
       const enrollment = await Enrollment.findById(payment.enrollmentId._id);
       if (enrollment && enrollment.paymentStatus !== "paid") {
         enrollment.paymentStatus = "paid";
+        if (!enrollment.itemsProgress || enrollment.itemsProgress.length === 0) {
+          enrollment.itemsProgress = await buildItemsProgress(enrollment.courseId);
+        }
         await enrollment.save();
         await Course.findByIdAndUpdate(enrollment.courseId, {
           $inc: { enrollmentCount: 1 },

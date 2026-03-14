@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "import-data": "node scripts/import-data.js",
     "test:create-course": "node scripts/test-create-course.js",
-    "test:upload": "node scripts/test-upload-api.js"
+    "test:upload": "node scripts/test-upload-api.js",
+    "test:enrollment-itemsProgress": "node scripts/test-enrollment-itemsProgress.js"
   },
   "keywords": [
     "nodejs",

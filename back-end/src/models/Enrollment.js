@@ -1,26 +1,37 @@
 const mongoose = require("mongoose");
 
-/* ================= LESSON PROGRESS (only Lessons count for progress %) ================= */
+/** Ngưỡng hoàn thành lesson: 30% thời lượng video (tích lũy watchedSeconds). */
+const LESSON_COMPLETE_THRESHOLD = 0.3;
 
-const lessonProgressSchema = new mongoose.Schema(
+/* ================= ITEM PROGRESS (lesson: lock/progress/done + heartbeat; quiz: open/done) ================= */
+
+const itemProgressSchema = new mongoose.Schema(
   {
-    lessonId: {
+    itemId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Lesson",
       required: true,
       index: true
     },
-    completed: {
-      type: Boolean,
-      default: false
+    itemType: {
+      type: String,
+      enum: ["lesson", "quiz"],
+      required: true
     },
+    /** lesson: 'lock' | 'progress' | 'done'. quiz: 'open' | 'done' */
+    status: {
+      type: String,
+      enum: ["lock", "progress", "done", "open"],
+      required: true
+    },
+    /** Chỉ lesson: thời gian xem tích lũy (giây). */
     watchedSeconds: {
       type: Number,
       default: 0
     },
-    lastWatchedAt: {
-      type: Date,
-      default: Date.now
+    /** Chỉ lesson: duration từ Lesson gốc lúc enroll (giây), để tính ngưỡng không cần query lại. */
+    duration: {
+      type: Number,
+      default: 0
     }
   },
   { _id: false }
@@ -28,8 +39,7 @@ const lessonProgressSchema = new mongoose.Schema(
 
 /* ================= ENROLLMENT =================
    Proof of access after successful payment (BR-08).
-   Only created when Order status becomes 'paid'.
-   Progress % = completed lessons / total lessons (Quizzes ignored).
+   Progress % = completed lessons / total lessons (chỉ lesson, 30% duration = done).
 */
 
 const enrollmentSchema = new mongoose.Schema(
@@ -70,8 +80,9 @@ const enrollmentSchema = new mongoose.Schema(
       default: false
     },
 
-    lessonsProgress: {
-      type: [lessonProgressSchema],
+    /** Tiến độ từng item (lesson + quiz). Lesson: lock/progress/done + watchedSeconds, duration. Quiz: open/done. */
+    itemsProgress: {
+      type: [itemProgressSchema],
       default: []
     }
   },
@@ -84,3 +95,4 @@ enrollmentSchema.index(
 );
 
 module.exports = mongoose.model("Enrollment", enrollmentSchema);
+module.exports.LESSON_COMPLETE_THRESHOLD = LESSON_COMPLETE_THRESHOLD;
