@@ -45,11 +45,21 @@ const TABS = [
   { key: "rejected", label: "Rejected" },
 ];
 
-const fmtDuration = (s) => {
-  if (!s) return "—";
-  const h = Math.floor(s / 3600),
-    m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+const fmtDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return "00:00";
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+
+  // Nếu có giờ thì hiển thị hh:mm:ss, không thì mm:ss
+  const parts = [
+    h > 0 ? h : null,
+    m.toString().padStart(2, "0"),
+    s.toString().padStart(2, "0"),
+  ].filter(Boolean); // Loại bỏ phần giờ nếu bằng null
+
+  return parts.join(":");
 };
 
 const InstructorCoursesPage = () => {
