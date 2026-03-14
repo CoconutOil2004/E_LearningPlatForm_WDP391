@@ -89,7 +89,7 @@ const CourseOverviewCards = ({
     { icon: <ClockCircleOutlined />, label: duration || "—" },
     {
       icon: <TeamOutlined />,
-      label: `${formatThousands(enrollmentCount)} Students`,
+      label: `${enrollmentCount} Students`,
     },
   ];
   return (
