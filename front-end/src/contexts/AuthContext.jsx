@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthService from "../services/api/AuthenService";
 import useAuthStore from "../store/slices/authStore";
+import useCourseStore from "../store/slices/courseStore";
 import { ROUTES } from "../utils/constants";
 import { useToast } from "./ToastContext";
 
@@ -18,18 +19,30 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     token,
   } = useAuthStore();
+  const { setWishlistIds } = useCourseStore();
   const toast = useToast();
   const navigate = useNavigate();
 
   // Rehydrate user profile on mount if token exists
+  // Also sync the user's watchlist from the DB into the local store
   useEffect(() => {
     if (token && isAuthenticated) {
-      AuthService.getProfile().catch(() => {
-        // Token invalid — force logout
-        storeLogout();
-      });
+      AuthService.getProfile()
+        .then((res) => {
+          // Backend returns { success, data: user }
+          // res = response.data from axios, so user is at res.data
+          const user = res?.data || res?.user;
+          if (user?.watchlist) {
+            setWishlistIds(user.watchlist.map((id) => id.toString()));
+          }
+        })
+        .catch(() => {
+          // Token invalid — force logout
+          storeLogout();
+        });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const login = async (email, password) => {
     try {

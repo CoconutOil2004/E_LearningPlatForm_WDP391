@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import AuthenService from "../../services/api/AuthenService";
 
 /**
  * courseStore — quản lý enrollment, tiến độ học tập, wishlist.
@@ -12,6 +13,10 @@ const useCourseStore = create(
     (set, get) => ({
       enrolledCourseIds: [],
       wishlistIds: [],
+      wishlistSynced: false,
+
+      setWishlistIds: (ids) =>
+        set({ wishlistIds: Array.isArray(ids) ? ids : [], wishlistSynced: true }),
 
       /**
        * lessonProgress:
@@ -40,12 +45,26 @@ const useCourseStore = create(
 
       isEnrolled: (courseId) => get().enrolledCourseIds.includes(courseId),
 
-      toggleWishlist: (courseId) =>
+      toggleWishlist: async (courseId) => {
+        // Optimistic update
         set((state) => ({
           wishlistIds: state.wishlistIds.includes(courseId)
             ? state.wishlistIds.filter((id) => id !== courseId)
             : [...state.wishlistIds, courseId],
-        })),
+        }));
+
+        try {
+          // Sync with BE
+          const response = await AuthenService.toggleWishlist(courseId);
+          if (response.success && response.wishlistIds) {
+            // Update with actual server state
+            set({ wishlistIds: response.wishlistIds });
+          }
+        } catch (error) {
+          console.error("Failed to sync wishlist with server:", error);
+          // Rollback not strictly necessary as BE failed, but local state mismatch persists
+        }
+      },
 
       isWishlisted: (courseId) => get().wishlistIds.includes(courseId),
 

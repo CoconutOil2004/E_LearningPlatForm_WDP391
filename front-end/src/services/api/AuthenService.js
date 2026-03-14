@@ -93,6 +93,21 @@ class AuthenService {
       throw error;
     }
   }
+
+  async toggleWishlist(courseId) {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "users/wishlist/toggle",
+        { courseId },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async logout() {
     try {
       const token = localStorage.getItem("token");

@@ -8,6 +8,7 @@ const {
   updateStudentAction,
   searchUsers,
   getUserById,
+  toggleWishlist,
 } = require('../controller/userController');
 const { protect } = require('../middleware/authMiddleware');
 const { isAdmin } = require('../middleware/auth.middleware');
@@ -21,6 +22,7 @@ router.patch('/students/:id/action', protect, isAdmin, updateStudentAction);
 
 // Tìm kiếm & xem chi tiết user
 router.get('/search', protect, searchUsers);
+router.post('/wishlist/toggle', protect, toggleWishlist);
 router.get('/:id', protect, getUserById);
 
 module.exports = router;

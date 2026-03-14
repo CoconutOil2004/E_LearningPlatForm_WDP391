@@ -350,6 +350,44 @@ const updateInstructorAction = async (req, res) => {
   }
 };
 
+const toggleWishlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { courseId } = req.body;
+
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: "Course ID is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const isWishlisted = user.watchlist.includes(courseId);
+    if (isWishlisted) {
+      // Remove from wishlist
+      user.watchlist = user.watchlist.filter((id) => id.toString() !== courseId);
+    } else {
+      // Add to wishlist
+      user.watchlist.push(courseId);
+    }
+
+    await user.save();
+    
+    logger.info(`User ${userId} toggled wishlist for course ${courseId}. New state: ${!isWishlisted}`);
+
+    res.json({ 
+      success: true, 
+      message: isWishlisted ? "Removed from wishlist" : "Added to wishlist",
+      wishlistIds: user.watchlist 
+    });
+  } catch (error) {
+    logger.error("Error toggling wishlist:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 const updateStudentAction = async (req, res) => {
   try {
     const { id } = req.params;
@@ -413,4 +451,5 @@ module.exports = {
   createInstructor,
   updateInstructorAction,
   updateStudentAction,
+  toggleWishlist,
 };
