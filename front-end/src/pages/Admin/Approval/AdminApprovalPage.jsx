@@ -29,7 +29,7 @@ import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR } from "../../../styles/adminTheme";
-import { formatDuration, formatThousands } from "../../../utils/helpers";
+import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 
 const { Text, Paragraph, Title } = Typography;
 const { TextArea } = Input;
@@ -44,7 +44,7 @@ const CourseCard = ({
 }) => {
   const instructor =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
-  const duration = formatDuration(course.totalDuration);
+  const duration = formatDurationClock(course.totalDuration);
   const totalLessons = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
     0,

@@ -25,7 +25,7 @@ import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR, STATUS_CONFIG } from "../../../styles/adminTheme";
-import { formatDuration, formatThousands } from "../../../utils/helpers";
+import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -255,7 +255,9 @@ const AdminCoursesPage = () => {
       key: "duration",
       width: 100,
       render: (v) => (
-        <Text style={{ color: COLOR.gray600 }}>{formatDuration(v) ?? "—"}</Text>
+        <Text style={{ color: COLOR.gray600 }}>
+          {formatDurationClock(v) ?? "—"}
+        </Text>
       ),
     },
     {

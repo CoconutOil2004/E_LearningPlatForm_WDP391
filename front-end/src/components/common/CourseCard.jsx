@@ -63,18 +63,6 @@ const CourseCard = ({
           className="object-cover w-full transition-transform duration-500 h-44 group-hover:scale-105"
         />
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 flex items-end p-3 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/40 to-transparent group-hover:opacity-100">
-          <button
-            onClick={handleEnrollClick}
-            className="flex items-center justify-center w-full gap-2 py-2 text-sm font-bold text-white rounded-xl"
-            style={{ background: "var(--color-primary)" }}
-          >
-            <Icon name="play" size={16} color="white" />
-            {isEnrolled ? "Continue Learning" : "Preview Course"}
-          </button>
-        </div>
-
         {/* Badges */}
         {course.enrollmentCount > 100 && (
           <div className="absolute top-3 left-3">

@@ -10,7 +10,7 @@ import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 import {
-  formatDuration,
+  formatDurationClock,
   formatThousands,
   pageVariants,
 } from "../../../utils/helpers";
@@ -42,7 +42,7 @@ const CourseCard = ({
   const level = LEVEL_COLORS[course.level] || LEVEL_COLORS.Beginner;
   const instructor =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
-  const duration = formatDuration(course.totalDuration);
+  const duration = formatDurationClock(course.totalDuration);
   const lessonCount = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
     0,

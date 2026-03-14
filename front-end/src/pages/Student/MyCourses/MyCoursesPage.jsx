@@ -5,8 +5,7 @@ import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
 import PaymentService from "../../../services/api/PaymentService";
 import { ROUTES } from "../../../utils/constants";
-import { formatDuration, pageVariants } from "../../../utils/helpers";
-
+import { formatDurationClock, pageVariants } from "../../../utils/helpers";
 
 const countLessons = (sections = []) =>
   sections.reduce(
@@ -31,7 +30,7 @@ const MyCourseCard = ({ enrollment }) => {
     course?.instructorId?.email ??
     "Instructor";
   const lessons = countLessons(course?.sections);
-  const duration = formatDuration(course?.totalDuration);
+  const duration = formatDurationClock(course?.totalDuration);
   const progressPct = Math.min(100, Math.max(0, progress ?? 0));
 
   return (

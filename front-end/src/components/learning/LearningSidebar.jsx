@@ -6,7 +6,7 @@ import {
 } from "@ant-design/icons";
 import { Space, Tag, Tooltip, Typography } from "antd";
 
-import { formatDurationShort } from "../../utils/helpers";
+import { formatDurationClock } from "../../utils/helpers";
 
 const { Text } = Typography;
 
@@ -52,11 +52,23 @@ const LearningSidebar = ({
       }}
     >
       {/* Sidebar header */}
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <div
+        style={{
+          padding: "16px 20px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
         <Text strong style={{ color: "#fff", fontSize: 14 }}>
           Course Content
         </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 13, display: "block", marginTop: 4 }}>
+        <Text
+          style={{
+            color: "#9CA3AF",
+            fontSize: 13,
+            display: "block",
+            marginTop: 4,
+          }}
+        >
           {completed.length}/{totalLessons} lessons completed
         </Text>
       </div>
@@ -89,7 +101,11 @@ const LearningSidebar = ({
               return (
                 <Tooltip
                   key={item._id || item.flatIdx}
-                  title={!unlocked ? "Complete the previous lesson to unlock" : undefined}
+                  title={
+                    !unlocked
+                      ? "Complete the previous lesson to unlock"
+                      : undefined
+                  }
                   placement="right"
                 >
                   <div
@@ -99,8 +115,12 @@ const LearningSidebar = ({
                       gap: 12,
                       padding: "12px 20px",
                       cursor: unlocked ? "pointer" : "not-allowed",
-                      background: isActive ? "rgba(99,102,241,0.15)" : "transparent",
-                      borderLeft: isActive ? "3px solid #6366f1" : "3px solid transparent",
+                      background: isActive
+                        ? "rgba(99,102,241,0.15)"
+                        : "transparent",
+                      borderLeft: isActive
+                        ? "3px solid #6366f1"
+                        : "3px solid transparent",
                       borderBottom: "1px solid rgba(255,255,255,0.02)",
                       transition: "background 0.2s",
                       opacity: unlocked ? 1 : 0.45,
@@ -146,13 +166,18 @@ const LearningSidebar = ({
                       <Space size={12}>
                         {item.itemId?.duration > 0 && (
                           <Text style={{ color: "#6B7280", fontSize: 12 }}>
-                            {formatDurationShort(item.itemId.duration)}
+                            {formatDurationClock(item.itemId.duration)}
                           </Text>
                         )}
                         {isQuiz && (
                           <Tag
                             color="purple"
-                            style={{ margin: 0, fontSize: 10, lineHeight: "16px", border: "none" }}
+                            style={{
+                              margin: 0,
+                              fontSize: 10,
+                              lineHeight: "16px",
+                              border: "none",
+                            }}
                           >
                             Quiz
                           </Tag>
@@ -160,7 +185,12 @@ const LearningSidebar = ({
                         {!isDone && hasWatched && (
                           <Tag
                             color="cyan"
-                            style={{ margin: 0, fontSize: 10, lineHeight: "16px", border: "none" }}
+                            style={{
+                              margin: 0,
+                              fontSize: 10,
+                              lineHeight: "16px",
+                              border: "none",
+                            }}
                           >
                             ≥80%
                           </Tag>

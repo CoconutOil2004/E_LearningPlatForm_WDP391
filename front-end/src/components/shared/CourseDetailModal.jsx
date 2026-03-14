@@ -20,11 +20,7 @@ import {
 } from "antd";
 import { useState } from "react";
 
-import {
-  formatDurationClock,
-  formatDurationShort,
-  formatThousands,
-} from "../../utils/helpers";
+import { formatDurationClock, formatThousands } from "../../utils/helpers";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -298,7 +294,7 @@ const ItemRow = ({ item, expanded, onToggle }) => {
           )}
           {isLesson && dur > 0 && (
             <span style={{ fontSize: 12, color: "#6B7280" }}>
-              {formatDurationShort(dur)}
+              {formatDurationClock(dur)}
             </span>
           )}
           {!isLesson && item.itemId?.questions?.length > 0 && (

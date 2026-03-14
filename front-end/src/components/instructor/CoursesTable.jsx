@@ -12,7 +12,7 @@ import {
 import { Button, Image, Space, Table, Tag, Tooltip, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 import { COLOR, STATUS_CONFIG } from "../../../src/styles/adminTheme";
-import { formatDuration, formatThousands } from "../../../utils/helpers";
+import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 const { Text } = Typography;
 
 const CoursesTable = ({
@@ -110,7 +110,7 @@ const CoursesTable = ({
         <Space size={4}>
           <ClockCircleOutlined style={{ color: COLOR.gray400, fontSize: 12 }} />
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {formatDuration(duration)}
+            {formatDurationClock(duration)}
           </Text>
         </Space>
       ),

@@ -15,7 +15,6 @@ import {
   UnlockOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -38,7 +37,7 @@ import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 import {
-  formatDuration,
+  formatDurationClock,
   formatThousands,
   pageVariants,
 } from "../../../utils/helpers";
@@ -61,9 +60,6 @@ const CourseMeta = ({
     <Space>
       <StarFilled style={{ color: "#F59E0B" }} />
       <Text strong>{Number(course.rating ?? 0).toFixed(1)}</Text>
-      <Text type="secondary">
-        ({formatThousands(course.enrollmentCount ?? 0)} students)
-      </Text>
     </Space>
     {duration && (
       <Space>
@@ -176,10 +172,11 @@ const PriceBlock = ({ isEnrolled, isFree, course }) => {
         </Text>
       )}
       <Title
+        className="gradient-text"
         level={2}
         style={{
           margin: 0,
-          background: "linear-gradient(135deg,#667eea,#764ba2)",
+          // background: "linear-gradient(135deg,#667eea,#764ba2)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
         }}
@@ -295,7 +292,7 @@ const CourseDetailPage = () => {
     (a, s) => a + (s.items?.filter((i) => i.itemType === "quiz").length ?? 0),
     0,
   );
-  const duration = formatDuration(course.totalDuration);
+  const duration = formatDurationClock(course.totalDuration);
 
   // Handlers
   const handleBuy = async () => {
@@ -405,7 +402,7 @@ const CourseDetailPage = () => {
                 <Text style={{ flex: 1 }}>{item.title}</Text>
                 {dur > 0 && (
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {formatDuration(dur)}
+                    {formatDurationClock(dur)}
                   </Text>
                 )}
                 {!isUnlocked && !isQuiz && (
@@ -612,12 +609,13 @@ const CourseDetailPage = () => {
                     loading={paying}
                     icon={isFree ? <CheckCircleOutlined /> : <TrophyOutlined />}
                     onClick={handleBuy}
+                    className="btn-aurora"
                     style={{
                       borderRadius: 12,
                       height: 48,
                       fontSize: 16,
                       fontWeight: 700,
-                      background: "linear-gradient(135deg,#667eea,#764ba2)",
+                      // background: "linear-gradient(135deg,#667eea,#764ba2)",
                       border: "none",
                     }}
                   >
@@ -657,16 +655,6 @@ const CourseDetailPage = () => {
                   >
                     {isAdmin ? "Manage Course" : "Edit Course"}
                   </Button>
-                )}
-
-                {/* 30-day guarantee */}
-                {!isFree && !isEnrolled && (
-                  <Alert
-                    message="30-day money-back guarantee"
-                    type="info"
-                    showIcon
-                    style={{ marginTop: 12, borderRadius: 10 }}
-                  />
                 )}
 
                 <Divider />
