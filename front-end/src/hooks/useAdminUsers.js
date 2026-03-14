@@ -99,6 +99,7 @@ const useAdminUsers = () => {
     const updateList = (list, setter) =>
       setter(list.map((u) => (u._id === user._id ? { ...u, action: nextAction } : u)));
 
+    // Optimistic update
     if (tab === TABS.INSTRUCTOR) {
       updateList(instructors, setInstructors);
     } else {
@@ -109,10 +110,10 @@ const useAdminUsers = () => {
       if (tab === TABS.INSTRUCTOR) {
         await UserService.updateInstructorAction(user._id, nextAction);
       } else {
-        throw new Error("Chưa có API lock/unlock student. Cần BE bổ sung endpoint.");
+        await UserService.updateStudentAction(user._id, nextAction);
       }
     } catch (err) {
-      // Roll back
+      // Roll back on error
       if (tab === TABS.INSTRUCTOR) {
         setInstructors((prev) =>
           prev.map((u) => (u._id === user._id ? { ...u, action: user.action } : u))

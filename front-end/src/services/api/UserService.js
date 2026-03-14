@@ -1,4 +1,3 @@
-
 import { api } from "../index";
 
 class UserService {
@@ -27,15 +26,25 @@ class UserService {
 
   /**
    * Lock / Unlock tài khoản instructor
-   * @param {string} id          - _id của instructor
+   * @param {string} id
    * @param {'lock'|'unlock'} action
-   * @returns {{ success, message, instructor }}
    */
   async updateInstructorAction(id, action) {
     const { data } = await api.patch(`/users/instructors/${id}/action`, { action });
     return data;
   }
 
+  /**
+   * Lock / Unlock tài khoản student
+   * @param {string} id
+   * @param {'lock'|'unlock'} action
+   */
+  async updateStudentAction(id, action) {
+    const { data } = await api.patch(`/users/students/${id}/action`, { action });
+    return data;
+  }
+
+  
   // ─── Students ───────────────────────────────────────────────────────────────
 
   /**
