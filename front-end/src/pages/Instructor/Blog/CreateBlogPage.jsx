@@ -5,6 +5,7 @@ import {
   CheckOutlined,
   CloseOutlined,
   CodeOutlined,
+  DeleteOutlined,
   EditOutlined,
   EyeOutlined,
   FileTextOutlined,
@@ -16,6 +17,7 @@ import {
   SaveOutlined,
   SendOutlined,
   TagOutlined,
+  UploadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
 import {
@@ -28,9 +30,11 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Tag,
   Tooltip,
   Typography,
+  Upload,
   message,
 } from "antd";
 import { motion } from "framer-motion";
@@ -38,6 +42,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BlogService from "../../../services/api/BlogService";
 import CourseService from "../../../services/api/CourseService";
+import UserService from "../../../services/api/UserService";
 import { pageVariants } from "../../../utils/helpers";
 
 const { Title, Text } = Typography;
@@ -163,6 +168,8 @@ const CreateBlogPage = () => {
   const [tags, setTags] = useState([]);
   const [content, setContent] = useState("");
   const [thumbnail, setThumbnail] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
@@ -364,30 +371,92 @@ const CreateBlogPage = () => {
                     </Card>
                   </motion.div>
 
-                  {/* Thumbnail URL */}
+                  {/* Thumbnail Upload */}
                   <motion.div {...up(0.1)}>
                     <Card bordered={false} style={card} bodyStyle={{ padding: 20 }}>
-                      <Text strong style={{ fontSize: 13, color: C.text, display: "block", marginBottom: 10 }}>
-                        <PictureOutlined style={{ marginRight: 6, color: C.primary }} /> Cover Image URL
+                      <Text strong style={{ fontSize: 13, color: C.text, display: "block", marginBottom: 12 }}>
+                        <PictureOutlined style={{ marginRight: 6, color: C.primary }} /> Cover Image
                       </Text>
-                      <Input
-                        value={thumbnail}
-                        onChange={(e) => { setThumbnail(e.target.value); triggerAutoSave(); }}
-                        placeholder="https://example.com/image.jpg"
-                        prefix={<LinkOutlined style={{ color: C.textMuted }} />}
-                        style={{ borderRadius: 8 }}
-                      />
-                      {thumbnail && (
-                        <div style={{ marginTop: 12, borderRadius: 12, overflow: "hidden", height: 200 }}>
-                          <img src={thumbnail} alt="Cover preview" onError={(e) => e.target.style.display = "none"}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+
+                      {thumbnail ? (
+                        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", height: 200 }}>
+                          <img
+                            src={thumbnail}
+                            alt="Cover preview"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                          <div style={{
+                            position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            gap: 10, opacity: 0, transition: "opacity 0.2s",
+                          }}
+                            onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                            onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+                          >
+                            <Upload
+                              accept="image/*"
+                              showUploadList={false}
+                              beforeUpload={async (file) => {
+                                setUploadingThumb(true);
+                                try {
+                                  const res = await UserService.uploadImage(file);
+                                  if (res?.url) { setThumbnail(res.url); triggerAutoSave(); }
+                                  else message.error("Upload failed.");
+                                } catch { message.error("Upload failed."); }
+                                finally { setUploadingThumb(false); }
+                                return false;
+                              }}
+                            >
+                              <Button icon={<UploadOutlined />} size="small"
+                                style={{ borderRadius: 8, fontWeight: 600 }}>
+                                Change
+                              </Button>
+                            </Upload>
+                            <Button icon={<DeleteOutlined />} size="small" danger
+                              style={{ borderRadius: 8, fontWeight: 600 }}
+                              onClick={() => { setThumbnail(""); setThumbnailFile(null); }}>
+                              Remove
+                            </Button>
+                          </div>
+                          {uploadingThumb && (
+                            <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Spin indicator={<LoadingOutlined style={{ fontSize: 28, color: C.primary }} />} />
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {!thumbnail && (
-                        <div style={{ marginTop: 10, height: 120, borderRadius: 12, border: `2px dashed ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, color: C.textMuted }}>
-                          <PictureOutlined style={{ fontSize: 28 }} />
-                          <Text style={{ color: C.textMuted, fontSize: 13 }}>Cover image preview will appear here</Text>
-                        </div>
+                      ) : (
+                        <Upload.Dragger
+                          accept="image/*"
+                          showUploadList={false}
+                          disabled={uploadingThumb}
+                          beforeUpload={async (file) => {
+                            const isImage = file.type.startsWith("image/");
+                            if (!isImage) { message.error("Only image files are allowed!"); return false; }
+                            const isUnder5M = file.size / 1024 / 1024 < 5;
+                            if (!isUnder5M) { message.error("Image must be smaller than 5MB!"); return false; }
+                            setUploadingThumb(true);
+                            try {
+                              const res = await UserService.uploadImage(file);
+                              if (res?.url) { setThumbnail(res.url); triggerAutoSave(); message.success("Cover image uploaded!"); }
+                              else message.error("Upload failed.");
+                            } catch { message.error("Upload failed."); }
+                            finally { setUploadingThumb(false); }
+                            return false;
+                          }}
+                          style={{ borderRadius: 12, border: `2px dashed ${C.border}`, background: "#fafafe" }}
+                        >
+                          <div style={{ padding: "20px 0" }}>
+                            {uploadingThumb ? (
+                              <Spin indicator={<LoadingOutlined style={{ fontSize: 28, color: C.primary }} />} />
+                            ) : (
+                              <>
+                                <PictureOutlined style={{ fontSize: 32, color: C.primary, marginBottom: 8 }} />
+                                <div style={{ color: C.text, fontWeight: 700, fontSize: 13 }}>Click or drag image here</div>
+                                <div style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>PNG, JPG, WEBP · Max 5MB</div>
+                              </>
+                            )}
+                          </div>
+                        </Upload.Dragger>
                       )}
                     </Card>
                   </motion.div>

@@ -5,6 +5,7 @@ const {
   getInstructors,
   createInstructor,
   updateInstructorAction,
+  updateStudentAction,
   searchUsers,
   getUserById,
 } = require('../controller/userController');
@@ -16,6 +17,7 @@ router.get('/students', protect, isAdmin, getStudents);
 router.get('/instructors', protect, isAdmin, getInstructors);
 router.post('/instructors', protect, isAdmin, createInstructor);
 router.patch('/instructors/:id/action', protect, isAdmin, updateInstructorAction);
+router.patch('/students/:id/action', protect, isAdmin, updateStudentAction);
 
 // Tìm kiếm & xem chi tiết user
 router.get('/search', protect, searchUsers);
