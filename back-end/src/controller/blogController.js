@@ -513,6 +513,64 @@ const getBlogById = async (req, res) => {
   }
 };
 
+// Instructor lấy danh sách blog của chính mình
+const getMyBlogs = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      status,
+      category,
+    } = req.query;
+
+    const query = { author: instructorId, deleted: false };
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { summary: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status) query.status = status;
+    if (category && isValidObjectId(category)) query.category = category;
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageSize = Math.max(Number(limit) || 10, 1);
+    const skip = (currentPage - 1) * pageSize;
+
+    const [blogs, total] = await Promise.all([
+      Blog.find(query)
+        .populate("category", "name")
+        .populate("author", "fullname email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize),
+      Blog.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy danh sách bài viết thành công.",
+      data: blogs,
+      pagination: {
+        currentPage,
+        totalPages: Math.ceil(total / pageSize),
+        totalItems: total,
+        pageSize,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy danh sách bài viết.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBlog,
   updateOwnBlog,
@@ -522,4 +580,5 @@ module.exports = {
   rejectBlog,
   softDeleteBlog,
   getBlogById,
+  getMyBlogs,
 };
