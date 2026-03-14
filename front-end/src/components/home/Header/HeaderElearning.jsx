@@ -47,6 +47,7 @@ const AvatarDropdown = ({ user }) => {
     return [
       { icon: "user", label: "Profile", path: ROUTES.STUDENT_PROFILE },
       { icon: "book", label: "My Courses", path: ROUTES.MY_COURSES },
+      { icon: "award", label: "My Certificates", path: ROUTES.MY_CERTIFICATES },
       { icon: "trending", label: "Learning Progress", path: ROUTES.PROGRESS },
       { icon: "settings", label: "Settings", path: ROUTES.STUDENT_SETTINGS },
     ];

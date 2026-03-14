@@ -40,6 +40,7 @@ const ROUTES = {
   LEARNING: "/student/learning/:courseId",
   QUIZ: "/student/quiz/:courseId",
   CERTIFICATE: "/student/certificate/:courseId",
+  MY_CERTIFICATES: "/student/certificates",
   WISHLIST: "/student/wishlist",
   PROGRESS: "/student/progress",
   STUDENT_PROFILE: "/student/profile",

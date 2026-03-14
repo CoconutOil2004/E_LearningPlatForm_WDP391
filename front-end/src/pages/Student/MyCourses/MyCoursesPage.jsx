@@ -39,7 +39,6 @@ const MyCourseCard = ({ enrollment }) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       className="overflow-hidden cursor-pointer glass-card rounded-2xl group"
-      onClick={() => course?._id && navigate(`/student/learning/${course._id}`)}
     >
       <div
         className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/20"
@@ -133,11 +132,23 @@ const MyCourseCard = ({ enrollment }) => {
             />
           </div>
         </div>
-        <button className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold transition-all btn-aurora">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            if (progressPct === 100 && course?._id) {
+              navigate(`/student/certificate/${course._id}`);
+            } else if (course?._id) {
+              navigate(`/student/learning/${course._id}`);
+            }
+          }}
+          className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+            progressPct === 100 ? "bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/30" : "btn-aurora"
+          }`}
+        >
           {progressPct === 0
             ? "Start Learning"
             : progressPct === 100
-              ? "Review Course"
+              ? "View Certificate"
               : continueLesson?.title
                 ? `Continue: ${continueLesson.title.slice(0, 28)}${continueLesson.title.length > 28 ? "…" : ""}`
                 : "Continue"}

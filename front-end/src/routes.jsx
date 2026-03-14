@@ -37,6 +37,7 @@ import SearchPage from "./pages/Public/Search/SearchPage";
 
 // ─── Student Pages ────────────────────────────────────────────────────────────
 import CertificatePage from "./pages/Student/Certificate/CertificatePage";
+import MyCertificatesPage from "./pages/Student/Certificate/MyCertificatesPage";
 import StudentDashboard from "./pages/Student/Dashboard/StudentDashboard";
 import LearningPage from "./pages/Student/Learning/LearningPage";
 import MyCoursesPage from "./pages/Student/MyCourses/MyCoursesPage";
@@ -110,6 +111,7 @@ const router = createBrowserRouter(
       >
         <Route path="/" element={<StudentDashboard />} />
         <Route path="/student/my-courses" element={<MyCoursesPage />} />
+        <Route path="/student/certificates" element={<MyCertificatesPage />} />
         <Route path="/student/wishlist" element={<WishlistPage />} />
         <Route path="/student/progress" element={<LearningProgressPage />} />
         <Route path="/student/profile" element={<StudentProfilePage />} />
