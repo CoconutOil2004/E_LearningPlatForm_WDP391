@@ -14,7 +14,7 @@ exports.getCategories = async (req, res) => {
       data: categories
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
