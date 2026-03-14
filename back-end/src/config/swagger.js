@@ -690,9 +690,14 @@ const swaggerDocument = {
     "/api/payments/my": {
       get: {
         tags: ["Payments"],
-        summary: "Lịch sử thanh toán của tôi",
+        summary: "Lịch sử giao dịch của tôi",
+        description: "Trả về danh sách thanh toán của user đăng nhập (amount, paymentMethod, status, paymentDate, khóa học tương ứng). Sắp xếp theo paymentDate mới nhất.",
         security: [{ bearerAuth: [] }],
-        responses: { "200": { description: "payments" } },
+        responses: {
+          "200": {
+            description: "success: true, data: mảng payment (có enrollmentId.courseId: title, price, thumbnail)",
+          },
+        },
       },
     },
 

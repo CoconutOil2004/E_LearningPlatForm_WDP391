@@ -3,8 +3,8 @@ require("dotenv").config({
   path: path.join(__dirname, "..", "..", ".env"),
 });
 
-const connectDB = require("../config/db");
-const User = require("../models/User");
+const connectDB = require("../src/config/db");
+const User = require("../src/models/User");
 
 const run = async () => {
   try {

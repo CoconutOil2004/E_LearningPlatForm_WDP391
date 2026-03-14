@@ -8,9 +8,9 @@ class PaymentService {
       .then((r) => r.data);
   }
 
-  // GET /api/payments/my → { success, payments }
+  // GET /api/payments/my → { success, data: payments }
   getMyPayments() {
-    return api.get("/payments/my").then((r) => r.data?.payments ?? []);
+    return api.get("/payments/my").then((r) => r.data?.data ?? []);
   }
 
   // GET /api/enrollments/my-courses → { success, total, data }

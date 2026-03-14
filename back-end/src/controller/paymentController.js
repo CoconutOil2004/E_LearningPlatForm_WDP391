@@ -154,7 +154,8 @@ exports.paymentCallback = async (req, res) => {
 };
 
 /* ===============================
-   MY PAYMENTS
+   MY PAYMENTS - Lịch sử giao dịch của user
+   GET /api/payments/my
 ================================*/
 exports.getMyPayments = async (req, res) => {
   try {
@@ -168,12 +169,12 @@ exports.getMyPayments = async (req, res) => {
     })
       .populate({
         path: "enrollmentId",
-        populate: { path: "courseId" },
+        populate: { path: "courseId", select: "title price thumbnail" },
       })
-      .sort({ createdAt: -1 })
+      .sort({ paymentDate: -1, createdAt: -1 })
       .lean();
 
-    res.json({ success: true, payments });
+    res.json({ success: true, data: payments });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
