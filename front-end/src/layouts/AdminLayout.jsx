@@ -11,6 +11,7 @@ import {
   SafetyCertificateOutlined,
   SettingOutlined,
   TeamOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -62,6 +63,7 @@ const NAV_ITEMS = [
     icon: <SafetyCertificateOutlined />,
     label: "Operations Hub",
   },
+  { key: ROUTES.ADMIN_PROFILE, icon: <UserOutlined />, label: "Profile" },
 ];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -235,6 +237,7 @@ const AdminLayout = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  onClick={() => navigate(ROUTES.ADMIN_PROFILE)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -243,11 +246,15 @@ const AdminLayout = () => {
                     borderRadius: 10,
                     background: "rgba(255,255,255,0.05)",
                     marginBottom: 6,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 >
                   <Avatar
                     size={32}
-                    src={user?.avatar}
+                    src={user?.avatarURL}
                     style={{
                       background: `linear-gradient(135deg, ${COLOR.teal}, ${COLOR.ocean})`,
                       fontWeight: 900,
@@ -256,7 +263,7 @@ const AdminLayout = () => {
                       border: "2px solid #00BFA5",
                     }}
                   >
-                    {!user?.avatar && initials(user?.fullname || "Admin")}
+                    {!user?.avatarURL && initials(user?.fullname || user?.username || "Admin")}
                   </Avatar>
                   <div style={{ minWidth: 0 }}>
                     <div
@@ -268,7 +275,7 @@ const AdminLayout = () => {
                       }}
                       className="truncate"
                     >
-                      {user?.fullname || "Admin"}
+                      {user?.fullname || user?.username || "Admin"}
                     </div>
                     <div
                       style={{

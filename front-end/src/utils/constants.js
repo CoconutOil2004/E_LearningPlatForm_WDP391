@@ -72,6 +72,7 @@ BLOG_DETAIL: "/blog/:id",
   ADMIN_SETTINGS: "/admin/settings",
   ADMIN_LOGS: "/admin/logs",
   ADMIN_BLOG: "/admin/blog",
+  ADMIN_PROFILE: "/admin/profile",
 };
 
 export { API_BASE_URL, BACKEND_API_URI, formatCurrency, formatUSD, ROLES, ROUTES };

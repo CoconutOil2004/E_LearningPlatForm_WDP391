@@ -10,7 +10,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Tooltip } from "antd";
+import { Avatar, Tooltip } from "antd";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -57,6 +57,13 @@ const NAV_ITEMS = [
   },
   { icon: <UserOutlined />, label: "Profile", path: ROUTES.INSTRUCTOR_PROFILE },
 ];
+const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
 const InstructorLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -148,6 +155,32 @@ const InstructorLayout = () => {
 
         {/* Footer Actions */}
         <div className="flex flex-col gap-2 p-4 bg-white border-t border-gray-100 shrink-0">
+          {/* User info block */}
+          {!collapsed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => navigate(ROUTES.INSTRUCTOR_PROFILE)}
+              className="flex items-center gap-3 p-3 mb-2 transition-all cursor-pointer rounded-2xl bg-gray-50 hover:bg-gray-100 ring-1 ring-inset ring-gray-200/50"
+            >
+              <Avatar
+                size={40}
+                src={user?.avatarURL}
+                className="font-bold border-2 border-indigo-100 shadow-sm shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600"
+              >
+                {!user?.avatarURL && getInitials(user?.fullname || user?.username || "Instructor")}
+              </Avatar>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-gray-900 truncate leading-tight">
+                  {user?.fullname || user?.username || "Instructor"}
+                </p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
+                  Instructor
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           <Tooltip title={collapsed ? "Logout" : ""} placement="right">
             <button
               onClick={logout}

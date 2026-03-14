@@ -29,6 +29,11 @@ const AvatarDropdown = ({ user }) => {
     if (role === "instructor") {
       return [
         {
+          icon: "user",
+          label: "Profile",
+          path: ROUTES.INSTRUCTOR_PROFILE,
+        },
+        {
           icon: "layoutDashboard",
           label: "Dashboard",
           path: ROUTES.INSTRUCTOR_DASHBOARD,
@@ -37,6 +42,11 @@ const AvatarDropdown = ({ user }) => {
     }
     if (role === "admin") {
       return [
+        {
+          icon: "user",
+          label: "Profile",
+          path: ROUTES.ADMIN_PROFILE,
+        },
         {
           icon: "layoutDashboard",
           label: "Dashboard",
@@ -64,14 +74,22 @@ const AvatarDropdown = ({ user }) => {
         className="flex items-center gap-2 p-1 transition-colors rounded-xl hover:bg-primary/10"
       >
         <div
-          className="flex items-center justify-center text-sm font-bold text-white w-9 h-9 rounded-xl"
+          className="flex items-center justify-center overflow-hidden text-sm font-bold text-white w-9 h-9 rounded-xl"
           style={{ background: "var(--gradient-brand)" }}
         >
-          {getInitials(user?.username || "S")}
+          {user?.avatarURL ? (
+            <img 
+              src={user.avatarURL} 
+              alt="avatar" 
+              className="object-cover w-full h-full"
+            />
+          ) : (
+            getInitials(user?.fullname || user?.username || "S")
+          )}
         </div>
         <Icon name="chevronDown" size={16} color="var(--text-muted)" />
       </motion.button>
-
+ 
       <AnimatePresence>
         {open && (
           <motion.div
@@ -83,8 +101,8 @@ const AvatarDropdown = ({ user }) => {
             style={{ boxShadow: "var(--shadow-lg)" }}
           >
             <div className="p-4 border-b border-border">
-              <p className="text-sm font-bold text-heading">
-                {user?.username || "Student"}
+              <p className="text-sm font-bold text-heading truncate">
+                {user?.fullname || user?.username || "Student"}
               </p>
               <p className="text-xs truncate text-muted">{user?.email}</p>
             </div>
