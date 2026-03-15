@@ -48,6 +48,7 @@ import LearningProgressPage from "./pages/Student/Progress/LearningProgressPage"
 import QuizPage from "./pages/Student/Quiz/QuizPage";
 import StudentSettingsPage from "./pages/Student/Settings/StudentSettingsPage";
 import WishlistPage from "./pages/Student/Wishlist/WishlistPage";
+import RoadmapPage from "./pages/Student/Roadmap/RoadmapPage";
 
 // ─── Instructor Pages ─────────────────────────────────────────────────────────
 import InstructorAnalyticsPage from "./pages/Instructor/Analytics/InstructorAnalyticsPage";
@@ -124,6 +125,7 @@ const router = createBrowserRouter(
         <Route path="/student/progress" element={<LearningProgressPage />} />
         <Route path="/student/profile" element={<StudentProfilePage />} />
         <Route path="/student/settings" element={<StudentSettingsPage />} />
+        <Route path={ROUTES.ROADMAP} element={<RoadmapPage />} />
       </Route>
 
       {/* Student fullscreen pages */}

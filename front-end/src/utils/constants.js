@@ -26,6 +26,7 @@ const ROUTES = {
   SEARCH: "/search",
   ABOUT: "/about",
   CONTACT: "/contact",
+  ROADMAP: "/roadmap",
 
   // Auth
   LOGIN: "/signin",

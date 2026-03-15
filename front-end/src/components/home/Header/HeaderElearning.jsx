@@ -184,6 +184,12 @@ const Header = () => {
           >
             Browse
           </Link>
+          <Link
+            to={ROUTES.ROADMAP}
+            className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
+          >
+            Roadmap
+          </Link>
           {isAuthenticated && role === "student" && (
             <Link
               to={ROUTES.MY_COURSES}
