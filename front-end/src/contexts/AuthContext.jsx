@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   const {
     setCredentials,
     logout: storeLogout,
+    updateUser,
     isAuthenticated,
     token,
   } = useAuthStore();
@@ -32,6 +33,9 @@ export const AuthProvider = ({ children }) => {
           // Backend returns { success, data: user }
           // res = response.data from axios, so user is at res.data
           const user = res?.data || res?.user;
+          if (user) {
+            updateUser(user);
+          }
           if (user?.watchlist) {
             setWishlistIds(user.watchlist.map((id) => id.toString()));
           }
@@ -50,6 +54,12 @@ export const AuthProvider = ({ children }) => {
       const user = res.user || { name: "User", email, role: "student" };
       setCredentials(user, res.token);
       toast.success("Signed in successfully!");
+
+      if (user.mustChangePassword) {
+        navigate(ROUTES.CHANGE_PASSWORD_REQUIRED);
+        return { success: true };
+      }
+
       const role = user.role;
       if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD);
       else if (role === "instructor") navigate(ROUTES.INSTRUCTOR_DASHBOARD);

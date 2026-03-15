@@ -4,6 +4,7 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
+import { ROUTES } from "./utils/constants";
 
 // ─── Layouts ─────────────────────────────────────────────────────────────────
 import AdminLayout from "./layouts/AdminLayout";
@@ -26,6 +27,7 @@ import ResendOTP from "./pages/Auth/ResendOTP";
 import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
 import StoreRegistration from "./pages/Auth/StoreRegistration";
+import ForcedPasswordChange from "./pages/Auth/ForcedPasswordChange";
 
 // ─── Public Pages ─────────────────────────────────────────────────────────────
 import AboutPage from "./pages/Public/About/AboutPage";
@@ -91,6 +93,8 @@ const router = createBrowserRouter(
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
+
+      <Route path={ROUTES.CHANGE_PASSWORD_REQUIRED} element={<ForcedPasswordChange />} />
 
       {/* Public Routes */}
       <Route element={<PublicLayout />}>

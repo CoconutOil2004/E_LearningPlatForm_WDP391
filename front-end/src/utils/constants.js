@@ -73,6 +73,7 @@ BLOG_DETAIL: "/blog/:id",
   ADMIN_LOGS: "/admin/logs",
   ADMIN_BLOG: "/admin/blog",
   ADMIN_PROFILE: "/admin/profile",
+  CHANGE_PASSWORD_REQUIRED: "/change-password-required",
 };
 
 export { API_BASE_URL, BACKEND_API_URI, formatCurrency, formatUSD, ROLES, ROUTES };

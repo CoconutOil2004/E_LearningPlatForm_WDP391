@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../../store/slices/authStore";
+import { ROUTES } from "../../utils/constants";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -39,10 +40,17 @@ const AuthCallback = () => {
       
       setCredentials(user, token);
 
-      if (user.mustChangePassword) {
-        navigate("/change-password-required", { replace: true });
-        return;
-      }
+      // Give the store a moment to update before navigating
+      setTimeout(() => {
+        if (user.mustChangePassword) {
+          navigate(ROUTES.CHANGE_PASSWORD_REQUIRED, { replace: true });
+        } else {
+          const role = user.role;
+          if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+          else if (role === "instructor") navigate(ROUTES.INSTRUCTOR_DASHBOARD, { replace: true });
+          else navigate("/", { replace: true });
+        }
+      }, 100);
 
       if (user.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
