@@ -1,5 +1,9 @@
-import { ArrowLeftOutlined, MenuOutlined } from "@ant-design/icons";
-import { Progress as AntProgress, Button, Typography } from "antd";
+import {
+  ArrowLeftOutlined,
+  MenuOutlined,
+  StarOutlined,
+} from "@ant-design/icons";
+import { Progress as AntProgress, Button, Typography, Tooltip } from "antd";
 
 const { Text, Title } = Typography;
 
@@ -12,6 +16,7 @@ const { Text, Title } = Typography;
  *   totalLessons   – total lesson count
  *   onBack         – () => void
  *   onToggleSidebar – () => void
+ *   onRate         - () => void
  */
 const LearningHeader = ({
   course,
@@ -20,6 +25,7 @@ const LearningHeader = ({
   totalLessons,
   onBack,
   onToggleSidebar,
+  onRate,
 }) => (
   <header
     style={{
@@ -41,7 +47,7 @@ const LearningHeader = ({
         onClick={onBack}
         style={{ color: "#fff" }}
       />
-      <div>
+      <div style={{ minWidth: 0 }}>
         <Text
           style={{
             color: "#9CA3AF",
@@ -69,10 +75,16 @@ const LearningHeader = ({
       </div>
     </div>
 
-    {/* Right: progress + toggle */}
+    {/* Right: progress + actions */}
     <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
       <div
-        style={{ display: "flex", alignItems: "center", gap: 12, width: 220 }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          width: 220,
+          '@media(maxWidth: 768px)': { display: 'none' }
+        }}
       >
         <AntProgress
           percent={progressPercent}
@@ -92,12 +104,24 @@ const LearningHeader = ({
           {completed}/{totalLessons} · {progressPercent}%
         </Text>
       </div>
-      <Button
-        type="text"
-        icon={<MenuOutlined />}
-        onClick={onToggleSidebar}
-        style={{ color: "#fff" }}
-      />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Tooltip title="Leave a review">
+          <Button
+            type="text"
+            icon={<StarOutlined style={{ color: "#F59E0B" }} />}
+            onClick={onRate}
+            style={{ color: "#fff" }}
+          />
+        </Tooltip>
+        
+        <Button
+          type="text"
+          icon={<MenuOutlined />}
+          onClick={onToggleSidebar}
+          style={{ color: "#fff" }}
+        />
+      </div>
     </div>
   </header>
 );

@@ -8,6 +8,10 @@ const QuizAttempt = require('./QuizAttempt');
 const Payment = require('./Payment');
 const Order = require('./Order');
 const RevenueReport = require('./RevenueReport');
+const Blog = require('./Blog');
+const Notification = require('./Notification');
+const Review = require('./Review');
+const Comment = require('./Comment');
 
 module.exports = {
   User,
@@ -20,4 +24,8 @@ module.exports = {
   Payment,
   Order,
   RevenueReport,
+  Blog,
+  Notification,
+  Review,
+  Comment,
 };

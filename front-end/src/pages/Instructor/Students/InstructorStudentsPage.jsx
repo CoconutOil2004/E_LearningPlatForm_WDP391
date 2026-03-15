@@ -206,7 +206,10 @@ const InstructorStudentsPage = () => {
             theme={{
               components: {
                 Table: {
-                  rowHoverBg: "rgba(0, 119, 182, 0.06)",
+                  rowHoverBg: "rgba(0, 119, 182, 0.04)",
+                  headerBg: "#f8fafc",
+                  headerColor: "#475569",
+                  headerBorderRadius: 12,
                   colorBgContainer: "transparent",
                 },
               },

@@ -65,6 +65,9 @@ app.use("/api/payments", require("./src/routes/paymentRoutes"));
 app.use("/api/enrollments", require("./src/routes/enrollmentRoutes"));
 app.use("/api/blogs", require("./src/routes/blogRoutes"));
 app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+app.use("/api/reviews", require("./src/routes/reviewRoutes"));
+app.use("/api/comments", require("./src/routes/commentRoutes"));
+app.use("/api/analytics", require("./src/routes/analyticsRoutes"));
 /* ========================================== */
 
 const PORT = process.env.PORT || 9999;

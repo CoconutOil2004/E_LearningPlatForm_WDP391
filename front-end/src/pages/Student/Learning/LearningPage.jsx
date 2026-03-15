@@ -2,6 +2,7 @@ import {
   CheckCircleOutlined,
   LeftOutlined,
   RightOutlined,
+  StarOutlined,
 } from "@ant-design/icons";
 import { Button, Typography, message } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import QuizPlayer from "../../../components/learning/QuizPlayer";
 import VideoPlayer from "../../../components/learning/VideoPlayer";
 import CourseService from "../../../services/api/CourseService";
 import EnrollmentService from "../../../services/api/EnrollmentService";
+import ReviewModal from "../../../components/shared/ReviewModal";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 
@@ -178,6 +180,9 @@ const LearningPage = () => {
   const heartbeatTimerRef = useRef(null);
   const lastHeartbeatWatchedRef = useRef(0); // watchedSeconds đã gửi lần trước
   const heartbeatInFlightRef = useRef(false);
+
+  // Review state
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   /* ── Helpers ── */
   const getLessonId = useCallback((item) => {
@@ -571,18 +576,21 @@ const LearningPage = () => {
         color: "#fff",
       }}
     >
-      <LearningHeader
-        course={course}
-        progressPercent={progressPercent}
-        completed={completedCount}
-        totalLessons={lessonItems.length}
-        onBack={() => navigate(ROUTES.MY_COURSES)}
-        onToggleSidebar={() => setSidebarOpen((v) => !v)}
-      />
+        <LearningHeader
+          course={course}
+          progressPercent={progressPercent}
+          completed={completedCount}
+          totalLessons={lessonItems.length}
+          onBack={() => navigate(ROUTES.MY_COURSES)}
+          onToggleSidebar={() => setSidebarOpen((v) => !v)}
+          onRate={() => setReviewModalOpen(true)}
+        />
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {sidebarOpen && (
           <LearningSidebar
+            courseId={courseId}
+            activeLessonId={activeLessonId}
             sectionsWithIdx={sectionsWithIdx}
             itemsProgress={itemsProgress}
             activeIdx={activeIdx}
@@ -628,7 +636,6 @@ const LearningPage = () => {
               onEnded={handleNext}
             />
           )}
-
           {activeItem?.itemType !== "quiz" && (
             <LessonBottomBar
               activeIdx={activeIdx}
@@ -642,6 +649,16 @@ const LearningPage = () => {
           )}
         </div>
       </div>
+
+      <ReviewModal
+        open={reviewModalOpen}
+        onCancel={() => setReviewModalOpen(false)}
+        courseId={courseId}
+        onReviewSuccess={() => {
+          // Re-fetch reviews in the sidebar if it's open
+          message.success("Review saved!");
+        }}
+      />
     </div>
   );
 };

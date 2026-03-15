@@ -33,6 +33,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import CourseService from "../../../services/api/CourseService";
 import PaymentService from "../../../services/api/PaymentService";
+import CourseReview from "../../../components/shared/CourseReview";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
@@ -516,7 +517,7 @@ const CourseDetailPage = () => {
                     marginBottom: 20,
                   }}
                 >
-                  {["overview", "curriculum"].map((t) => (
+                  {["overview", "curriculum", "reviews"].map((t) => (
                     <Button
                       key={t}
                       type="text"
@@ -532,9 +533,10 @@ const CourseDetailPage = () => {
                             ? "2px solid var(--color-primary,#667eea)"
                             : "2px solid transparent",
                         borderRadius: 0,
+                        textTransform: 'capitalize'
                       }}
                     >
-                      {t === "overview" ? "Overview" : "Curriculum"}
+                      {t}
                     </Button>
                   ))}
                 </Space>
@@ -559,6 +561,10 @@ const CourseDetailPage = () => {
                       />
                     )}
                   </div>
+                )}
+
+                {tab === "reviews" && (
+                  <CourseReview courseId={courseId} />
                 )}
               </div>
             </Space>

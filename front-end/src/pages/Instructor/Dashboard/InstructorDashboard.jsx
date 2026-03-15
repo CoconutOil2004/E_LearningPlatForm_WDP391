@@ -22,16 +22,31 @@ import {
   Row,
   Segmented,
   Space,
+  Spin,
   Tag,
   Typography,
 } from "antd";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  BarChart as ReBarChart,
+  Bar,
+  Cell,
+} from "recharts";
+
+import AnalyticsService from "../../../services/api/AnalyticsService";
 import CourseService from "../../../services/api/CourseService";
 import useAuthStore from "../../../store/slices/authStore";
 import { ROUTES } from "../../../utils/constants";
-import { pageVariants } from "../../../utils/helpers";
+import { formatThousands, pageVariants } from "../../../utils/helpers";
 
 const { Title, Text } = Typography;
 
@@ -84,31 +99,7 @@ const AnimCount = ({ val }) => {
   return <>{isK ? (n / 1000).toFixed(1) + "k" : Math.floor(n).toLocaleString()}</>;
 };
 
-// ─── Bar chart ────────────────────────────────────────────────────────────────
-const BarChart = ({ data }) => {
-  const max = Math.max(...data.map((d) => d.v));
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 128 }}>
-      {data.map((d, i) => (
-        <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <motion.div
-            initial={{ scaleY: 0 }}
-            animate={{ scaleY: 1 }}
-            transition={{ delay: 0.35 + i * 0.07, duration: 0.65, ease: [0.34, 1.56, 0.64, 1] }}
-            style={{
-              transformOrigin: "bottom",
-              width: "100%",
-              height: Math.max(8, (d.v / max) * 112),
-              borderRadius: "6px 6px 0 0",
-              background: d.hi ? C.gradient : d.mint ? C.gradientMint : C.primaryBg,
-            }}
-          />
-          <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: 700, textTransform: "uppercase" }}>{d.day}</Text>
-        </div>
-      ))}
-    </div>
-  );
-};
+// Custom Recharts wrapper will be used instead
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon, label, val, badge, badgeClr, barW, barBg, aBg, aClr, delay }) => (
@@ -160,21 +151,31 @@ const Act = ({ icon, iBg, iClr, title, desc, time, lineClr, delay }) => (
 const InstructorDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [period, setPeriod] = useState("Week");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const name = user?.fullname?.split(" ")[0] ?? "Instructor";
+  const name = user?.fullName?.split(" ")[0] ?? "Instructor";
 
-  const charts = {
-    Week: [
-      { day: "Mon", v: 40 }, { day: "Tue", v: 62 }, { day: "Wed", v: 55 },
-      { day: "Thu", v: 82, hi: true }, { day: "Fri", v: 96, hi: true },
-      { day: "Sat", v: 72, mint: true }, { day: "Sun", v: 86, mint: true },
-    ],
-    Month: [{ day: "W1", v: 55 }, { day: "W2", v: 70 }, { day: "W3", v: 90, hi: true }, { day: "W4", v: 80, mint: true }],
-    Year: [{ day: "Q1", v: 60 }, { day: "Q2", v: 75, hi: true }, { day: "Q3", v: 90, hi: true }, { day: "Q4", v: 85, mint: true }],
-  };
+  useEffect(() => {
+    AnalyticsService.getInstructorAnalytics()
+      .then(res => setData(res.data))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !data) {
+    return <div style={{ padding: 100, textAlign: 'center' }}><Spin size="large" /></div>;
+  }
+
+  const enrollmentTrendData = data.enrollmentTrend.map(item => ({
+    date: item._id,
+    count: item.count
+  }));
+
+  const totalRevenue = data.revenueByCourse.reduce((acc, curr) => acc + curr.revenue, 0);
+  const totalStudents = data.revenueByCourse.reduce((acc, curr) => acc + curr.sales, 0);
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
@@ -188,32 +189,27 @@ const InstructorDashboard = () => {
           >
             <Row gutter={[32, 20]} align="middle">
               <Col xs={24} lg={15}>
-                {/* Badge */}
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 999, padding: "4px 14px", marginBottom: 14 }}>
                   <StarFilled style={{ color: "#fbbf24", fontSize: 13 }} />
-                  <Text style={{ color: "white", fontWeight: 700, fontSize: 12 }}>Premium Instructor</Text>
+                  <Text style={{ color: "white", fontWeight: 700, fontSize: 12 }}>Pro Instructor</Text>
                 </div>
                 <Title level={1} style={{ color: "white", margin: "0 0 10px", fontWeight: 800, fontSize: 32, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
                   {greet}, {name}! 👋<br />
                   Share Knowledge.{" "}
                   <span style={{ fontWeight: 300, fontStyle: "italic", opacity: 0.85 }}>Inspire Learners.</span>
                 </Title>
-                <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 15, display: "block", marginBottom: 20, lineHeight: 1.7, maxWidth: 460 }}>
-                  Empower your students with premium content and real-time insights. Your impact starts here.
-                </Text>
                 <Space wrap>
                   <Button size="large" icon={<PlusOutlined />} onClick={() => navigate(ROUTES.CREATE_COURSE)}
                     style={{ background: "white", color: C.primaryDark, border: "none", borderRadius: 12, fontWeight: 700, height: 44, paddingInline: 22, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
                     Create Course
                   </Button>
-                  <Button size="large" icon={<EditOutlined />} onClick={() => navigate("/instructor/blog/create")}
-                    style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 12, fontWeight: 700, height: 44, paddingInline: 22 }}>
-                    Create New Blog
-                  </Button>
                 </Space>
-                {/* Quick stats */}
                 <div style={{ display: "flex", gap: 24, marginTop: 20, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-                  {[["12.8k", "Students"], ["12", "Courses"], ["4.9 ★", "Rating"]].map(([v, l]) => (
+                  {[
+                    [totalStudents.toLocaleString(), "Total Enrolls"],
+                    [data.revenueByCourse.length.toString(), "Courses"],
+                    [`${Number(data.avgInstructorRating || 0).toFixed(1)} ★`, "Avg Rating"]
+                  ].map(([v, l]) => (
                     <div key={l}>
                       <Text style={{ color: "white", fontWeight: 800, fontSize: 20, display: "block", lineHeight: 1.2 }}>{v}</Text>
                       <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 500 }}>{l}</Text>
@@ -222,7 +218,6 @@ const InstructorDashboard = () => {
                 </div>
               </Col>
 
-              {/* Floating revenue card */}
               <Col xs={24} lg={9} style={{ display: "flex", justifyContent: "flex-end" }}>
                 <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}>
                   <Card bordered={false}
@@ -233,15 +228,16 @@ const InstructorDashboard = () => {
                         <RiseOutlined style={{ color: "#10b981", fontSize: 17 }} />
                       </div>
                       <div>
-                        <Text style={{ color: "white", fontWeight: 700, fontSize: 13, display: "block" }}>Revenue this month</Text>
-                        <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 11 }}>vs last month</Text>
+                        <Text style={{ color: "white", fontWeight: 700, fontSize: 13, display: "block" }}>Total Revenue</Text>
+                        <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 11 }}>Cumulative performance</Text>
                       </div>
                     </div>
-                    <Text style={{ color: "white", fontWeight: 900, fontSize: 28, display: "block", lineHeight: 1 }}>29.800.000 ₫</Text>
-                    <Text style={{ color: "#10b981", fontWeight: 700, fontSize: 13, display: "block", marginTop: 6 }}>
-                      <ArrowUpOutlined /> +22% from last month
+                    <Text style={{ color: "white", fontWeight: 900, fontSize: 24, display: "block", lineHeight: 1 }}>
+                      {formatThousands(totalRevenue)}
                     </Text>
-                    <Progress percent={72} showInfo={false} strokeColor="#10b981" trailColor="rgba(255,255,255,0.15)" strokeWidth={4} style={{ marginTop: 12 }} />
+                    <Text style={{ color: "#10b981", fontWeight: 700, fontSize: 13, display: "block", marginTop: 6 }}>
+                      <ArrowUpOutlined /> Growing Audience
+                    </Text>
                   </Card>
                 </motion.div>
               </Col>
@@ -251,234 +247,98 @@ const InstructorDashboard = () => {
 
         {/* ── STAT CARDS ───────────────────────────────────────────────────── */}
         <Row gutter={[14, 14]} style={{ marginBottom: 18 }}>
-          {[
-            { icon: <TeamOutlined />, label: "Total Students", val: "12840", badge: "+12%", badgeClr: C.mint, barW: 72, barBg: C.gradient, aBg: C.primaryBg, aClr: C.primary, delay: 0.08 },
-            { icon: <EditOutlined />, label: "Published Blogs", val: "42", badge: "+5%", badgeClr: C.mint, barW: 55, barBg: C.gradientMint, aBg: C.mintBg, aClr: C.mint, delay: 0.14 },
-            { icon: <BookOutlined />, label: "Active Courses", val: "12", barW: 40, barBg: C.gradientAmber, aBg: C.amberBg, aClr: C.amber, delay: 0.2 },
-            { icon: <EyeOutlined />, label: "Monthly Views", val: "85.2k", badge: "+18%", badgeClr: C.mint, barW: 85, barBg: C.gradient, aBg: C.primaryBg, aClr: C.primary, delay: 0.26 },
-          ].map((s) => (
-            <Col key={s.label} xs={12} lg={6}>
-              <StatCard {...s} />
-            </Col>
-          ))}
+          <Col xs={12} lg={6}>
+            <StatCard icon={<TeamOutlined />} label="Total Enrolls" val={totalStudents.toString()} aBg={C.primaryBg} aClr={C.primary} delay={0.1} />
+          </Col>
+          <Col xs={12} lg={6}>
+            <StatCard icon={<BookOutlined />} label="Active Courses" val={data.revenueByCourse.length.toString()} aBg={C.mintBg} aClr={C.mint} delay={0.2} />
+          </Col>
+          <Col xs={12} lg={6}>
+            <StatCard icon={<RiseOutlined />} label="Conversion" val="12%" aBg={C.amberBg} aClr={C.amber} delay={0.3} />
+          </Col>
+          <Col xs={12} lg={6}>
+            <StatCard icon={<EyeOutlined />} label="Platform Rank" val="#1" aBg={C.primaryBg} aClr={C.primary} delay={0.4} />
+          </Col>
         </Row>
 
         {/* ── MAIN GRID ────────────────────────────────────────────────────── */}
         <Row gutter={[14, 14]}>
           <Col xs={24} lg={16}>
             <Space direction="vertical" size={14} style={{ width: "100%" }}>
-
-              {/* Chart */}
               <motion.div {...up(0.28)}>
                 <Card bordered={false} style={card} bodyStyle={{ padding: 22 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                    <div>
-                      <Title level={4} style={{ margin: 0, color: C.text }}>Performance Analytics</Title>
-                      <Text style={{ color: C.textSub, fontSize: 13 }}>Student engagement over time</Text>
-                    </div>
-                    <Segmented options={["Week", "Month", "Year"]} value={period} onChange={setPeriod} style={{ borderRadius: 10 }} />
-                  </div>
-                  <BarChart data={charts[period]} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 14, paddingTop: 14, borderTop: "1px solid #f1f0fe" }}>
-                    {[[C.primary, "Enrolled"], [C.mint, "Completed"]].map(([clr, lbl]) => (
-                      <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: clr }} />
-                        <Text style={{ fontSize: 12, color: C.textSub }}>{lbl}</Text>
-                      </div>
-                    ))}
-                    <Tag style={{ marginLeft: "auto", borderRadius: 20, fontWeight: 700, fontSize: 12, border: "none", background: "#d1fae5", color: C.mint }}>
-                      <ArrowUpOutlined /> +24% vs last {period.toLowerCase()}
-                    </Tag>
+                  <Title level={4} style={{ margin: "0 0 18px", color: C.text }}>Enrollment Trend</Title>
+                  <div style={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={enrollmentTrendData}>
+                        <defs>
+                          <linearGradient id="colorEnroll" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={C.primary} stopOpacity={0.8} />
+                            <stop offset="95%" stopColor={C.primary} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+                        <RechartsTooltip />
+                        <Area type="monotone" dataKey="count" stroke={C.primary} fillOpacity={1} fill="url(#colorEnroll)" strokeWidth={3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </Card>
               </motion.div>
 
-              {/* Top Courses */}
               <motion.div {...up(0.34)}>
                 <Card bordered={false} style={card} bodyStyle={{ padding: 0 }}
                   title={
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <Title level={4} style={{ margin: 0, color: C.text }}>Top Performing Courses</Title>
-                        <Text style={{ color: C.textSub, fontSize: 13, fontWeight: 400 }}>Ranked by enrollment this month</Text>
+                        <Title level={4} style={{ margin: 0, color: C.text }}>Course Performance</Title>
+                        <Text style={{ color: C.textSub, fontSize: 13, fontWeight: 400 }}>Revenue and enrollment breakdown</Text>
                       </div>
                       <Button type="link" icon={<ArrowRightOutlined />} onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)} style={{ color: C.primary, fontWeight: 700, padding: 0 }}>View All</Button>
                     </div>
                   }
                   headStyle={{ padding: "14px 22px", borderBottom: "1px solid #f1f0fe" }}
                 >
-                  {[
-                    { rank: 1, title: "Advanced Python for Data Science", students: "4,280", rating: "4.9", rev: "8.680.000 ₫", growth: "+18%", clr: C.primary, bg: C.primaryBg, bar: 92 },
-                    { rank: 2, title: "Mastering React Patterns in 2024", students: "3,120", rating: "4.8", rev: "6.860.000 ₫", growth: "+12%", clr: C.mint, bg: C.mintBg, bar: 70 },
-                    { rank: 3, title: "UX/UI Foundations Complete", students: "2,840", rating: "4.7", rev: "5.320.000 ₫", growth: "Stable", clr: C.amber, bg: C.amberBg, bar: 55 },
-                  ].map((c, i) => (
-                    <motion.div key={c.rank} {...up(0.34 + i * 0.07)}>
-                      <div
-                        style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 22px", borderBottom: i < 2 ? "1px solid #f9f9ff" : "none", cursor: "pointer", transition: "background 0.2s" }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = C.primaryBg}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                      >
-                        <div style={{ width: 34, height: 34, borderRadius: 9, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <Text style={{ color: c.clr, fontWeight: 900, fontSize: 13 }}>#{c.rank}</Text>
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Text strong style={{ fontSize: 13, color: C.text, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</Text>
-                          <Text style={{ fontSize: 12, color: C.textSub }}>{c.students} students · {c.rating} ★</Text>
-                        </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <Text strong style={{ fontSize: 13, color: C.text, display: "block" }}>{c.rev}</Text>
-                          <Text style={{ fontSize: 12, color: c.growth === "Stable" ? C.textMuted : C.mint, fontWeight: 700 }}>{c.growth}</Text>
-                        </div>
-                        <div style={{ width: 68, flexShrink: 0 }}>
-                          <div style={{ height: 5, background: "#f1f0fe", borderRadius: 3, overflow: "hidden" }}>
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${c.bar}%` }} transition={{ delay: 0.5 + i * 0.1, duration: 0.9 }}
-                              style={{ height: "100%", borderRadius: 3, background: c.clr }} />
-                          </div>
-                        </div>
+                  {data.revenueByCourse.map((c, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 22px", borderBottom: i < data.revenueByCourse.length - 1 ? "1px solid #f9f9ff" : "none" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: C.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <BookOutlined style={{ color: C.primary }} />
                       </div>
-                    </motion.div>
-                  ))}
-                </Card>
-              </motion.div>
-
-              {/* Blog Activity */}
-              <motion.div {...up(0.4)}>
-                <Card bordered={false} style={card} bodyStyle={{ padding: 16 }}
-                  title={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <Title level={4} style={{ margin: 0, color: C.text }}>Recent Blog Activity</Title>
-                        <Text style={{ color: C.textSub, fontSize: 13, fontWeight: 400 }}>Your latest published content</Text>
+                      <div style={{ flex: 1 }}>
+                        <Text strong style={{ fontSize: 13, display: 'block' }}>{c.name}</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {c.sales} enrollments · {Number(c.rating || 0).toFixed(1)} ★
+                        </Text>
                       </div>
-                      <Button type="link" icon={<ArrowRightOutlined />} onClick={() => navigate("/instructor/blog/create")} style={{ color: C.primary, fontWeight: 700, padding: 0 }}>New Post</Button>
+                      <div style={{ textAlign: 'right' }}>
+                        <Text strong style={{ fontSize: 14, color: C.primary }}>{formatThousands(c.value)}</Text>
+                      </div>
                     </div>
-                  }
-                  headStyle={{ padding: "14px 22px", borderBottom: "1px solid #f1f0fe" }}
-                >
-                  <Row gutter={[12, 12]}>
-                    {[
-                      { tag: "React", tagClr: C.primary, title: "Mastering Advanced React Patterns in 2024", views: "1.2k", comments: 24, likes: 89 },
-                      { tag: "AI & Education", tagClr: C.mint, title: "The Future of AI in Modern Education Systems", views: "850", comments: 18, likes: 62 },
-                    ].map((b, i) => (
-                      <Col key={b.title} xs={24} sm={12}>
-                        <motion.div {...up(0.4 + i * 0.08)} whileHover={{ y: -2 }}>
-                          <Card bordered={false} hoverable
-                            style={{ borderRadius: 12, border: "1px solid #f1f0fe", cursor: "pointer" }}
-                            bodyStyle={{ padding: 14 }}
-                          >
-                            <div style={{ display: "flex", gap: 12 }}>
-                              <div style={{ width: 68, height: 68, borderRadius: 10, background: `linear-gradient(135deg, ${b.tagClr}20, ${b.tagClr}40)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <EditOutlined style={{ fontSize: 20, color: b.tagClr }} />
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <Tag style={{ borderRadius: 6, fontSize: 10, fontWeight: 700, border: "none", background: `${b.tagClr}15`, color: b.tagClr, marginBottom: 4 }}>{b.tag}</Tag>
-                                <Text strong style={{ fontSize: 12, color: C.text, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.4 }}>{b.title}</Text>
-                                <div style={{ display: "flex", gap: 10, marginTop: 7 }}>
-                                  <Text style={{ fontSize: 11, color: C.textSub, display: "flex", alignItems: "center", gap: 3 }}><EyeOutlined /> {b.views}</Text>
-                                  <Text style={{ fontSize: 11, color: C.textSub, display: "flex", alignItems: "center", gap: 3 }}><MessageOutlined /> {b.comments}</Text>
-                                  <Text style={{ fontSize: 11, color: C.mint }}>❤ {b.likes}</Text>
-                                </div>
-                              </div>
-                            </div>
-                          </Card>
-                        </motion.div>
-                      </Col>
-                    ))}
-                  </Row>
+                  ))}
                 </Card>
               </motion.div>
             </Space>
           </Col>
 
-          {/* RIGHT SIDEBAR */}
           <Col xs={24} lg={8}>
             <Space direction="vertical" size={14} style={{ width: "100%" }}>
-
-              {/* Recent Activity */}
-              <motion.div {...up(0.28)}>
-                <Card bordered={false} style={card}
-                  title={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Title level={4} style={{ margin: 0, color: C.text }}>Recent Activity</Title>
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.primaryBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 10, fontWeight: 700, color: C.primary }}>4</Text>
-                      </div>
-                    </div>
-                  }
-                  headStyle={{ padding: "14px 18px", borderBottom: "1px solid #f1f0fe" }}
-                  bodyStyle={{ padding: "18px" }}
-                >
-                  <Space direction="vertical" size={18} style={{ width: "100%" }}>
-                    <Act icon={<UserAddOutlined style={{ color: C.primary, fontSize: 13 }} />} iBg={C.primaryBg} iClr={C.primary}
-                      title="New Student Enrolled" desc="Alex Johnson joined 'Advanced Python for Data Science'" time="2 minutes ago" lineClr={C.primary} delay={0.3} />
-                    <Act icon={<CheckCircleFilled style={{ color: C.mint, fontSize: 13 }} />} iBg={C.mintBg} iClr={C.mint}
-                      title="Course Completed" desc="Sarah Miller finished 'UX/UI Foundations'" time="15 minutes ago" lineClr={C.mint} delay={0.34} />
-                    <Act icon={<MessageOutlined style={{ color: C.textMuted, fontSize: 13 }} />} iBg="#f3f4f6" iClr={C.textMuted}
-                      title="Comment Received" desc="David posted a question on 'Mastering React Patterns'" time="1 hour ago" lineClr="#d1d5db" delay={0.38} />
-                    <Act icon={<DollarOutlined style={{ color: C.amber, fontSize: 13 }} />} iBg={C.amberBg} iClr={C.amber}
-                      title="Payment Processed" desc="Earnings for July have been deposited" time="3 hours ago" lineClr={C.amber} delay={0.42} />
-                    <Button block type="text" icon={<ArrowRightOutlined />}
-                      style={{ color: C.textSub, fontWeight: 600, borderTop: "1px solid #f1f0fe", marginTop: 2, height: "auto", paddingTop: 12 }}>
-                      View History
-                    </Button>
-                  </Space>
-                </Card>
-              </motion.div>
-
-              {/* Monthly Goals */}
-              <motion.div {...up(0.36)}>
-                <Card bordered={false} style={card} bodyStyle={{ padding: 20 }}>
-                  <Title level={5} style={{ margin: "0 0 16px", color: C.text }}>Monthly Goals</Title>
-                  <Space direction="vertical" size={14} style={{ width: "100%" }}>
-                    {[
-                      { label: "New Students", cur: 840, total: 1000, clr: C.primary, fmt: (c, t) => `${c} / ${t}` },
-                      { label: "Blogs Published", cur: 6, total: 8, clr: C.mint, fmt: (c, t) => `${c} / ${t}` },
-                      { label: "Revenue Target", cur: 4200, total: 5000, clr: C.amber, fmt: () => "29,4M ₫ / 35M ₫" },
-                    ].map((g) => (
-                      <div key={g.label}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                          <Text style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>{g.label}</Text>
-                          <Text strong style={{ fontSize: 13, color: C.text }}>{g.fmt(g.cur, g.total)}</Text>
-                        </div>
-                        <Progress percent={Math.round((g.cur / g.total) * 100)} strokeColor={g.clr} trailColor="#f1f0fe" showInfo={false} strokeWidth={6} style={{ margin: 0 }} />
-                      </div>
-                    ))}
-                  </Space>
-                </Card>
-              </motion.div>
-
-              {/* Upgrade Card */}
-              <motion.div {...up(0.44)}>
-                <Card bordered={false}
-                  style={{ borderRadius: 16, background: C.gradient, border: "none", boxShadow: "0 8px 32px rgba(99,102,241,0.28)", overflow: "hidden", position: "relative" }}
-                  bodyStyle={{ padding: 22, position: "relative", zIndex: 1 }}
-                >
-                  <div style={{ position: "absolute", top: -30, right: -30, width: 150, height: 150, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
-                  <div style={{ position: "absolute", bottom: -20, left: 10, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.05)", pointerEvents: "none" }} />
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-                    <TrophyOutlined style={{ color: "white", fontSize: 19 }} />
+              <Card bordered={false} style={card} title="Impact Summary">
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <TrophyOutlined style={{ fontSize: 48, color: '#f59e0b', marginBottom: 16 }} />
+                  <Title level={4}>Keep it up!</Title>
+                  <Text type="secondary">Your courses have reached {totalStudents} students this month.</Text>
+                </div>
+              </Card>
+              <Card bordered={false} style={card} title="Engagement Goals">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div>
+                    <Text size="small">Enrollment Target</Text>
+                    <Progress percent={Math.min(100, Math.round((totalStudents / 100) * 100))} strokeColor={C.primary} />
                   </div>
-                  <Title level={4} style={{ color: "white", margin: "0 0 8px" }}>Nexus Pro Upgrade</Title>
-                  <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, lineHeight: 1.6, display: "block", marginBottom: 12 }}>
-                    Get detailed heatmaps of student engagement and AI-powered blog writing assistance.
-                  </Text>
-                  <Space direction="vertical" size={5} style={{ marginBottom: 16 }}>
-                    {["Advanced analytics dashboard", "AI blog writing assistant", "Student heatmap insights"].map((f) => (
-                      <div key={f} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <CheckCircleFilled style={{ color: "#10b981", fontSize: 12 }} />
-                        <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>{f}</Text>
-                      </div>
-                    ))}
-                  </Space>
-                  <Button block size="large"
-                    style={{ background: "white", color: C.primaryDark, border: "none", borderRadius: 10, fontWeight: 700, height: 42 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.color = "white"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = C.primaryDark; }}
-                  >
-                    Nâng cấp ngay — 750.000 ₫/tháng
-                  </Button>
-                </Card>
-              </motion.div>
+                </Space>
+              </Card>
             </Space>
           </Col>
         </Row>
