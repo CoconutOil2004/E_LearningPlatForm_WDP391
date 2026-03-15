@@ -105,7 +105,7 @@ const CreateInstructorModal = ({ open, onClose, onSubmit, loading }) => {
 };
 
 // ─── UsersTable ───────────────────────────────────────────────────────────────
-const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
+const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, pagination, onPageChange }) => {
   const instructorCols = [
     {
       title: "Courses",
@@ -178,6 +178,7 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
         <Space size={12}>
           <Avatar
             size={40}
+            src={record.avatarURL}
             style={{
               background: `linear-gradient(135deg, ${COLOR.ocean}, ${COLOR.teal})`,
               fontWeight: 900,
@@ -269,9 +270,12 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
       rowKey="_id"
       scroll={{ x: 1000 }}
       pagination={{
-        pageSize: 10,
-        showSizeChanger: true,
+        current: pagination.current,
+        pageSize: 20,
+        total: pagination.total,
+        showSizeChanger: false,
         showTotal: (t) => `Total ${t} ${type}s`,
+        onChange: onPageChange
       }}
     />
   );
@@ -279,12 +283,17 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type }) => {
 
 // ─── AdminUsersPage ───────────────────────────────────────────────────────────
 const AdminUsersPage = () => {
+  /* eslint-disable no-unused-vars */
   const {
     tab,
     setTab,
     TABS,
     instructors,
     students,
+    instructorPagination,
+    studentPagination,
+    page,
+    setPage,
     loading,
     showCreateModal,
     isCreating,
@@ -292,14 +301,13 @@ const AdminUsersPage = () => {
     closeCreateModal,
     handleCreate,
     handleToggleLock,
-    // BUG FIX 4: lấy actionLoading từ hook thay vì hardcode null
     actionLoading,
   } = useAdminUsers();
 
   const stats = [
     {
       title: "Total Instructors",
-      value: instructors.length,
+      value: instructorPagination.total,
       prefix: <UserOutlined />,
     },
     {
@@ -309,7 +317,7 @@ const AdminUsersPage = () => {
     },
     {
       title: "Total Students",
-      value: students.length,
+      value: studentPagination.total,
       prefix: <TeamOutlined />,
     },
     {
@@ -325,7 +333,7 @@ const AdminUsersPage = () => {
       label: (
         <Space>
           <UserOutlined />
-          <span>Instructors ({instructors.length})</span>
+          <span>Instructors ({instructorPagination.total})</span>
         </Space>
       ),
       children: (
@@ -335,6 +343,8 @@ const AdminUsersPage = () => {
           onToggleLock={handleToggleLock}
           actionLoading={actionLoading}
           type="instructor"
+          pagination={{ ...instructorPagination, current: page }}
+          onPageChange={setPage}
         />
       ),
     },
@@ -343,7 +353,7 @@ const AdminUsersPage = () => {
       label: (
         <Space>
           <TeamOutlined />
-          <span>Students ({students.length})</span>
+          <span>Students ({studentPagination.total})</span>
         </Space>
       ),
       children: (
@@ -353,6 +363,8 @@ const AdminUsersPage = () => {
           onToggleLock={handleToggleLock}
           actionLoading={actionLoading}
           type="student"
+          pagination={{ ...studentPagination, current: page }}
+          onPageChange={setPage}
         />
       ),
     },
@@ -382,7 +394,7 @@ const AdminUsersPage = () => {
 
       <Card
         bordered={false}
-        style={{ borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+        style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)" }}
         bodyStyle={{ padding: 0 }}
       >
         <Tabs

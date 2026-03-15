@@ -14,7 +14,11 @@ const useAdminUsers = () => {
 
   const [instructors,  setInstructors]  = useState([]);
   const [students,     setStudents]     = useState([]);
-  const [pagination,   setPagination]   = useState({ total: 0, totalPages: 1 });
+  
+  // Separate pagination for each type
+  const [instructorPagination, setInstructorPagination] = useState({ total: 0, totalPages: 1 });
+  const [studentPagination,    setStudentPagination]    = useState({ total: 0, totalPages: 1 });
+  
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
 
@@ -22,7 +26,6 @@ const useAdminUsers = () => {
   const [isCreating,      setIsCreating]      = useState(false);
   const [createError,     setCreateError]     = useState(null);
 
-  // BUG FIX 4: thêm actionLoading state (trước đây hardcode null bên JSX)
   const [actionLoading, setActionLoading] = useState(null);
 
   const fetchInstructors = useCallback(async (p = 1) => {
@@ -31,7 +34,7 @@ const useAdminUsers = () => {
     try {
       const res = await UserService.getInstructors({ page: p, limit: PAGE_SIZE });
       setInstructors(res.instructors ?? []);
-      setPagination(res.pagination ?? { total: 0, totalPages: 1 });
+      setInstructorPagination(res.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
       setError(err?.response?.data?.message ?? "Không thể tải danh sách instructor");
     } finally {
@@ -45,7 +48,7 @@ const useAdminUsers = () => {
     try {
       const res = await UserService.getStudents({ page: p, limit: PAGE_SIZE });
       setStudents(res.students ?? []);
-      setPagination(res.pagination ?? { total: 0, totalPages: 1 });
+      setStudentPagination(res.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
       setError(err?.response?.data?.message ?? "Không thể tải danh sách student");
     } finally {
@@ -53,12 +56,24 @@ const useAdminUsers = () => {
     }
   }, []);
 
-  useEffect(() => { setPage(1); }, [tab]);
-
+  // Initial fetch for both on mount
   useEffect(() => {
-    if (tab === TABS.INSTRUCTOR) fetchInstructors(page);
-    else                          fetchStudents(page);
+    fetchInstructors(1);
+    fetchStudents(1);
+  }, [fetchInstructors, fetchStudents]);
+
+  // Handle active tab pagination
+  useEffect(() => {
+    if (page > 1) { // Only refetch if it's not the first page (already handled or reset)
+      if (tab === TABS.INSTRUCTOR) fetchInstructors(page);
+      else                          fetchStudents(page);
+    }
   }, [tab, page, fetchInstructors, fetchStudents]);
+
+  useEffect(() => { 
+    // Reset page to 1 when tab changes, which might trigger the second effect if page was > 1
+    if (page !== 1) setPage(1); 
+  }, [tab]);
 
   const refetch = useCallback(() => {
     if (tab === TABS.INSTRUCTOR) fetchInstructors(page);
@@ -131,7 +146,9 @@ const useAdminUsers = () => {
 
   return {
     tab, setTab, TABS,
-    instructors, students, pagination, page, setPage,
+    instructors, students, 
+    instructorPagination, studentPagination, 
+    page, setPage,
     loading, error,
     showCreateModal, isCreating, createError,
     openCreateModal, closeCreateModal, handleCreate,
