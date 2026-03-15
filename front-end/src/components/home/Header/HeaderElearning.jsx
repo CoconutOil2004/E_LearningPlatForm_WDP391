@@ -8,6 +8,7 @@ import useNotificationStore from "../../../store/slices/notificationStore";
 import { ROUTES } from "../../../utils/constants";
 import { cn, getInitials } from "../../../utils/helpers";
 import { Icon } from "../../ui";
+import NotificationBell from "../../shared/NotificationBell";
 
 // ─── Avatar Dropdown ──────────────────────────────────────────────────────────
 const AvatarDropdown = ({ user }) => {
@@ -141,76 +142,20 @@ const AvatarDropdown = ({ user }) => {
   );
 };
 
-// ─── Notification Dropdown ────────────────────────────────────────────────────
-const NotifDropdown = () => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const { notifications, markAllRead } = useNotificationStore();
-  const unread = notifications.filter((n) => !n.read).length;
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="relative p-2 transition-colors rounded-xl hover:bg-subtle"
-      >
-        <Icon name="bell" size={22} color="var(--text-body)" />
-        {unread > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-danger/100 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-            {unread}
-          </span>
-        )}
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute right-0 z-50 mt-2 overflow-hidden bg-white border top-full w-80 rounded-2xl border-border"
-            style={{ boxShadow: "var(--shadow-lg)" }}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-bold text-heading">Notifications</h3>
-              <button
-                onClick={markAllRead}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                Mark all read
-              </button>
-            </div>
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={cn(
-                  "p-4 border-b border-border hover:bg-subtle transition-colors",
-                  !n.read && "bg-indigo-50/40",
-                )}
-              >
-                <p className="text-sm font-medium text-body">{n.text}</p>
-                <p className="mt-1 text-xs text-disabled">{n.time}</p>
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
 // ─── Public Header ────────────────────────────────────────────────────────────
 const Header = () => {
   const { isAuthenticated, user, role } = useAuthStore();
   const { wishlistIds } = useCourseStore();
+  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated && user?._id) {
+      fetchNotifications();
+      setupSocket(user._id);
+    }
+    return () => disconnectSocket();
+  }, [isAuthenticated, user?._id]);
 
   return (
     <header
@@ -275,7 +220,7 @@ const Header = () => {
                   </span>
                 )}
               </Link>
-              <NotifDropdown />
+              <NotificationBell />
               <AvatarDropdown user={user} />
             </>
           ) : (

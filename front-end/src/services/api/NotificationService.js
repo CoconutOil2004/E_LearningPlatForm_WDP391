@@ -1,58 +1,34 @@
-// front-end/src/services/api/NotificationService.js
+import axios from "axios";
+import { BACKEND_API_URI } from "../../utils/constants";
 
-import { api } from '../index'; 
+const NotificationService = {
+  getNotifications: async () => {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`${BACKEND_API_URI}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  },
 
-class NotificationService {
-    // Helper đã sửa đổi để ưu tiên 'accessToken' hoặc kiểm tra cả 'token'
-    getAuthHeaders() {
-        // Kiểm tra cả hai key để tăng khả năng tìm thấy token hợp lệ
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('token'); 
-        
-        if (!token) {
-            // Nếu không có token, ném lỗi để Component biết và không cố gắng gọi API
-            throw new Error("Missing authentication token.");
-        }
-        
-        return { Authorization: `Bearer ${token}` };
-    }
+  markAsRead: async (id) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.patch(
+      `${BACKEND_API_URI}/notifications/${id}/read`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  },
 
-    // Lấy danh sách thông báo
-    async getNotifications() {
-        try {
-            const response = await api.get('/notifications', {
-                // Đảm bảo getAuthHeaders được gọi ở đây
-                headers: this.getAuthHeaders(), 
-            });
-            return response.data;
-        } catch (error) {
-            // Ghi log chi tiết hơn để dễ debug
-            console.error("Lỗi khi lấy thông báo:", error.response?.status || error.message);
-            throw error;
-        }
-    }
+  markAllAsRead: async () => {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${BACKEND_API_URI}/notifications/mark-all-read`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  },
+};
 
-    // ... (Các hàm markOneAsRead và markAllAsRead giữ nguyên logic)
-    async markOneAsRead(notificationId) {
-        try {
-            const response = await api.patch(`/notifications/mark-read/${notificationId}`, null, {
-                headers: this.getAuthHeaders(),
-            });
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    async markAllAsRead() {
-        try {
-            const response = await api.patch('/notifications/mark-all-read', null, {
-                headers: this.getAuthHeaders(),
-            });
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
-    }
-}
-
-export default new NotificationService();
+export default NotificationService;

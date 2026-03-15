@@ -3,6 +3,7 @@ const Enrollment = require("../models/Enrollment");
 const Payment = require("../models/Payment");
 const { createPaymentUrl, verifyReturnUrl } = require("../utils/vnpay");
 const { buildItemsProgress } = require("../utils/buildItemsProgress");
+const { sendNotification } = require("../utils/notificationUtils");
 
 /* ===============================
    CREATE PAYMENT (VNPay)
@@ -104,9 +105,10 @@ exports.paymentCallback = async (req, res) => {
       );
     }
 
-    const payment = await Payment.findById(verify.orderId).populate(
-      "enrollmentId",
-    );
+    const payment = await Payment.findById(verify.orderId).populate({
+      path: "enrollmentId",
+      populate: { path: "courseId", select: "title" }
+    });
 
     if (!payment) {
       return res.redirect(
@@ -136,6 +138,30 @@ exports.paymentCallback = async (req, res) => {
         await Course.findByIdAndUpdate(enrollment.courseId, {
           $inc: { enrollmentCount: 1 },
         });
+
+        // Fetch student details for instructor notification
+        const student = await User.findById(enrollment.userId).select("fullname username");
+
+        // Gửi thông báo cho học viên
+        await sendNotification(req.app, {
+          userId: enrollment.userId,
+          title: "Thanh toán thành công",
+          message: `Chúc mừng! Bạn đã đăng ký thành công khóa học "${payment.enrollmentId?.courseId?.title || "mới"}".`,
+          type: "success",
+          link: `/learning/${enrollment.courseId}`,
+        });
+
+        // Gửi thông báo cho Giảng viên
+        const course = payment.enrollmentId?.courseId;
+        if (course && course.instructorId) {
+           await sendNotification(req.app, {
+             userId: course.instructorId,
+             title: "Học viên mới (Đã thanh toán)",
+             message: `Học viên ${student?.fullname || student?.username || "mới"} đã mua khóa học "${course.title}" của bạn.`,
+             type: "success",
+             link: `/instructor/courses/edit/${course._id}`,
+           });
+        }
       }
     }
 

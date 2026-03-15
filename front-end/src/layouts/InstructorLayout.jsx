@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import { Avatar, Tooltip } from "antd";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Outlet,
   ScrollRestoration,
@@ -21,8 +21,10 @@ import {
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
+import useNotificationStore from "../store/slices/notificationStore";
 import { ROUTES } from "../utils/constants";
 import { cn } from "../utils/helpers";
+import NotificationBell from "../components/shared/NotificationBell";
 
 const NAV_ITEMS = [
   {
@@ -73,6 +75,16 @@ const InstructorLayout = () => {
   const { logout } = useAuth();
 
   const isActive = (path) => location.pathname.startsWith(path);
+
+  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchNotifications();
+      setupSocket(user._id);
+    }
+    return () => disconnectSocket();
+  }, [user?._id]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">
@@ -210,8 +222,28 @@ const InstructorLayout = () => {
       </motion.aside>
 
       {/* ── Main Content Area ── */}
-      <main className="flex-1 overflow-y-auto bg-gray-50">
-        <div className="min-h-full">
+      <main className="flex-1 overflow-hidden flex flex-col bg-gray-50">
+        {/* Top Header */}
+        <header className="h-[72px] bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
+          <div>
+             <h1 className="text-xl font-bold text-gray-900 capitalize">
+                {location.pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard'}
+             </h1>
+          </div>
+          <div className="flex items-center gap-4">
+             <NotificationBell />
+             <div className="h-8 w-[1px] bg-gray-100 mx-2" />
+             <button 
+                onClick={() => navigate(ROUTES.HOME)}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+             >
+                View as Student
+             </button>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-8">
+          <ScrollRestoration />
           <Outlet />
         </div>
       </main>

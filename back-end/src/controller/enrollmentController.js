@@ -1,6 +1,7 @@
 const Enrollment = require("../models/Enrollment");
 const Course = require("../models/Course");
 const { buildItemsProgress } = require("../utils/buildItemsProgress");
+const { sendNotification } = require("../utils/notificationUtils");
 
 exports.getMyCourses = async (req, res) => {
   try {
@@ -125,7 +126,7 @@ exports.enrollFreeCourse = async (req, res) => {
 
     // 1. Check course exists
     const course = await Course.findById(courseId).select(
-      "price enrollmentCount status",
+      "title price enrollmentCount status",
     );
     if (!course) {
       return res.status(404).json({
@@ -195,6 +196,29 @@ exports.enrollFreeCourse = async (req, res) => {
     await Course.findByIdAndUpdate(courseId, {
       $inc: { enrollmentCount: 1 },
     });
+
+    // 7.1 Fetch student details for instructor notification
+    const student = await User.findById(userId).select("fullname username");
+
+    // 8. Gửi thông báo cho học viên
+    await sendNotification(req.app, {
+      userId,
+      title: "Đăng ký khóa học",
+      message: `Chúc mừng! Bạn đã đăng ký khóa học "${course.title || "mới"}" thành công.`,
+      type: "success",
+      link: `/learning/${courseId}`,
+    });
+
+    // 9. Gửi thông báo cho Giảng viên
+    if (course.instructorId) {
+      await sendNotification(req.app, {
+        userId: course.instructorId,
+        title: "Học viên mới",
+        message: `Học viên ${student?.fullname || student?.username || "mới"} đã tham gia khóa học "${course.title}" của bạn.`,
+        type: "info",
+        link: `/instructor/courses/edit/${courseId}`, // Assuming instructor dashboard link
+      });
+    }
 
     res.status(201).json({
       success: true,

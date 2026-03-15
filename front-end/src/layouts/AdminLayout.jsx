@@ -22,7 +22,7 @@ import {
   Typography,
 } from "antd";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Outlet,
   ScrollRestoration,
@@ -31,8 +31,10 @@ import {
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
+import useNotificationStore from "../store/slices/notificationStore";
 import { adminTheme, COLOR } from "../styles/adminTheme";
 import { ROUTES } from "../utils/constants";
+import NotificationBell from "../components/shared/NotificationBell";
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -93,6 +95,16 @@ const AdminLayout = () => {
     icon: item.icon,
     label: item.label,
   }));
+
+  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchNotifications();
+      setupSocket(user._id);
+    }
+    return () => disconnectSocket();
+  }, [user?._id]);
 
   return (
     <ConfigProvider
@@ -367,12 +379,55 @@ const AdminLayout = () => {
         <Content
           style={{
             background: "#F5F7FA",
-            overflowY: "auto",
-            minHeight: "100vh",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
           }}
         >
-          <ScrollRestoration />
-          <Outlet />
+          {/* Dashboard Header */}
+          <header 
+            style={{ 
+              height: 56, 
+              background: "white", 
+              borderBottom: "1px solid rgba(0,0,0,0.05)", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "space-between", 
+              padding: "0 24px",
+              flexShrink: 0
+            }}
+          >
+            <div>
+               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#1e293b" }}>
+                  {location.pathname.split('/').pop()?.replace('-', ' ') || 'Admin Dashboard'}
+               </h2>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+               <NotificationBell />
+               <div style={{ width: 1, height: 24, background: "rgba(0,0,0,0.05)" }} />
+               <button 
+                  onClick={() => navigate(ROUTES.HOME)}
+                  style={{ 
+                    fontSize: 12, 
+                    fontWeight: 700, 
+                    color: "#00BFA5", 
+                    background: "#F0FDFA", 
+                    border: "none", 
+                    padding: "6px 12px", 
+                    borderRadius: 8, 
+                    cursor: "pointer" 
+                  }}
+               >
+                  Public View
+               </button>
+            </div>
+          </header>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+            <ScrollRestoration />
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </ConfigProvider>

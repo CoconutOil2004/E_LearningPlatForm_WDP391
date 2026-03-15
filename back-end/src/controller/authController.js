@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const logger = require("../utils/logger");
+const { sendNotification } = require("../utils/notificationUtils");
 const { sendEmail } = require("../services/emailService");
 const crypto = require("crypto");
 const { generateRandomPassword } = require("../utils/password");

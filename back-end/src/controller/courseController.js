@@ -5,6 +5,8 @@ const Lesson = require("../models/Lesson");
 const Quiz = require("../models/Quiz");
 const { validateCategoryId } = require("./categoryController");
 const { cloudinary } = require("../config/cloudinary");
+const { sendNotification, notifyAdmins } = require("../utils/notificationUtils");
+const User = require("../models/User");
 
 /** Enum level dùng cho validation (trùng với Course schema). FE có thể gọi GET /api/courses/levels để lấy. */
 const LEVEL_ENUM = ["Beginner", "Intermediate", "Advanced"];
@@ -662,6 +664,14 @@ exports.submitCourse = async (req, res) => {
     course.status = "pending";
     await course.save();
 
+    // Thông báo cho tất cả Admin (trừ bản thân nếu là admin)
+    await notifyAdmins(req.app, {
+      title: "Khóa học mới chờ duyệt",
+      message: `Giảng viên ${req.user.fullname || req.user.username} đã gửi khóa học "${course.title}" để chờ duyệt.`,
+      type: "info",
+      link: "/admin/approval",
+    }, req.user._id);
+
     res.json({
       success: true,
       message: "Course submitted for review",
@@ -718,6 +728,15 @@ exports.approveCourse = async (req, res) => {
 
     course.status = "published";
     await course.save();
+
+    // Thông báo cho Giảng viên
+    await sendNotification(req.app, {
+      userId: course.instructorId,
+      title: "Khóa học được phê duyệt",
+      message: `Chúc mừng! Khóa học "${course.title}" của bạn đã được phê duyệt và xuất bản.`,
+      type: "success",
+      link: `/learning/${course._id}`,
+    });
 
     res.json({
       success: true,
@@ -810,6 +829,15 @@ exports.rejectCourse = async (req, res) => {
       .populate("instructorId", "fullname email")
       .populate("category", "name")
       .lean();
+
+    // Thông báo cho Giảng viên
+    await sendNotification(req.app, {
+      userId: course.instructorId,
+      title: "Khóa học bị từ chối",
+      message: `Rất tiếc, khóa học "${course.title}" của bạn đã bị từ chối. Lý do: ${course.rejectionReason}`,
+      type: "error",
+      link: `/instructor/courses/edit/${course._id}`,
+    });
 
     res.json({
       success: true,
