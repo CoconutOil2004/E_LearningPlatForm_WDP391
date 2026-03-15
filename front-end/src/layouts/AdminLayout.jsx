@@ -65,6 +65,7 @@ const NAV_ITEMS = [
     icon: <SafetyCertificateOutlined />,
     label: "Operations Hub",
   },
+  { key: ROUTES.ADMIN_BLOG, icon: <FileTextOutlined />, label: "Blog Management" },
   { key: ROUTES.ADMIN_PROFILE, icon: <UserOutlined />, label: "Profile" },
 ];
 
