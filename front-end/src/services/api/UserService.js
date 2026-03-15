@@ -57,6 +57,26 @@ class UserService {
     });
     return data;
   }
+
+  // ─── Instructor Specific ───────────────────────────────────────────────────
+
+  /**
+   * Lấy danh sách học viên của giảng viên hiện tại
+   */
+  async getInstructorStudents({ page = 1, limit = 20 } = {}) {
+    const { data } = await api.get("/users/instructor/students", {
+      params: { page, limit },
+    });
+    return data;
+  }
+
+  /**
+   * Lấy thống kê doanh thu của giảng viên hiện tại
+   */
+  async getInstructorRevenue() {
+    const { data } = await api.get("/users/instructor/revenue");
+    return data;
+  }
 }
 
 export default new UserService();

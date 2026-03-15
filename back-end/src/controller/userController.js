@@ -515,6 +515,135 @@ const updateStudentAction = async (req, res) => {
   }
 };
 
+/**
+ * Lấy danh sách học viên của Instructor hiện tại
+ */
+const getInstructorStudents = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const { page = 1, limit = 20 } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (p - 1) * l;
+
+    // 1. Tìm các khóa học của instructor này
+    const instructorCourses = await Course.find({ instructorId }).select('_id');
+    const courseIds = instructorCourses.map(c => c._id);
+
+    // 2. Aggregate Enrollments của các khóa học đó
+    const [enrollments, total] = await Promise.all([
+      Enrollment.aggregate([
+        { $match: { courseId: { $in: courseIds } } },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: l },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'student'
+          }
+        },
+        { $unwind: '$student' },
+        {
+          $lookup: {
+            from: 'courses',
+            localField: 'courseId',
+            foreignField: '_id',
+            as: 'course'
+          }
+        },
+        { $unwind: '$course' },
+        {
+          $project: {
+            _id: 1,
+            enrollmentDate: 1,
+            progress: 1,
+            completed: 1,
+            'student.fullname': 1,
+            'student.email': 1,
+            'student.avatarURL': 1,
+            'course.title': 1,
+            'course.thumbnail': 1
+          }
+        }
+      ]),
+      Enrollment.countDocuments({ courseId: { $in: courseIds } })
+    ]);
+
+    res.json({
+      success: true,
+      students: enrollments,
+      pagination: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l)
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching instructor students:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+/**
+ * Lấy thống kê doanh thu cho Instructor hiện tại
+ */
+const getInstructorRevenue = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    
+    // Tìm các khóa học của instructor này
+    const instructorCourses = await Course.find({ instructorId }).select('_id');
+    const courseIds = instructorCourses.map(c => c._id);
+
+    // Tính toán doanh thu
+    const now = new Date();
+    const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0));
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalStats, todayStats, monthStats, recentOrders] = await Promise.all([
+      // Tổng doanh thu
+      Order.aggregate([
+        { $match: { courseId: { $in: courseIds }, status: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+      ]),
+      // Doanh thu hôm nay
+      Order.aggregate([
+        { $match: { courseId: { $in: courseIds }, status: 'paid', createdAt: { $gte: todayStart } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // Doanh thu tháng này
+      Order.aggregate([
+        { $match: { courseId: { $in: courseIds }, status: 'paid', createdAt: { $gte: monthStart } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // Đơn hàng gần đây
+      Order.find({ courseId: { $in: courseIds }, status: 'paid' })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate('userId', 'fullname email avatarURL')
+        .populate('courseId', 'title thumbnail')
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        totalRevenue: totalStats[0]?.total || 0,
+        totalSales: totalStats[0]?.count || 0,
+        todayRevenue: todayStats[0]?.total || 0,
+        monthRevenue: monthStats[0]?.total || 0
+      },
+      recentOrders
+    });
+  } catch (error) {
+    logger.error('Error fetching instructor revenue:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 module.exports = {
   searchUsers,
   getUserById,
@@ -526,4 +655,6 @@ module.exports = {
   updateInstructorAction,
   updateStudentAction,
   toggleWishlist,
+  getInstructorStudents,
+  getInstructorRevenue,
 };
