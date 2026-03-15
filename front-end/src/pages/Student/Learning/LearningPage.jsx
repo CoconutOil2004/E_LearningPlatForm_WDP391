@@ -568,10 +568,11 @@ const LearningPage = () => {
   if (!course) return null;
 
   // Derive owner/admin status
+  const userId = user?._id || user?.id;
   const isOwner =
-    !!user?._id &&
-    (course?.instructorId?._id?.toString() === user._id?.toString() ||
-      course?.instructorId?.toString() === user._id?.toString());
+    !!userId &&
+    (course?.instructorId?._id?.toString() === userId.toString() ||
+      course?.instructorId?.toString() === userId.toString());
   const isAdmin = user?.role === "admin";
 
   return (

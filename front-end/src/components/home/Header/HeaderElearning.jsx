@@ -146,12 +146,6 @@ const AvatarDropdown = ({ user }) => {
 const Header = () => {
   const { isAuthenticated, user, role } = useAuthStore();
   const { wishlistIds } = useCourseStore();
-  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Initial notifications and socket setup are now handled by GlobalInitializer
-  }, []);
 
   return (
     <header

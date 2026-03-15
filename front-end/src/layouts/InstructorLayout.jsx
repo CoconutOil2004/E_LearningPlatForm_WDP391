@@ -76,11 +76,6 @@ const InstructorLayout = () => {
 
   const isActive = (path) => location.pathname.startsWith(path);
 
-  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
-
-  useEffect(() => {
-    // GlobalInitializer handles this
-  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">

@@ -101,12 +101,6 @@ const AdminLayout = () => {
     label: item.label,
   }));
 
-  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
-
-  useEffect(() => {
-    // GlobalInitializer handles this
-  }, []);
-
   return (
     <ConfigProvider
       theme={{

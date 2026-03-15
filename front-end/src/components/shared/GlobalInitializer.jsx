@@ -11,10 +11,11 @@ const GlobalInitializer = () => {
   const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
 
   useEffect(() => {
-    if (isAuthenticated && user?._id) {
-      console.log("[GlobalInitializer] Initializing notifications for user:", user._id);
+    const userId = user?._id || user?.id;
+    if (isAuthenticated && userId) {
+      console.log("[GlobalInitializer] Initializing notifications for user:", userId);
       fetchNotifications();
-      setupSocket(user._id);
+      setupSocket(userId);
     } else {
       disconnectSocket();
     }
