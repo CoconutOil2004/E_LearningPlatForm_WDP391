@@ -8,8 +8,10 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MessageOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
+  StarOutlined,
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -66,6 +68,8 @@ const NAV_ITEMS = [
     label: "Operations Hub",
   },
   { key: ROUTES.ADMIN_BLOG, icon: <FileTextOutlined />, label: "Blog Management" },
+  { key: ROUTES.ADMIN_REVIEWS, icon: <StarOutlined />, label: "Reviews" },
+  { key: ROUTES.ADMIN_COMMENTS, icon: <MessageOutlined />, label: "Comments" },
   { key: ROUTES.ADMIN_PROFILE, icon: <UserOutlined />, label: "Profile" },
 ];
 

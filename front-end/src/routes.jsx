@@ -72,6 +72,8 @@ import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
 import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
 import AdminProfilePage from "./pages/Admin/Profile/AdminProfilePage";
 import AdminBlogPage from "./pages/Admin/Blog/AdminBlogPage";
+import AdminReviewPage from "./pages/Admin/Review/AdminReviewPage";
+import AdminCommentPage from "./pages/Admin/Comment/AdminCommentPage";
 import ResetPassword from "./pages/Auth/ResetPassword";
 
 const router = createBrowserRouter(
@@ -191,6 +193,8 @@ const router = createBrowserRouter(
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="/admin/logs" element={<AdminLogsPage />} />
         <Route path="/admin/blog" element={<AdminBlogPage />} />
+        <Route path="/admin/reviews" element={<AdminReviewPage />} />
+        <Route path="/admin/comments" element={<AdminCommentPage />} />
         <Route path="/admin/profile" element={<AdminProfilePage />} />
       </Route>
 

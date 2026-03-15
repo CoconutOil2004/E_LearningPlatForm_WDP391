@@ -564,7 +564,7 @@ const CourseDetailPage = () => {
                 )}
 
                 {tab === "reviews" && (
-                  <CourseReview courseId={courseId} />
+                  <CourseReview courseId={courseId} isInstructor={isOwner || isAdmin} />
                 )}
               </div>
             </Space>

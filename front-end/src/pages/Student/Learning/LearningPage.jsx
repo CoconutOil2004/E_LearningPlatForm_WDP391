@@ -15,6 +15,7 @@ import VideoPlayer from "../../../components/learning/VideoPlayer";
 import CourseService from "../../../services/api/CourseService";
 import EnrollmentService from "../../../services/api/EnrollmentService";
 import ReviewModal from "../../../components/shared/ReviewModal";
+import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 
@@ -147,6 +148,7 @@ const LessonBottomBar = ({
 const LearningPage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   const {
     enrolledCourseIds,
@@ -565,6 +567,13 @@ const LearningPage = () => {
   if (loading) return <LoadingScreen />;
   if (!course) return null;
 
+  // Derive owner/admin status
+  const isOwner =
+    !!user?._id &&
+    (course?.instructorId?._id?.toString() === user._id?.toString() ||
+      course?.instructorId?.toString() === user._id?.toString());
+  const isAdmin = user?.role === "admin";
+
   return (
     <div
       style={{
@@ -596,6 +605,7 @@ const LearningPage = () => {
             activeIdx={activeIdx}
             totalLessons={lessonItems.length}
             completedCount={completedCount}
+            isInstructor={isOwner || isAdmin}
             onGoTo={(idx) => {
               // Kiểm tra lock từ server trước khi cho phép điều hướng
               const targetItem = flatItems[idx];

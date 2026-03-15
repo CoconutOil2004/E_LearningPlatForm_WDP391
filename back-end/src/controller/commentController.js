@@ -117,3 +117,40 @@ exports.deleteComment = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get all comments (Admin only)
+ */
+exports.getAllComments = async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const [comments, total] = await Promise.all([
+      Comment.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate("userId", "fullname avatarURL")
+        .populate("courseId", "title"),
+      Comment.countDocuments(),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: comments,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+      }
+    });
+  } catch (error) {
+    logger.error("Error fetching all comments:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching comments"
+    });
+  }
+};

@@ -72,6 +72,8 @@ BLOG_DETAIL: "/blog/:id",
   ADMIN_SETTINGS: "/admin/settings",
   ADMIN_LOGS: "/admin/logs",
   ADMIN_BLOG: "/admin/blog",
+  ADMIN_REVIEWS: "/admin/reviews",
+  ADMIN_COMMENTS: "/admin/comments",
   ADMIN_PROFILE: "/admin/profile",
   CHANGE_PASSWORD_REQUIRED: "/change-password-required",
 };

@@ -212,9 +212,106 @@ const replyToReview = async (req, res) => {
   }
 };
 
+/**
+ * Get all reviews (Admin only)
+ */
+const getAllReviews = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      Review.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate("userId", "fullname avatarURL")
+        .populate("courseId", "title"),
+      Review.countDocuments(),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      reviews,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching all reviews:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching reviews",
+    });
+  }
+};
+
+/**
+ * Delete a review (Admin or Author only)
+ */
+const deleteReview = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+
+    // Check permissions: Admin or the student who wrote it
+    if (review.userId.toString() !== userId && userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this review",
+      });
+    }
+
+    const courseId = review.courseId;
+    await Review.findByIdAndDelete(reviewId);
+
+    // Recalculate course average rating
+    const stats = await Review.aggregate([
+      { $match: { courseId: new mongoose.Types.ObjectId(courseId) } },
+      {
+        $group: {
+          _id: "$courseId",
+          averageRating: { $avg: "$rating" },
+        },
+      },
+    ]);
+
+    const newAverageRating = stats.length > 0 ? stats[0].averageRating : 0;
+
+    await Course.findByIdAndUpdate(courseId, {
+      rating: Math.round(newAverageRating * 10) / 10,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (error) {
+    logger.error("Error deleting review:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting review",
+    });
+  }
+};
+
 module.exports = {
   createReview,
   getCourseReviews,
   getCourseRatingStats,
   replyToReview,
+  getAllReviews,
+  deleteReview,
 };

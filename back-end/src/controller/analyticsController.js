@@ -197,7 +197,7 @@ const getInstructorAnalytics = async (req, res) => {
 
       // 3. Instructor Average Rating
       Course.aggregate([
-        { $match: { instructorId: instructorId } },
+        { $match: { instructorId: new mongoose.Types.ObjectId(instructorId) } },
         {
           $group: {
             _id: null,

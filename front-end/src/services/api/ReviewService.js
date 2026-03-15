@@ -32,13 +32,29 @@ class ReviewService {
     return res.data;
   }
 
-  /**
-   * Reply to a review (Instructor only)
-   * @param {string} reviewId 
-   * @param {string} content 
-   */
   async replyToReview(reviewId, content) {
     const res = await api.post(`/reviews/${reviewId}/reply`, { content });
+    return res.data;
+  }
+
+  /**
+   * Get all reviews (Admin only)
+   * @param {number} page 
+   * @param {number} limit 
+   */
+  async getAllReviews(page = 1, limit = 20) {
+    const res = await api.get("/reviews/admin/all", {
+      params: { page, limit }
+    });
+    return res.data;
+  }
+
+  /**
+   * Delete a review
+   * @param {string} reviewId 
+   */
+  async deleteReview(reviewId) {
+    const res = await api.delete(`/reviews/${reviewId}`);
     return res.data;
   }
 }

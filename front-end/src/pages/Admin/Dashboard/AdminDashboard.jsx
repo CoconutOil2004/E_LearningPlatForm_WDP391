@@ -309,8 +309,12 @@ const AdminDashboard = () => {
         </div>
 
         {/* Summary Row */}
-        <Row gutter={[20, 20]} style={{ marginBottom: 32 }}>
-          <Col xs={24} sm={12} lg={4}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: 20 
+          }}>
             <SummaryCard 
               icon={DollarOutlined} 
               label="Total Revenue" 
@@ -318,8 +322,6 @@ const AdminDashboard = () => {
               accent={COLOR.ocean} 
               delay={0.1}
             />
-          </Col>
-          <Col xs={24} sm={12} lg={4}>
             <SummaryCard 
               icon={TeamOutlined} 
               label="Total Users" 
@@ -327,8 +329,6 @@ const AdminDashboard = () => {
               accent={COLOR.teal} 
               delay={0.2}
             />
-          </Col>
-          <Col xs={24} sm={12} lg={4}>
             <SummaryCard 
               icon={BookOutlined} 
               label="Taxonomies" 
@@ -336,8 +336,6 @@ const AdminDashboard = () => {
               accent="#8b5cf6" 
               delay={0.3}
             />
-          </Col>
-          <Col xs={24} sm={12} lg={4}>
             <SummaryCard 
               icon={ShoppingCartOutlined} 
               label="Top Grossing" 
@@ -345,8 +343,6 @@ const AdminDashboard = () => {
               accent="#f59e0b" 
               delay={0.4}
             />
-          </Col>
-          <Col xs={24} sm={12} lg={4}>
             <SummaryCard 
               icon={StarFilled} 
               label="Platform Rating" 
@@ -354,8 +350,8 @@ const AdminDashboard = () => {
               accent="#f59e0b" 
               delay={0.5}
             />
-          </Col>
-        </Row>
+          </div>
+        </div>
 
         {/* Main Charts Row */}
         <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>

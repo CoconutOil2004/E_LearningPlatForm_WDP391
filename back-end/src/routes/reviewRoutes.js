@@ -16,4 +16,9 @@ router.get("/course/:courseId/stats", getCourseRatingStats);
 router.post("/", protect, createReview);
 router.post("/:reviewId/reply", protect, replyToReview);
 
+// Admin global reviews
+const { getAllReviews, deleteReview } = require("../controller/reviewController");
+router.get("/admin/all", protect, getAllReviews);
+router.delete("/:reviewId", protect, deleteReview);
+
 module.exports = router;

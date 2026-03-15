@@ -19,12 +19,20 @@ class CommentService {
     return res.data;
   }
 
-  /**
-   * Delete a comment
-   * @param {string} id 
-   */
   async deleteComment(id) {
     const res = await api.delete(`/comments/${id}`);
+    return res.data;
+  }
+
+  /**
+   * Get all comments (Admin only)
+   * @param {number} page 
+   * @param {number} limit 
+   */
+  async getAllComments(page = 1, limit = 20) {
+    const res = await api.get("/comments/admin/all", {
+      params: { page, limit }
+    });
     return res.data;
   }
 }

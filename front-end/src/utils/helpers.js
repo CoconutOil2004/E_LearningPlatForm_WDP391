@@ -101,3 +101,30 @@ export const formatDurationShort = (seconds) => {
   const s = Math.floor(seconds % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 };
+/**
+ * Format date to "X units ago"
+ * e.g. "5 minutes ago", "2 hours ago", "yesterday", "3 days ago"
+ */
+export const formatTimeAgo = (date) => {
+  if (!date) return "";
+  const now = new Date();
+  const past = new Date(date);
+  const diffInSeconds = Math.floor((now - past) / 1000);
+
+  if (diffInSeconds < 60) return "just now";
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return "yesterday";
+  if (diffInDays < 30) return `${diffInDays}d ago`;
+  
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return `${diffInMonths}mo ago`;
+  
+  return past.toLocaleDateString("vi-VN");
+};

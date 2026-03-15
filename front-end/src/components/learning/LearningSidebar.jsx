@@ -25,6 +25,7 @@ const LearningSidebar = ({
   activeIdx,
   totalLessons,
   completedCount,
+  isInstructor = false,
   onGoTo,
 }) => {
   const [activeTab, setActiveTab] = useState("curriculum");
@@ -200,7 +201,7 @@ const LearningSidebar = ({
       ),
       children: (
         <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-          <CourseReview courseId={courseId} dark />
+          <CourseReview courseId={courseId} dark isInstructor={isInstructor} />
         </div>
       ),
     },
