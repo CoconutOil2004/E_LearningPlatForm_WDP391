@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { Course, User, Order, Category, Enrollment } = require("../models");
 const logger = require("../utils/logger");
 
@@ -134,29 +135,36 @@ const getAdminAnalytics = async (req, res) => {
  */
 const getInstructorAnalytics = async (req, res) => {
   try {
-    const instructorId = req.user.id;
-    
-    // Find courses by this instructor
-    const instructorCourses = await Course.find({ instructorId }).select("_id title");
+    const instructorId = req.user._id;
+
+    // Find all courses by this instructor
+    const instructorCourses = await Course.find({ instructorId }).select("_id title status rating enrollmentCount price");
+    const activeCoursesCount = instructorCourses.filter(c => c.status === 'published').length;
     const courseIds = instructorCourses.map(c => c._id);
+
+    // Calculate total enrollments from Enrollment collection for accuracy
+    const totalEnrolls = await Enrollment.countDocuments({ 
+      courseId: { $in: courseIds } 
+    });
 
     const [
       revenueByCourse,
       enrollmentTrend,
       avgInstructorRating
     ] = await Promise.all([
-      // 1. Revenue split by Course
+      // 1. Revenue split by Course (only paid orders)
       Order.aggregate([
-        { 
-          $match: { 
-            courseId: { $in: courseIds }, 
-            status: 'paid' 
-          } 
+        {
+          $match: {
+            courseId: { $in: courseIds },
+            status: 'paid'
+          }
         },
         {
           $group: {
             _id: "$courseId",
-            value: { $sum: "$amount" }
+            revenue: { $sum: "$amount" },
+            sales: { $sum: 1 }
           }
         },
         {
@@ -171,20 +179,20 @@ const getInstructorAnalytics = async (req, res) => {
         {
           $project: {
             name: "$courseInfo.title",
-            value: 1,
+            revenue: 1,
             sales: 1,
             rating: "$courseInfo.rating"
           }
         }
       ]),
 
-      // 2. Enrollment trend (Last 30 days)
+      // 2. Enrollment trend (Last 30 days) - Using Enrollment model to include free courses
       Enrollment.aggregate([
-        { 
-          $match: { 
+        {
+          $match: {
             courseId: { $in: courseIds },
             createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-          } 
+          }
         },
         {
           $group: {
@@ -207,12 +215,26 @@ const getInstructorAnalytics = async (req, res) => {
       ])
     ]);
 
+    // Merge revenue info into all instructor courses to ensure we show courses with 0 sales too
+    const finalCoursePerformance = instructorCourses.map(course => {
+      const revenueData = revenueByCourse.find(r => r._id.toString() === course._id.toString());
+      return {
+        _id: course._id,
+        name: course.title,
+        revenue: revenueData?.revenue || 0,
+        sales: course.enrollmentCount || 0, // Using enrollmentCount from course model (includes free)
+        rating: course.rating || 0
+      };
+    }).sort((a, b) => b.revenue - a.revenue);
+
     res.json({
       success: true,
       data: {
-        revenueByCourse,
+        revenueByCourse: finalCoursePerformance,
         enrollmentTrend,
-        avgInstructorRating: avgInstructorRating[0]?.avgRating || 0
+        avgInstructorRating: avgInstructorRating[0]?.avgRating || 0,
+        totalEnrolls,
+        activeCourses: activeCoursesCount
       }
     });
   } catch (error) {

@@ -79,12 +79,8 @@ const InstructorLayout = () => {
   const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
 
   useEffect(() => {
-    if (user?._id) {
-      fetchNotifications();
-      setupSocket(user._id);
-    }
-    return () => disconnectSocket();
-  }, [user?._id]);
+    // GlobalInitializer handles this
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">

@@ -126,7 +126,7 @@ exports.enrollFreeCourse = async (req, res) => {
 
     // 1. Check course exists
     const course = await Course.findById(courseId).select(
-      "title price enrollmentCount status",
+      "title price enrollmentCount status instructorId",
     );
     if (!course) {
       return res.status(404).json({

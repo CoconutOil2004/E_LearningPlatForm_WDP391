@@ -248,10 +248,10 @@ const InstructorDashboard = () => {
         {/* ── STAT CARDS ───────────────────────────────────────────────────── */}
         <Row gutter={[14, 14]} style={{ marginBottom: 18 }}>
           <Col xs={12} lg={6}>
-            <StatCard icon={<TeamOutlined />} label="Total Enrolls" val={totalStudents.toString()} aBg={C.primaryBg} aClr={C.primary} delay={0.1} />
+            <StatCard icon={<TeamOutlined />} label="Total Enrolls" val={(data.totalEnrolls || 0).toString()} aBg={C.primaryBg} aClr={C.primary} delay={0.1} />
           </Col>
           <Col xs={12} lg={6}>
-            <StatCard icon={<BookOutlined />} label="Active Courses" val={data.revenueByCourse.length.toString()} aBg={C.mintBg} aClr={C.mint} delay={0.2} />
+            <StatCard icon={<BookOutlined />} label="Active Courses" val={(data.activeCourses || 0).toString()} aBg={C.mintBg} aClr={C.mint} delay={0.2} />
           </Col>
           <Col xs={12} lg={6}>
             <StatCard icon={<RiseOutlined />} label="Conversion" val="12%" aBg={C.amberBg} aClr={C.amber} delay={0.3} />

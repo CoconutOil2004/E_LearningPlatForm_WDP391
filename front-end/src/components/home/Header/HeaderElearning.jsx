@@ -150,12 +150,8 @@ const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated && user?._id) {
-      fetchNotifications();
-      setupSocket(user._id);
-    }
-    return () => disconnectSocket();
-  }, [isAuthenticated, user?._id]);
+    // Initial notifications and socket setup are now handled by GlobalInitializer
+  }, []);
 
   return (
     <header

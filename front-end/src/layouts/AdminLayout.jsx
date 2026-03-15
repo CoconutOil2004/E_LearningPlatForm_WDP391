@@ -104,12 +104,8 @@ const AdminLayout = () => {
   const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
 
   useEffect(() => {
-    if (user?._id) {
-      fetchNotifications();
-      setupSocket(user._id);
-    }
-    return () => disconnectSocket();
-  }, [user?._id]);
+    // GlobalInitializer handles this
+  }, []);
 
   return (
     <ConfigProvider

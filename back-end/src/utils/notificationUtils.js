@@ -40,8 +40,10 @@ const sendNotification = async (app, data) => {
 const notifyAdmins = async (app, data, excludeUserId = null) => {
   try {
     const admins = await User.find({ role: "admin" }).select("_id fullname email role");
-    console.log(`🔍 [notifyAdmins] Found ${admins?.length || 0} potential admins`);
-    
+    console.log(`🔍 [notifyAdmins] Total users in DB with role 'admin': ${admins?.length || 0}`);
+    admins.forEach(admin => {
+        console.log(`   - Found Admin: ${admin.fullname || admin.email} (ID: ${admin._id})`);
+    });
     if (!admins || admins.length === 0) return;
 
     const filteredAdmins = excludeUserId 

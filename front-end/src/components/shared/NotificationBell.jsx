@@ -65,7 +65,7 @@ const NotificationBell = () => {
                     onClick={() => {
                       markAsRead(n._id);
                       if (n.link) {
-                        // Optional: Navigate to link
+                        window.location.href = n.link;
                       }
                     }}
                     className={cn(
