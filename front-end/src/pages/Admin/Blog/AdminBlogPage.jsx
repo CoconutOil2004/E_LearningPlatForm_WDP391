@@ -3,11 +3,9 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
-  EditOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
   FileTextOutlined,
-  LoadingOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -15,13 +13,10 @@ import {
   Avatar,
   Button,
   Card,
-  Col,
   Empty,
   Form,
   Input,
   Modal,
-  Row,
-  Select,
   Space,
   Table,
   Tag,
@@ -29,41 +24,34 @@ import {
   Typography,
   message,
 } from "antd";
-import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import BlogService from "../../../services/api/BlogService";
-import { pageVariants } from "../../../utils/helpers";
+import { COLOR } from "../../../styles/adminTheme";
+import AdminPageLayout from "../../../components/admin/AdminPageLayout";
+import PageHeader from "../../../components/admin/PageHeader";
 
 const { Title, Text } = Typography;
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
-  primary: "#003B5C", // Admin primary
-  primaryBg: "rgba(0,59,92,0.08)",
-  mint: "#10b981",
-  mintBg: "rgba(16,185,129,0.08)",
-  amber: "#f59e0b",
-  amberBg: "rgba(245,158,11,0.08)",
-  red: "#ef4444",
-  redBg: "rgba(239,68,68,0.08)",
+  primary: COLOR.ocean, // Sync with image 1 vibrant blue
+  primaryBg: "rgba(0,119,182,0.08)",
+  mint: COLOR.green,
+  mintBg: "rgba(0,200,83,0.08)",
+  amber: COLOR.warning,
+  amberBg: "rgba(255,167,38,0.08)",
+  red: COLOR.error,
+  redBg: "rgba(239,83,80,0.08)",
   border: "#f1f0fe",
   text: "#111827",
   textSub: "#6b7280",
-  textMuted: "#9ca3af",
-  gradient: "linear-gradient(135deg, #003B5C, #005687)",
 };
 
 const cardStyle = {
   borderRadius: 16,
   border: `1px solid ${C.border}`,
-  boxShadow: "0 2px 12px rgba(0,59,92,0.06)",
+  boxShadow: "0 2px 12px rgba(0,119,182,0.06)",
 };
-
-const up = (delay = 0) => ({
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: "easeOut", delay },
-});
 
 const STATUS_CONFIG = {
   draft: { label: "Draft", color: "#6b7280", bg: "#f3f4f6", icon: <FileTextOutlined /> },
@@ -98,7 +86,7 @@ const BlogPreviewModal = ({ blog, open, onClose }) => {
           </Tag>
           <Text type="secondary">By <strong>{blog.author?.fullname || "Unknown"}</strong></Text>
         </div>
-        <Title level={2}>{blog.title}</Title>
+        <Title level={2} style={{ color: COLOR.ocean, fontWeight: 900 }}>{blog.title}</Title>
         <Text style={{ color: C.textSub, fontSize: 16, display: "block", marginBottom: 20, fontStyle: "italic" }}>{blog.summary}</Text>
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
           <div className="blog-content" dangerouslySetInnerHTML={{ __html: blog.content }} />
@@ -173,7 +161,7 @@ const AdminBlogPage = () => {
         search: search || undefined
       };
       if (activeTab !== "all") params.status = activeTab;
-      
+
       const res = await BlogService.manageBlogs(params);
       if (res.success) {
         setBlogs(res.data);
@@ -232,7 +220,7 @@ const AdminBlogPage = () => {
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Avatar shape="square" size={48} src={r.thumbnail} icon={<FileTextOutlined />} />
           <div style={{ minWidth: 0 }}>
-            <Text strong style={{ display: "block" }} ellipsis>{r.title}</Text>
+            <Text strong style={{ display: "block", color: COLOR.ocean }} ellipsis>{r.title}</Text>
             <Text type="secondary" size="small" ellipsis>{r.summary}</Text>
           </div>
         </div>
@@ -243,8 +231,16 @@ const AdminBlogPage = () => {
       key: "author",
       render: (_, r) => (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar src={r.author?.avatarURL}>{r.author?.fullname?.[0]}</Avatar>
-          <Text>{r.author?.fullname || "User"}</Text>
+          <Avatar 
+            src={r.author?.avatarURL} 
+            style={{ background: `linear-gradient(135deg, ${COLOR.ocean}, ${COLOR.teal})`, fontWeight: 900 }}
+          >
+            {r.author?.fullname?.[0]?.toUpperCase()}
+          </Avatar>
+          <Space direction="vertical" size={0}>
+            <Text strong style={{ color: COLOR.ocean }}>{r.author?.fullname || "User"}</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>{r.author?.email}</Text>
+          </Space>
         </div>
       )
     },
@@ -255,7 +251,7 @@ const AdminBlogPage = () => {
       render: (_, r) => {
         const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
         return (
-          <Tag style={{ borderRadius: 12, border: "none", background: st.bg, color: st.color, fontWeight: 600 }}>
+          <Tag style={{ borderRadius: 12, border: "none", background: st.bg, color: st.color, fontWeight: 700, textTransform: "uppercase", padding: "3px 10px" }}>
             {st.label}
           </Tag>
         );
@@ -276,14 +272,14 @@ const AdminBlogPage = () => {
           <Tooltip title="View Details">
             <Button type="text" icon={<EyeOutlined />} onClick={() => setPreviewBlog(r)} />
           </Tooltip>
-          
+
           {r.status === "pending" && (
             <>
               <Tooltip title="Approve">
-                <Button type="text" icon={<CheckCircleOutlined />} style={{ color: C.mint }} onClick={() => handleApprove(r._id)} />
+                <Button type="text" icon={<CheckCircleOutlined />} style={{ color: COLOR.green }} onClick={() => handleApprove(r._id)} />
               </Tooltip>
               <Tooltip title="Reject">
-                <Button type="text" icon={<CloseCircleOutlined />} style={{ color: C.red }} onClick={() => setRejectBlog(r)} />
+                <Button type="text" icon={<CloseCircleOutlined />} style={{ color: COLOR.error }} onClick={() => setRejectBlog(r)} />
               </Tooltip>
             </>
           )}
@@ -297,57 +293,67 @@ const AdminBlogPage = () => {
   ];
 
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" style={{ padding: 24 }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>Blog Management</Title>
-          <Text type="secondary">Review and manage platform articles</Text>
-        </div>
-        <Space>
-          <Input 
-            placeholder="Search by title..." 
-            prefix={<SearchOutlined />} 
-            style={{ width: 250, borderRadius: 8 }}
-            onChange={(e) => setSearch(e.target.value)}
-            onPressEnter={() => { setPagination(p => ({...p, current: 1})); fetchBlogs(); }}
-          />
-          <Button icon={<ReloadOutlined />} onClick={fetchBlogs} />
-        </Space>
-      </div>
+    <AdminPageLayout>
+      <PageHeader 
+        title="Blog Management" 
+        subtitle="Review and manage platform articles"
+        extra={
+          <Space>
+            <Input
+              placeholder="Search by title..."
+              prefix={<SearchOutlined />}
+              style={{ width: 250, borderRadius: 8 }}
+              onChange={(e) => setSearch(e.target.value)}
+              onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchBlogs(); }}
+            />
+            <Button icon={<ReloadOutlined />} onClick={fetchBlogs} />
+          </Space>
+        }
+      />
 
-      {/* Content */}
       <Card bordered={false} style={cardStyle} bodyStyle={{ padding: 0 }}>
-        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 8 }}>
+        <div style={{ padding: "16px 24px", borderBottom: `1px solid ${COLOR.gray100}`, display: "flex", gap: 8 }}>
           {TABS.map(t => (
-            <Button 
+            <button
               key={t.key}
-              type={activeTab === t.key ? "primary" : "text"}
-              onClick={() => { setActiveTab(t.key); setPagination(p => ({...p, current: 1})); }}
-              style={{ borderRadius: 20, fontWeight: 600 }}
+              onClick={() => { setActiveTab(t.key); setPagination(p => ({ ...p, current: 1 })); }}
+              style={{
+                padding: "6px 20px",
+                borderRadius: 20,
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                background: activeTab === t.key ? COLOR.ocean : "transparent",
+                color: activeTab === t.key ? "#fff" : COLOR.gray600,
+                transition: "all 0.2s",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
+              }}
             >
               {t.label}
-            </Button>
+            </button>
           ))}
         </div>
-        
-        <Table 
-          columns={columns} 
-          dataSource={blogs} 
+
+        <Table
+          columns={columns}
+          dataSource={blogs}
           rowKey="_id"
           loading={loading}
           pagination={{
             ...pagination,
-            onChange: (page) => setPagination(p => ({...p, current: page })),
+            onChange: (page) => setPagination(p => ({ ...p, current: page })),
           }}
           locale={{ emptyText: <Empty description="No blogs found" /> }}
+          style={{ padding: "0" }}
         />
       </Card>
 
-      {/* Modals */}
       <BlogPreviewModal blog={previewBlog} open={!!previewBlog} onClose={() => setPreviewBlog(null)} />
       <RejectModal blog={rejectBlog} open={!!rejectBlog} onClose={() => setRejectBlog(null)} onConfirm={handleReject} />
-    </motion.div>
+    </AdminPageLayout>
   );
 };
 
