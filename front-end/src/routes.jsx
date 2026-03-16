@@ -28,6 +28,7 @@ import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
 import StoreRegistration from "./pages/Auth/StoreRegistration";
 import ForcedPasswordChange from "./pages/Auth/ForcedPasswordChange";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 // ─── Public Pages ─────────────────────────────────────────────────────────────
 import AboutPage from "./pages/Public/About/AboutPage";
@@ -36,6 +37,8 @@ import CourseDetailPage from "./pages/Public/CourseDetail/CourseDetailPage";
 import CoursesPage from "./pages/Public/Courses/CoursesPage";
 import HomePage from "./pages/Public/Home/HomePage";
 import SearchPage from "./pages/Public/Search/SearchPage";
+import BlogListPage from "./pages/Instructor/Blog/BlogListPage";
+import BlogDetailPage from "./pages/Public/Blog/BlogDetailPage";
 
 // ─── Student Pages ────────────────────────────────────────────────────────────
 import CertificatePage from "./pages/Student/Certificate/CertificatePage";
@@ -75,7 +78,6 @@ import AdminProfilePage from "./pages/Admin/Profile/AdminProfilePage";
 import AdminBlogPage from "./pages/Admin/Blog/AdminBlogPage";
 import AdminReviewPage from "./pages/Admin/Review/AdminReviewPage";
 import AdminCommentPage from "./pages/Admin/Comment/AdminCommentPage";
-import ResetPassword from "./pages/Auth/ResetPassword";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -100,7 +102,7 @@ const router = createBrowserRouter(
 
       <Route path={ROUTES.CHANGE_PASSWORD_REQUIRED} element={<ForcedPasswordChange />} />
 
-      {/* Public Routes */}
+      {/* Public Routes — accessible by everyone including guests */}
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
@@ -108,6 +110,9 @@ const router = createBrowserRouter(
         <Route path="/search" element={<SearchPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        {/* ── Blog public routes (no auth required) ── */}
+        <Route path="/blog" element={<BlogListPage />} />
+        <Route path="/blog/:id" element={<BlogDetailPage />} />
       </Route>
 
       {/* Student Routes */}
@@ -138,10 +143,7 @@ const router = createBrowserRouter(
       >
         <Route path="/student/learning/:courseId" element={<LearningPage />} />
         <Route path="/student/quiz/:courseId" element={<QuizPage />} />
-        <Route
-          path="/student/certificate/:courseId"
-          element={<CertificatePage />}
-        />
+        <Route path="/student/certificate/:courseId" element={<CertificatePage />} />
       </Route>
 
       {/* Instructor Routes */}
@@ -154,27 +156,14 @@ const router = createBrowserRouter(
       >
         <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
         <Route path="/instructor/courses" element={<InstructorCoursesPage />} />
-        <Route
-          path="/instructor/courses/create"
-          element={<CreateCoursePage />}
-        />
-        <Route
-          path="/instructor/courses/edit/:id"
-          element={<CreateCoursePage />}
-        />
+        <Route path="/instructor/courses/create" element={<CreateCoursePage />} />
+        <Route path="/instructor/courses/edit/:id" element={<CreateCoursePage />} />
         <Route path="/instructor/revenue" element={<InstructorRevenuePage />} />
-        <Route
-          path="/instructor/students"
-          element={<InstructorStudentsPage />}
-        />
+        <Route path="/instructor/students" element={<InstructorStudentsPage />} />
         <Route path="/instructor/blog" element={<InstructorBlogPage />} />
         <Route path="/instructor/blog/create" element={<CreateBlogPage />} />
-        <Route
-          path="/instructor/analytics"
-          element={<InstructorAnalyticsPage />}
-        />
+        <Route path="/instructor/analytics" element={<InstructorAnalyticsPage />} />
         <Route path="/instructor/profile" element={<InstructorProfilePage />} />
-
       </Route>
 
       {/* Admin Routes */}

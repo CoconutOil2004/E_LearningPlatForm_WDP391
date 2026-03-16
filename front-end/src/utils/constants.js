@@ -28,6 +28,10 @@ const ROUTES = {
   CONTACT: "/contact",
   ROADMAP: "/roadmap",
 
+  // Blog public
+  BLOG_LIST: "/blog",
+  BLOG_DETAIL: "/blog/:id",
+
   // Auth
   LOGIN: "/signin",
   REGISTER: "/signup",
@@ -59,8 +63,6 @@ const ROUTES = {
   INSTRUCTOR_BLOG: "/instructor/blog",
   INSTRUCTOR_BLOG_CREATE: "/instructor/blog/create",
   INSTRUCTOR_BLOG_EDIT: "/instructor/blog/edit/:id",
-BLOG_LIST: "/blog",
-BLOG_DETAIL: "/blog/:id",
 
   // Admin
   ADMIN_DASHBOARD: "/admin/dashboard",
