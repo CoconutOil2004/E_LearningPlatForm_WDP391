@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    env_file:
+      - ./back-end/.env
+    environment:
+      - PORT=9999
+      - CLIENT_URL=http://localhost
+    ports:
+      - "9999:9999"
+    restart: always
+
+  frontend:
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
