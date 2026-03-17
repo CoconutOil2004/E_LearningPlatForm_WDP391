@@ -96,7 +96,7 @@ const SignIn = () => {
   const toastShown = useRef(false);
 
   useEffect(() => {
-    if (toastShown.current) return; // chặn lần chạy thứ 2 (StrictMode)
+    if (toastShown.current) return;
 
     if (location.state?.message) {
       toastShown.current = true; // đánh dấu đã hiện
@@ -117,7 +117,6 @@ const SignIn = () => {
         password: formData.password,
       });
       setCredentials(response.user, response.token);
-      toast.success("Signed in successfully!");
 
       if (response.user?.mustChangePassword) {
         navigate(ROUTES.CHANGE_PASSWORD_REQUIRED);
@@ -129,9 +128,6 @@ const SignIn = () => {
         navigate("/instructor/dashboard");
       else navigate("/");
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || error.message || "Sign in failed",
-      );
     } finally {
       setIsLoading(false);
     }

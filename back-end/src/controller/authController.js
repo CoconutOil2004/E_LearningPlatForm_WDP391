@@ -312,11 +312,12 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     return res.json({
       success: true,
+      message: "Đăng nhập thành công",
       token,
       user: {
         id: user._id,
@@ -343,13 +344,15 @@ exports.googleCallback = async (req, res) => {
     const user = req.user;
 
     if (!user) {
-      return res.redirect(`${process.env.CLIENT_URL}/signin?error=google_failed`);
+      return res.redirect(
+        `${process.env.CLIENT_URL}/signin?error=google_failed`,
+      );
     }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     const userData = encodeURIComponent(
@@ -361,16 +364,16 @@ exports.googleCallback = async (req, res) => {
         avatarURL: user.avatarURL,
         role: user.role,
         mustChangePassword: user.mustChangePassword || false,
-      })
+      }),
     );
 
     return res.redirect(
-      `${process.env.CLIENT_URL}/auth/callback?token=${token}&user=${userData}`
+      `${process.env.CLIENT_URL}/auth/callback?token=${token}&user=${userData}`,
     );
   } catch (err) {
     console.error("Google login error:", err);
     return res.redirect(
-      `${process.env.CLIENT_URL}/signin?error=google_login_failed`
+      `${process.env.CLIENT_URL}/signin?error=google_login_failed`,
     );
   }
 };
@@ -406,7 +409,7 @@ exports.forgotPassword = async (req, res) => {
 
     const forgotTemplate = buildForgotPasswordTemplate(
       user.fullname,
-      newPassword
+      newPassword,
     );
 
     await sendEmail({
@@ -558,7 +561,7 @@ exports.changeRole = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     return res.json({
@@ -781,6 +784,62 @@ exports.changePasswordRequired = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error",
+    });
+  }
+};
+
+// ================= LOGOUT =================
+exports.logout = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "Đăng xuất thành công",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};
+
+// ================= REFRESH TOKEN =================
+exports.refreshToken = async (req, res) => {
+  try {
+    const token =
+      req.headers.authorization?.split(" ")[1] || req.cookies?.token;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Token không tồn tại",
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Người dùng không tồn tại",
+      });
+    }
+
+    const newToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" },
+    );
+
+    return res.json({
+      success: true,
+      accessToken: newToken,
+    });
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Token không hợp lệ hoặc đã hết hạn",
     });
   }
 };

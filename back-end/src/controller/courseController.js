@@ -5,7 +5,10 @@ const Lesson = require("../models/Lesson");
 const Quiz = require("../models/Quiz");
 const { validateCategoryId } = require("./categoryController");
 const { cloudinary } = require("../config/cloudinary");
-const { sendNotification, notifyAdmins } = require("../utils/notificationUtils");
+const {
+  sendNotification,
+  notifyAdmins,
+} = require("../utils/notificationUtils");
 const User = require("../models/User");
 
 /** Enum level dùng cho validation (trùng với Course schema). FE có thể gọi GET /api/courses/levels để lấy. */
@@ -278,33 +281,38 @@ exports.createCourse = async (req, res) => {
     const instructorId = req.user._id;
 
     if (!title || typeof title !== "string" || !title.trim()) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Title is required and cannot be empty." });
+      return res.status(400).json({
+        success: false,
+        message: "Title is required and cannot be empty.",
+      });
     }
     const trimmedTitle = title.trim();
     if (trimmedTitle.length > 60) {
-      return res.status(400).json({ success: false, message: "Title must be at most 60 characters." });
+      return res.status(400).json({
+        success: false,
+        message: "Title must be at most 60 characters.",
+      });
     }
 
     if (!categoryId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Category ID is required. Please select a category." });
+      return res.status(400).json({
+        success: false,
+        message: "Category ID is required. Please select a category.",
+      });
     }
     const categoryValidation = await validateCategoryId(categoryId);
     if (!categoryValidation.valid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "categoryId: " + categoryValidation.error });
+      return res.status(400).json({
+        success: false,
+        message: "categoryId: " + categoryValidation.error,
+      });
     }
 
     if (!level || !LEVEL_ENUM.includes(level)) {
       return res.status(400).json({
         success: false,
         message:
-          "Level is required and must be one of: " +
-          LEVEL_ENUM.join(", "),
+          "Level is required and must be one of: " + LEVEL_ENUM.join(", "),
       });
     }
 
@@ -323,19 +331,15 @@ exports.createCourse = async (req, res) => {
       .populate("instructorId", "fullname email")
       .populate("category", "name")
       .lean();
-
-    res.status(201).json({
-      success: true,
-      message: "Course created successfully.",
-      data: populated,
-    });
   } catch (err) {
     if (err.name === "ValidationError") {
       return res
         .status(400)
         .json({ success: false, message: err.message || "Invalid data." });
     }
-    res.status(500).json({ success: false, message: err.message || "Server error." });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error." });
   }
 };
 
@@ -347,7 +351,9 @@ exports.getCoursePreview = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid course ID." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID." });
     }
 
     // Dòng .select() — thêm "thumbnail"
@@ -361,7 +367,9 @@ exports.getCoursePreview = async (req, res) => {
       .lean();
 
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found." });
     }
 
     // Response object — thêm thumbnail
@@ -384,7 +392,10 @@ exports.getCoursePreview = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server error while fetching course preview." });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while fetching course preview.",
+    });
   }
 };
 
@@ -397,7 +408,9 @@ exports.getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid course ID." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID." });
     }
 
     const course = await Course.findById(id)
@@ -407,7 +420,9 @@ exports.getCourseById = async (req, res) => {
       .lean();
 
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found." });
     }
 
     const instructorIdStr =
@@ -417,7 +432,11 @@ exports.getCourseById = async (req, res) => {
     const isAdmin = req.user.role === "admin";
 
     if (isAdmin || isInstructor) {
-      return res.json({ success: true, message: "Course details retrieved successfully.", data: course });
+      return res.json({
+        success: true,
+        message: "Course details retrieved successfully.",
+        data: course,
+      });
     }
 
     const enrollment = await Enrollment.findOne({
@@ -426,9 +445,10 @@ exports.getCourseById = async (req, res) => {
       paymentStatus: "paid",
     });
     if (!enrollment) {
-      return res
-        .status(403)
-        .json({ success: false, message: "You need to purchase this course to view its content." });
+      return res.status(403).json({
+        success: false,
+        message: "You need to purchase this course to view its content.",
+      });
     }
 
     res.json({
@@ -438,7 +458,10 @@ exports.getCourseById = async (req, res) => {
       itemsProgress: enrollment.itemsProgress || [],
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || "Server error while fetching course details." });
+    res.status(500).json({
+      success: false,
+      message: err.message || "Server error while fetching course details.",
+    });
   }
 };
 
@@ -463,16 +486,23 @@ exports.updateCourse = async (req, res) => {
     } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ success: false, message: "Invalid course ID." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID." });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found." });
     }
 
     if (course.instructorId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "You are not the instructor of this course." });
+      return res.status(403).json({
+        success: false,
+        message: "You are not the instructor of this course.",
+      });
     }
 
     if (["pending", "published"].includes(course.status)) {
@@ -485,7 +515,9 @@ exports.updateCourse = async (req, res) => {
     if (categoryId !== undefined) {
       const categoryValidation = await validateCategoryId(categoryId || null);
       if (!categoryValidation.valid) {
-        return res.status(400).json({ success: false, message: categoryValidation.error });
+        return res
+          .status(400)
+          .json({ success: false, message: categoryValidation.error });
       }
       course.category = categoryValidation.category?._id || null;
     }
@@ -616,12 +648,21 @@ exports.updateCourse = async (req, res) => {
       .populate({ path: "sections.items.itemId" })
       .lean();
 
-    res.json({ success: true, message: "Course updated successfully.", data: populated });
+    res.json({
+      success: true,
+      message: "Course updated successfully.",
+      data: populated,
+    });
   } catch (err) {
     if (err.name === "ValidationError") {
-      return res.status(400).json({ success: false, message: err.message || "Invalid data." });
+      return res
+        .status(400)
+        .json({ success: false, message: err.message || "Invalid data." });
     }
-    res.status(500).json({ success: false, message: err.message || "Server error while updating course." });
+    res.status(500).json({
+      success: false,
+      message: err.message || "Server error while updating course.",
+    });
   }
 };
 
@@ -629,14 +670,17 @@ exports.updateCourse = async (req, res) => {
 exports.uploadVideo = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Please send a video file (field: video)." });
+      return res.status(400).json({
+        success: false,
+        message: "Please send a video file (field: video).",
+      });
     }
     const data = await uploadVideoToCloudinary(req.file.buffer);
     res.json({ success: true, message: "Video uploaded successfully.", data });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || "Video upload failed." });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Video upload failed." });
   }
 };
 
@@ -648,16 +692,23 @@ exports.submitCourse = async (req, res) => {
     const { courseId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ success: false, message: "Invalid course ID." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID." });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found." });
     }
 
     if (course.instructorId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "You are not the instructor of this course." });
+      return res.status(403).json({
+        success: false,
+        message: "You are not the instructor of this course.",
+      });
     }
 
     if (!["draft", "rejected"].includes(course.status)) {
@@ -671,12 +722,16 @@ exports.submitCourse = async (req, res) => {
     await course.save();
 
     // Notify all admins (except self if admin)
-    await notifyAdmins(req.app, {
-      title: "New course pending approval",
-      message: `Instructor ${req.user.fullname || req.user.username} submitted course "${course.title}" for review.`,
-      type: "info",
-      link: "/admin/approval",
-    }, req.user._id);
+    await notifyAdmins(
+      req.app,
+      {
+        title: "New course pending approval",
+        message: `Instructor ${req.user.fullname || req.user.username} submitted course "${course.title}" for review.`,
+        type: "info",
+        link: "/admin/approval",
+      },
+      req.user._id,
+    );
 
     res.json({
       success: true,
@@ -684,7 +739,10 @@ exports.submitCourse = async (req, res) => {
       data: course,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server error while submitting course." });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while submitting course.",
+    });
   }
 };
 
@@ -706,7 +764,10 @@ exports.getPendingCourses = async (req, res) => {
       data: courses,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server error while fetching pending courses." });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while fetching pending courses.",
+    });
   }
 };
 
@@ -718,12 +779,16 @@ exports.approveCourse = async (req, res) => {
     const { courseId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ success: false, message: "Invalid course ID." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID." });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found." });
     }
 
     if (course.status !== "pending") {
@@ -796,7 +861,10 @@ exports.getAdminAllCourses = async (req, res) => {
       data: courses,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server error while approving course." });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while approving course.",
+    });
   }
 };
 exports.rejectCourse = async (req, res) => {
@@ -805,12 +873,16 @@ exports.rejectCourse = async (req, res) => {
     const { reason } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
-      return res.status(400).json({ success: false, message: "Invalid course ID." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid course ID." });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ success: false, message: "Course not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found." });
     }
 
     if (course.status !== "pending") {
@@ -852,7 +924,10 @@ exports.rejectCourse = async (req, res) => {
       data: populated,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server error while rejecting course." });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while rejecting course.",
+    });
   }
 };
 
@@ -887,6 +962,10 @@ exports.getInstructorCourses = async (req, res) => {
       data: courses,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server error while fetching instructor courses." });
+    res.status(500).json({
+      success: false,
+      message:
+        error.message || "Server error while fetching instructor courses.",
+    });
   }
 };

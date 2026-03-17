@@ -59,8 +59,6 @@ const UploadingContext = createContext({
 });
 
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
-// Updated the languages, though these often align with what your API expects
-const LANGUAGES = ["English", "Vietnamese", "Japanese", "Chinese", "Korean"];
 
 // ─── Video Upload Cell ────────────────────────────────────────────────────────
 const VideoUploadCell = ({ lesson, onUploaded }) => {
@@ -511,7 +509,6 @@ const CreateCoursePage = () => {
           categoryId: c.category?._id ?? c.category ?? "",
           level: c.level ?? "Beginner",
           price: c.price ?? 0,
-          language: c.language ?? "English",
           thumbnail: c.thumbnail ?? "",
         });
         setThumbnailUrl(c.thumbnail ?? "");
@@ -600,11 +597,9 @@ const CreateCoursePage = () => {
       const values = await form.validateFields();
       setSaving(true);
       await saveAndGetId(values);
-      message.success("Draft saved successfully!");
       navigate(ROUTES.INSTRUCTOR_COURSES);
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err?.message || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -622,12 +617,10 @@ const CreateCoursePage = () => {
       setSubmitting(true);
       const id = await saveAndGetId(values);
       await CourseService.submitCourse(id);
-      message.success("Course submitted for review!");
       setStatus("pending");
       navigate(ROUTES.INSTRUCTOR_COURSES);
     } catch (err) {
       if (err?.errorFields) return;
-      message.error(err?.message || "Failed to submit");
     } finally {
       setSubmitting(false);
     }
@@ -738,7 +731,7 @@ const CreateCoursePage = () => {
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={12}>
                   <Form.Item
                     name="categoryId"
                     label={
@@ -758,7 +751,7 @@ const CreateCoursePage = () => {
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={12}>
                   <Form.Item
                     name="level"
                     label={
@@ -768,26 +761,6 @@ const CreateCoursePage = () => {
                   >
                     <Select size="large">
                       {LEVELS.map((l) => (
-                        <Option key={l} value={l}>
-                          {l}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
-
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="language"
-                    label={
-                      <span className="font-semibold text-gray-700">
-                        Language
-                      </span>
-                    }
-                    initialValue="English"
-                  >
-                    <Select size="large">
-                      {LANGUAGES.map((l) => (
                         <Option key={l} value={l}>
                           {l}
                         </Option>
@@ -855,15 +828,11 @@ const CreateCoursePage = () => {
                         if (url) {
                           form.setFieldsValue({ thumbnail: url });
                           setThumbnailUrl(url);
-                          onSuccess("ok"); // Báo cho Antd biết đã upload thành công
-                          message.success("Image uploaded successfully");
+                          onSuccess("ok");
                         } else {
                           throw new Error("No URL returned from server");
                         }
-                      } catch (error) {
-                        onError(error); // Báo cho Antd hiển thị trạng thái lỗi màu đỏ
-                        message.error("Failed to upload image");
-                      }
+                      } catch (error) {}
                     }}
                     // Khi người dùng bấm nút xóa (thùng rác)
                     onRemove={() => {

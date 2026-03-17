@@ -58,7 +58,7 @@ api.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${BACKEND_API_URI}/user/refresh-token`,
+          `${BACKEND_API_URI}/auth/refresh-token`,
         );
 
         // Store the new token

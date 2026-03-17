@@ -15,6 +15,8 @@ const {
   changePasswordRequired,
   verifyResetPasswordToken,
   resetPassword,
+  logout,
+  refreshToken,
 } = require("../controller/authController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -26,6 +28,8 @@ router.post("/resend-otp", resendOTP);
 router.post("/forgot-password", forgotPassword);
 router.get("/verify-reset-password", verifyResetPasswordToken);
 router.post("/reset-password", resetPassword);
+router.post("/logout", logout);
+router.post("/refresh-token", protect, refreshToken);
 router.put("/change-password-required", protect, changePasswordRequired);
 
 router.get(
@@ -45,13 +49,13 @@ router.get("/google/callback", (req, res, next) => {
 
     if (err) {
       return res.redirect(
-        `${process.env.CLIENT_URL}/signin?error=${encodeURIComponent(err.message || "google_failed")}`
+        `${process.env.CLIENT_URL}/signin?error=${encodeURIComponent(err.message || "google_failed")}`,
       );
     }
 
     if (!user) {
       return res.redirect(
-        `${process.env.CLIENT_URL}/signin?error=google_failed`
+        `${process.env.CLIENT_URL}/signin?error=google_failed`,
       );
     }
 

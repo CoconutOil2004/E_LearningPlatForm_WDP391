@@ -175,7 +175,6 @@ const InstructorCoursesPage = () => {
     setSubmittingId(courseId);
     try {
       await CourseService.submitCourse(courseId);
-      message.success("Course submitted for review!");
       setCourses((prev) =>
         prev.map((c) => (c._id === courseId ? { ...c, status: "pending" } : c)),
       );
@@ -184,9 +183,6 @@ const InstructorCoursesPage = () => {
           prev ? { ...prev, status: "pending" } : prev,
         );
     } catch (err) {
-      message.error(
-        err?.response?.data?.message || "Failed to submit for review",
-      );
     } finally {
       setSubmittingId(null);
     }

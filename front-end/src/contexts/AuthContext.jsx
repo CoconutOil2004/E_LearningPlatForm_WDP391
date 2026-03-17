@@ -4,7 +4,6 @@ import AuthService from "../services/api/AuthenService";
 import useAuthStore from "../store/slices/authStore";
 import useCourseStore from "../store/slices/courseStore";
 import { ROUTES } from "../utils/constants";
-import { useToast } from "./ToastContext";
 
 const AuthContext = createContext(null);
 
@@ -21,7 +20,6 @@ export const AuthProvider = ({ children }) => {
     token,
   } = useAuthStore();
   const { setWishlistIds } = useCourseStore();
-  const toast = useToast();
   const navigate = useNavigate();
 
   // Rehydrate user profile on mount if token exists
@@ -47,14 +45,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-
   const login = async (email, password) => {
     try {
       const res = await AuthService.login({ email, password });
       const user = res.user || { name: "User", email, role: "student" };
       setCredentials(user, res.token);
-      toast.success("Signed in successfully!");
-
       if (user.mustChangePassword) {
         navigate(ROUTES.CHANGE_PASSWORD_REQUIRED);
         return { success: true };
@@ -66,24 +61,20 @@ export const AuthProvider = ({ children }) => {
       else navigate(ROUTES.STUDENT_DASHBOARD);
       return { success: true };
     } catch (error) {
-      const msg = error.message || "Sign in failed";
-      toast.error(msg);
-      return { success: false, message: msg };
+      return { success: false, message: error.message || "Sign in failed" };
     }
   };
 
   const register = async (data) => {
     try {
       const res = await AuthService.register(data);
-      toast.success(
-        res.message || "Registration successful! Please verify your email.",
-      );
       navigate(`${ROUTES.VERIFY_OTP}?email=${encodeURIComponent(data.email)}`);
       return { success: true };
     } catch (error) {
-      const msg = error.message || "Registration failed";
-      toast.error(msg);
-      return { success: false, message: msg };
+      return {
+        success: false,
+        message: error.message || "Registration failed",
+      };
     }
   };
 
@@ -94,7 +85,6 @@ export const AuthProvider = ({ children }) => {
       // ignore server errors
     } finally {
       storeLogout();
-      toast.success("Signed out");
       navigate(ROUTES.HOME);
     }
   };
