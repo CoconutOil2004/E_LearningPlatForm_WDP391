@@ -26,7 +26,7 @@ const BlogTinyEditor = (props) => {
 
   const [loading, setLoading] = useState(true);
   const editorRef = useRef(null);
-  const useDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const useDarkMode = false;
 
   // Upload image to Cloudinary via UserService
   const handleImagesUpload = async (blobInfo) => {
