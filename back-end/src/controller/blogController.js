@@ -301,6 +301,7 @@ const manageBlogs = async (req, res) => {
     }
 
     if (status) query.status = status;
+    else query.status = { $ne: "draft" };
     if (category && isValidObjectId(category)) query.category = category;
     if (author && isValidObjectId(author)) query.author = author;
 
