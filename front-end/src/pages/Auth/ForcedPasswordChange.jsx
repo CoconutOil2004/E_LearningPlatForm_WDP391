@@ -48,12 +48,12 @@ const ForcedPasswordChange = () => {
     e.preventDefault();
 
     if (form.newPassword !== form.confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      toast.error("Confirm password does not match");
       return;
     }
 
     if (form.newPassword.length < 6) {
-      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự");
+      toast.error("New password must be at least 6 characters");
       return;
     }
 
@@ -66,7 +66,7 @@ const ForcedPasswordChange = () => {
       });
 
       if (res.success) {
-        toast.success("Mật khẩu đã được cập nhật thành công!");
+        toast.success("Password updated successfully!");
         updateUser({ mustChangePassword: false });
         
         // Short delay for the user to breathe
@@ -77,10 +77,10 @@ const ForcedPasswordChange = () => {
           else navigate("/");
         }, 1000);
       } else {
-        toast.error(res.message || "Đã có lỗi xảy ra");
+        toast.error(res.message || "An error occurred");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Đã có lỗi xảy ra");
+      toast.error(err.response?.data?.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -123,17 +123,17 @@ const ForcedPasswordChange = () => {
             <span>Security Check</span>
           </motion.div>
           <h1 className="text-4xl font-black" style={{ color: "var(--text-heading)" }}>
-            Bảo mật tài khoản
+            Account Security
           </h1>
           <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            Vui lòng đặt mật khẩu mới để tiếp tục sử dụng hệ thống.
+            Please set a new password to continue using the system.
           </p>
         </div>
 
         <div className="auth-card">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="auth-label">Mật khẩu hiện tại (từ Email)</label>
+              <label className="auth-label">Current password (from Email)</label>
               <input
                 type="password"
                 required
@@ -147,19 +147,19 @@ const ForcedPasswordChange = () => {
             <div className="h-px bg-gray-100 my-2 opacity-50" />
 
             <div>
-              <label className="auth-label">Mật khẩu mới</label>
+              <label className="auth-label">New password</label>
               <input
                 type="password"
                 required
                 value={form.newPassword}
                 onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
                 className="auth-input"
-                placeholder="Tối thiểu 6 ký tự"
+                placeholder="Minimum 6 characters"
               />
             </div>
 
             <div>
-              <label className="auth-label">Xác nhận mật khẩu mới</label>
+              <label className="auth-label">Confirm new password</label>
               <input
                 type="password"
                 required
@@ -179,10 +179,10 @@ const ForcedPasswordChange = () => {
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Spinner />
-                  Đang cập nhật...
+                  Updating...
                 </span>
               ) : (
-                "Cập nhật mật khẩu"
+                "Update password"
               )}
             </motion.button>
           </form>
@@ -194,7 +194,7 @@ const ForcedPasswordChange = () => {
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--red-500)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-disabled)")}
           >
-            Đăng xuất
+            Logout
           </button>
         </div>
       </motion.div>

@@ -1,12 +1,12 @@
-// Base URL lấy từ env variable, fallback về localhost khi dev
+// Base URL from env variable, fallback to localhost for dev
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:9999";
 const BACKEND_API_URI = `${API_BASE_URL}/api`;
 
-// Format VND currency
+// Format USD currency (default)
 const formatCurrency = (amount) =>
-  new Intl.NumberFormat("vi-VN", {
+  new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "VND",
+    currency: "USD",
   }).format(amount);
 
 const formatUSD = (amount) =>

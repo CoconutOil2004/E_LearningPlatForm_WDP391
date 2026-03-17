@@ -1,9 +1,9 @@
 /**
  * AdminService
- * Gộp từ:
- *   - pages/DashboardAdmin/ManageUser/AdminUserService.js (sai layer)
- *   - pages/DashboardAdmin/ManageVoucher/VoucherService.js (hardcode URL + sai layer)
- * Dùng api interceptor → tự động attach token, refresh token khi hết hạn.
+ * Merged from:
+ *   - pages/DashboardAdmin/ManageUser/AdminUserService.js
+ *   - pages/DashboardAdmin/ManageVoucher/VoucherService.js
+ * Uses api interceptor → automatically attach token, refresh token on expiration.
  */
 import { api } from "../index";
 

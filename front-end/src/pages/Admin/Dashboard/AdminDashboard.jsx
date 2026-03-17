@@ -2,12 +2,15 @@ import {
   ArrowUpOutlined,
   BookOutlined,
   DollarOutlined,
+  PlusOutlined,
   ShoppingCartOutlined,
 } from "@ant-design/icons";
-import { ConfigProvider, Skeleton, Spin, Table, Typography } from "antd";
+import { Button, ConfigProvider, Skeleton, Spin, Table, Typography } from "antd";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
+import CreateInstructorModal from "../../../components/admin/CreateInstructorModal";
+import useAdminUsers from "../../../hooks/useAdminUsers";
 import PaymentService from "../../../services/api/PaymentService";
 import { adminTheme, COLOR } from "../../../styles/adminTheme";
 import { formatThousands, pageVariants } from "../../../utils/helpers";
@@ -636,6 +639,14 @@ const TopCoursesTable = ({ data, loading }) => {
 
 /* ─── AdminDashboard ─────────────────────────────────────────────────────────── */
 const AdminDashboard = () => {
+  const {
+    showCreateModal,
+    isCreating,
+    openCreateModal,
+    closeCreateModal,
+    handleCreate,
+  } = useAdminUsers();
+
   const [summary, setSummary] = useState({ totalRevenue: 0, totalOrders: 0 });
   const [summaryLoading, setSummaryLoading] = useState(true);
 
@@ -730,22 +741,33 @@ const AdminDashboard = () => {
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.38 }}
-          style={{ marginBottom: 28 }}
+          style={{ marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}
         >
-          <h1
-            style={{
-              fontSize: 28,
-              fontWeight: 900,
-              color: COLOR.gray900,
-              margin: 0,
-              letterSpacing: "-0.02em",
-            }}
+          <div>
+            <h1
+              style={{
+                fontSize: 28,
+                fontWeight: 900,
+                color: COLOR.gray900,
+                margin: 0,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Dashboard
+            </h1>
+            <p style={{ color: COLOR.gray500, fontSize: 13, margin: "4px 0 0" }}>
+              Real-time revenue statistics
+            </p>
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            onClick={openCreateModal}
+            style={{ borderRadius: 10, fontWeight: 700, background: COLOR.ocean, border: "none" }}
           >
-            Dashboard
-          </h1>
-          <p style={{ color: COLOR.gray500, fontSize: 13, margin: "4px 0 0" }}>
-            Real-time revenue statistics
-          </p>
+            Create Instructor
+          </Button>
         </motion.div>
 
         {/* Summary cards */}
@@ -775,6 +797,13 @@ const AdminDashboard = () => {
 
         {/* Top courses */}
         <TopCoursesTable data={courseRevenue} loading={courseLoading} />
+
+        <CreateInstructorModal
+          open={showCreateModal}
+          onClose={closeCreateModal}
+          onSubmit={handleCreate}
+          loading={isCreating}
+        />
       </motion.div>
     </ConfigProvider>
   );

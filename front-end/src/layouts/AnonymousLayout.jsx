@@ -1,7 +1,7 @@
 /**
  * AnonymousLayout
- * Layout cho các trang public: Header + main content + Footer
- * KHÔNG chứa ToastContainer (đã mount ở App level)
+ * Layout for public pages: Header + main content + Footer
+ * DOES NOT contain ToastContainer (mounted at App level)
  */
 import { Outlet, ScrollRestoration, useLocation } from "react-router-dom";
 import Footer from "../components/home/Footer/FooterElearning";

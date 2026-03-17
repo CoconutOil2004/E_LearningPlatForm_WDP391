@@ -73,20 +73,20 @@ const getUserById = async (req, res) => {
   }
 };
 
-// Lấy thông tin người dùng từ token
+// Get user profile from token
 const getProfile = async (req, res) => {
     try {
-      const userId = req.user.id; // req.user được gán từ middleware xác thực token
+      const userId = req.user.id; // req.user is assigned from auth token middleware
   
-      const user = await User.findById(userId).select("-password"); // loại bỏ trường password
+      const user = await User.findById(userId).select("-password"); // exclude password field
       if (!user) {
-        return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+        return res.status(404).json({ success: false, message: "User not found" });
       }
   
       res.json({ success: true, user });
     } catch (error) {
-      logger.error("Lỗi khi lấy thông tin profile:", error);
-      res.status(500).json({ success: false, message: "Lỗi server" });
+      logger.error("Error fetching profile info:", error);
+      res.status(500).json({ success: false, message: "Server error" });
     }
   };
   
@@ -97,26 +97,23 @@ const getProfile = async (req, res) => {
   
       const updateData = {};
   
-      // Nếu có fullname
+      // If fullname is provided
       if (fullname) {
         updateData.fullname = fullname;
       }
   
-      // Nếu có avatarURL
+      // If avatarURL is provided
       if (avatarURL) {
         updateData.avatarURL = avatarURL;
       }
   
-      // Nếu có mật khẩu mới → hash trước khi lưu
+      // If new password is provided → hash before saving
       if (password) {
-        if (password.length < 6) {
-          return res.status(400).json({ success: false, message: "Mật khẩu phải dài ít nhất 6 ký tự" });
-        }
         const salt = await bcrypt.genSalt(10);
         updateData.password = await bcrypt.hash(password, salt);
       }
   
-      // Cập nhật người dùng
+      // Update user
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         { $set: updateData },
@@ -124,22 +121,22 @@ const getProfile = async (req, res) => {
       ).select("-password");
   
       if (!updatedUser) {
-        return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+        return res.status(404).json({ success: false, message: "User not found" });
       }
   
-      res.json({ success: true, message: "Cập nhật thông tin thành công", user: updatedUser });
+      res.json({ success: true, message: "Profile updated successfully", user: updatedUser });
     } catch (error) {
-      logger.error("Lỗi khi cập nhật profile:", error);
-      res.status(500).json({ success: false, message: "Lỗi server" });
+      logger.error("Error updating profile:", error);
+      res.status(500).json({ success: false, message: "Server error" });
     }
   };
 
 /**
- * Lấy danh sách student
+ * Get student list
  */
 // /api/users/students?page=1&limit=20
 /**
- * Lấy danh sách student kèm thống kê enrollment
+ * Get student list with enrollment statistics
  */
 const getStudents = async (req, res) => {
   try {
@@ -154,7 +151,7 @@ const getStudents = async (req, res) => {
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: l },
-        // Join với Enrollments để đếm khóa học đã tham gia
+        // Join with Enrollments to count joined courses
         {
           $lookup: {
             from: 'enrollments',
@@ -198,7 +195,7 @@ const getStudents = async (req, res) => {
     logger.error('Error fetching students with stats:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi server khi lấy danh sách student',
+      message: 'Server error while fetching student list',
     });
   }
 };
@@ -213,7 +210,7 @@ const createInstructor = async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Email là bắt buộc',
+        message: 'Email is required',
       });
     }
 
@@ -222,7 +219,7 @@ const createInstructor = async (req, res) => {
     if (!emailRegex.test(emailTrimmed)) {
       return res.status(400).json({
         success: false,
-        message: 'Email không hợp lệ',
+        message: 'Invalid email',
       });
     }
 
@@ -230,7 +227,7 @@ const createInstructor = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email đã được sử dụng bởi tài khoản khác',
+        message: 'Email is already in use by another account',
       });
     }
 
@@ -246,19 +243,19 @@ const createInstructor = async (req, res) => {
     });
     await user.save();
 
-    const emailContent = `Chào ${fullname?.trim() || 'bạn'},
+    const emailContent = `Hello ${fullname?.trim() || 'member'},
 
-Bạn đã được admin cấp tài khoản Instructor trên hệ thống.
+You have been granted an Instructor account by the administrator.
 
-Thông tin đăng nhập:
+Login Information:
 - Email: ${emailTrimmed}
-- Mật khẩu: ${password}
+- Password: ${password}
 
-Vui lòng đăng nhập và đổi mật khẩu để bảo mật tài khoản.`;
+Please log in and change your password to secure your account.`;
 
     await sendEmail(
       emailTrimmed,
-      'Tài khoản Instructor đã được tạo',
+      'Instructor account has been created',
       emailContent,
     );
 
@@ -266,7 +263,7 @@ Vui lòng đăng nhập và đổi mật khẩu để bảo mật tài khoản.`
 
     return res.status(201).json({
       success: true,
-      message: 'Tạo instructor thành công. Mật khẩu đã được gửi qua email.',
+      message: 'Instructor created successfully. Password has been sent to email.',
       instructor: {
         _id: user._id,
         username: user.username,
@@ -279,17 +276,17 @@ Vui lòng đăng nhập và đổi mật khẩu để bảo mật tài khoản.`
     logger.error('Error creating instructor:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi server khi tạo instructor',
+      message: 'Server error while creating instructor',
     });
   }
 };
 
 /**
- * Lấy danh sách instructor
+ * Get instructor list
  */
 // /api/users/instructors?page=1&limit=20
 /**
- * Lấy danh sách instructor kèm thống kê (Courses, Students, Revenue)
+ * Get instructor list with statistics (Courses, Students, Revenue)
  */
 const getInstructors = async (req, res) => {
   try {
@@ -304,7 +301,7 @@ const getInstructors = async (req, res) => {
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: l },
-        // 1. Join Courses để đếm số lượng khóa học
+        // 1. Join Courses to count number of courses
         {
           $lookup: {
             from: 'courses',
@@ -313,7 +310,7 @@ const getInstructors = async (req, res) => {
             as: 'courses'
           }
         },
-        // 2. Join Enrollments thông qua các khóa học đó để đếm tổng học viên
+        // 2. Join Enrollments through those courses to count total students
         {
           $lookup: {
             from: 'enrollments',
@@ -322,7 +319,7 @@ const getInstructors = async (req, res) => {
             as: 'allEnrollments'
           }
         },
-        // 3. Join Orders thông qua các khóa học đó để tính tổng doanh thu
+        // 3. Join Orders through those courses to calculate total revenue
         {
           $lookup: {
             from: 'orders',
@@ -336,7 +333,7 @@ const getInstructors = async (req, res) => {
         {
           $addFields: {
             coursesCount: { $size: '$courses' },
-            // Đếm số lượng học viên duy nhất (unique userIds)
+            // Count unique students (unique userIds)
             studentsCount: { $size: { $setUnion: ['$allEnrollments.userId'] } },
             totalRevenue: { $sum: '$paidOrders.amount' }
           }
@@ -362,7 +359,7 @@ const getInstructors = async (req, res) => {
     logger.error('Error fetching instructors with stats:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi server khi lấy danh sách instructor',
+      message: 'Server error while fetching instructor list',
     });
   }
 };
@@ -379,7 +376,7 @@ const updateInstructorAction = async (req, res) => {
     if (!action || !['lock', 'unlock'].includes(action)) {
       return res.status(400).json({
         success: false,
-        message: 'action phải là "lock" hoặc "unlock"',
+        message: 'Action must be "lock" or "unlock"',
       });
     }
 
@@ -387,14 +384,14 @@ const updateInstructorAction = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy người dùng',
+        message: 'User not found',
       });
     }
 
     if (user.role !== 'instructor') {
       return res.status(400).json({
         success: false,
-        message: 'Chỉ được phép lock/unlock tài khoản instructor',
+        message: 'Only instructor accounts can be locked/unlocked',
       });
     }
 
@@ -405,7 +402,7 @@ const updateInstructorAction = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: action === 'lock' ? 'Đã khóa tài khoản instructor' : 'Đã mở khóa tài khoản instructor',
+      message: action === 'lock' ? 'Instructor account locked' : 'Instructor account unlocked',
       instructor: {
         _id: user._id,
         username: user.username,
@@ -419,7 +416,7 @@ const updateInstructorAction = async (req, res) => {
     logger.error('Error updating instructor action:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi server khi cập nhật trạng thái instructor',
+      message: 'Server error while updating instructor status',
     });
   }
 };
@@ -470,7 +467,7 @@ const updateStudentAction = async (req, res) => {
     if (!action || !['lock', 'unlock'].includes(action)) {
       return res.status(400).json({
         success: false,
-        message: 'action phải là "lock" hoặc "unlock"',
+        message: 'Action must be "lock" or "unlock"',
       });
     }
 
@@ -478,14 +475,14 @@ const updateStudentAction = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy người dùng',
+        message: 'User not found',
       });
     }
 
     if (user.role !== 'student') {
       return res.status(400).json({
         success: false,
-        message: 'Chỉ được phép lock/unlock tài khoản student',
+        message: 'Only student accounts can be locked/unlocked',
       });
     }
 
@@ -496,7 +493,7 @@ const updateStudentAction = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: action === 'lock' ? 'Đã khóa tài khoản student' : 'Đã mở khóa tài khoản student',
+      message: action === 'lock' ? 'Student account locked' : 'Student account unlocked',
       student: {
         _id: user._id,
         username: user.username,
@@ -510,7 +507,7 @@ const updateStudentAction = async (req, res) => {
     logger.error('Error updating student action:', error);
     return res.status(500).json({
       success: false,
-      message: 'Lỗi server khi cập nhật trạng thái student',
+      message: 'Server error while updating student status',
     });
   }
 };
@@ -584,43 +581,43 @@ const getInstructorStudents = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching instructor students:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
 /**
- * Lấy thống kê doanh thu cho Instructor hiện tại
+ * Get revenue statistics for the current Instructor
  */
 const getInstructorRevenue = async (req, res) => {
   try {
     const instructorId = req.user.id;
     
-    // Tìm các khóa học của instructor này
+    // Find courses of this instructor
     const instructorCourses = await Course.find({ instructorId }).select('_id');
     const courseIds = instructorCourses.map(c => c._id);
 
-    // Tính toán doanh thu
+    // Calculate revenue
     const now = new Date();
     const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0));
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [totalStats, todayStats, monthStats, recentOrders] = await Promise.all([
-      // Tổng doanh thu
+      // Total Revenue
       Order.aggregate([
         { $match: { courseId: { $in: courseIds }, status: 'paid' } },
         { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
       ]),
-      // Doanh thu hôm nay
+      // Today's Revenue
       Order.aggregate([
         { $match: { courseId: { $in: courseIds }, status: 'paid', createdAt: { $gte: todayStart } } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
-      // Doanh thu tháng này
+      // This Month's Revenue
       Order.aggregate([
         { $match: { courseId: { $in: courseIds }, status: 'paid', createdAt: { $gte: monthStart } } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
-      // Đơn hàng gần đây
+      // Recent Orders
       Order.find({ courseId: { $in: courseIds }, status: 'paid' })
         .sort({ createdAt: -1 })
         .limit(10)
@@ -640,7 +637,7 @@ const getInstructorRevenue = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching instructor revenue:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 

@@ -28,7 +28,7 @@ exports.validateCategoryId = async (categoryId) => {
     return { valid: true, category: null };
   }
   if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-    return { valid: false, error: "Invalid category id" };
+    return { valid: false, error: "Invalid category ID" };
   }
   const category = await Category.findById(categoryId).lean();
   if (!category) {

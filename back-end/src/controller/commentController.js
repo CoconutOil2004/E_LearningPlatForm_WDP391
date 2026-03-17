@@ -9,13 +9,6 @@ exports.createComment = async (req, res) => {
     const { courseId, lessonId, content, parentCommentId } = req.body;
     const userId = req.user.id;
 
-    if (!courseId || !lessonId || !content) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: courseId, lessonId, content"
-      });
-    }
-
     // 1. Verify enrollment or ownership
     const isInstructor = await Course.exists({ _id: courseId, instructorId: userId });
     const isEnrolled = await Enrollment.exists({ userId, courseId });

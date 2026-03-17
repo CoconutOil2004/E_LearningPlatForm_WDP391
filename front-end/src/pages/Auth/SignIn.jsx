@@ -99,7 +99,7 @@ const SignIn = () => {
     if (toastShown.current) return;
 
     if (location.state?.message) {
-      toastShown.current = true; // đánh dấu đã hiện
+      toastShown.current = true; // mark as shown
       toast.info(location.state?.message);
       navigate(".", { replace: true, state: {} });
     }

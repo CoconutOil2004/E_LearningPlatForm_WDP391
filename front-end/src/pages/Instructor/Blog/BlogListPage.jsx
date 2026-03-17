@@ -41,7 +41,7 @@ const BlogCard = ({ blog, index }) => {
   const categoryName = blog.category?.name;
   const date = blog.approvedAt || blog.createdAt;
   const dateStr = date
-    ? new Date(date).toLocaleDateString("vi-VN", { day: "2-digit", month: "short", year: "numeric" })
+    ? new Date(date).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })
     : "";
 
   // Estimate read time
@@ -243,7 +243,7 @@ const FeaturedBlogCard = ({ blog }) => {
   const readMins = Math.max(1, Math.ceil(wordCount / 200));
   const date = blog.approvedAt || blog.createdAt;
   const dateStr = date
-    ? new Date(date).toLocaleDateString("vi-VN", { day: "2-digit", month: "short", year: "numeric" })
+    ? new Date(date).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })
     : "";
 
   return (

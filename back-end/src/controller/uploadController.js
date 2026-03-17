@@ -1,6 +1,6 @@
 const { cloudinary } = require("../config/cloudinary");
 
-/** Upload buffer ảnh lên Cloudinary, trả về { url, publicId } */
+/** Upload image buffer to Cloudinary, returns { url, publicId } */
 function uploadImageBufferToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -17,7 +17,7 @@ function uploadImageBufferToCloudinary(buffer) {
   });
 }
 
-/** Upload buffer video lên Cloudinary, trả về { videoUrl, publicId, duration } */
+/** Upload video buffer to Cloudinary, returns { videoUrl, publicId, duration } */
 function uploadVideoBufferToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -37,8 +37,8 @@ function uploadVideoBufferToCloudinary(buffer) {
 }
 
 /**
- * POST /api/upload/images – nhận nhiều ảnh một lúc (multipart, field: images)
- * Trả về { success, data: [ { url, publicId }, ... ] }
+ * POST /api/upload/images – upload multiple images at once (multipart, field: images)
+ * Returns { success, data: [ { url, publicId }, ... ] }
  */
 exports.uploadImages = async (req, res) => {
   try {
@@ -55,17 +55,17 @@ exports.uploadImages = async (req, res) => {
 };
 
 /**
- * POST /api/upload/video – nhận một video (multipart, field: video)
- * Trả về { success, data: { videoUrl, publicId, duration } }
+ * POST /api/upload/video – upload a video (multipart, field: video)
+ * Returns { success, data: { videoUrl, publicId, duration } }
  */
 exports.uploadVideo = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ success: false, message: "Cần gửi file video (field: video)." });
+      return res.status(400).json({ success: false, message: "Video file is required (field: video)." });
     }
     const data = await uploadVideoBufferToCloudinary(req.file.buffer);
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || "Upload video thất bại." });
+    res.status(500).json({ success: false, message: err.message || "Video upload failed." });
   }
 };

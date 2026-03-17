@@ -14,7 +14,7 @@ export const ProtectedRoute = ({ children, requiredRoles = [] }) => {
     return (
       <Navigate
         to={ROUTES.LOGIN}
-        state={{ from: location, message: "Vui lòng đăng nhập để tiếp tục." }}
+        state={{ from: location, message: "Please sign in to continue." }}
         replace
       />
     );

@@ -3,10 +3,10 @@ import { persist } from "zustand/middleware";
 import AuthenService from "../../services/api/AuthenService";
 
 /**
- * courseStore — quản lý enrollment, tiến độ học tập, wishlist.
+ * courseStore — manages enrollment, learning progress, and wishlist.
  *
- * Tiến độ lesson được lưu theo lessonId (ObjectId string) để đồng bộ với server.
- * Khi student quay lại, gọi syncFromServerItemsProgress() để restore từ itemsProgress BE trả về.
+ * Lesson progress is stored by lessonId (ObjectId string) to sync with the server.
+ * When a student returns, syncFromServerItemsProgress() is called to restore from itemsProgress returned by BE.
  */
 const useCourseStore = create(
   persist(
@@ -69,8 +69,8 @@ const useCourseStore = create(
       isWishlisted: (courseId) => get().wishlistIds.includes(courseId),
 
       /**
-       * Sync toàn bộ itemsProgress từ server vào store.
-       * Gọi khi mount LearningPage để restore tiến độ.
+       * Sync entire itemsProgress from server to store.
+       * Called when mounting LearningPage to restore progress.
        */
       syncFromServerItemsProgress: (
         courseId,
@@ -101,7 +101,7 @@ const useCourseStore = create(
         }),
 
       /**
-       * Cập nhật itemsProgress sau mỗi heartbeat/completeLesson response.
+       * Update itemsProgress after each heartbeat/completeLesson response.
        */
       updateItemsProgress: (courseId, itemsProgress, progress, completed) =>
         set((state) => {

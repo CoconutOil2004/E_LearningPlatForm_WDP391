@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const { protect, isAdmin } = require("../middleware/auth.middleware");
+const { validate } = require("../middleware/validation.middleware");
+const { createPaymentValidation } = require("../validations/enrollment.validation");
 
 const {
   createPayment,
@@ -12,7 +14,7 @@ const {
   getRevenueByCourse,
 } = require("../controller/paymentController");
 
-router.post("/create", protect, createPayment);
+router.post("/create", protect, createPaymentValidation, validate, createPayment);
 
 router.get("/callback", paymentCallback);
 

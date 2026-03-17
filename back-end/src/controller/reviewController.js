@@ -10,13 +10,6 @@ const createReview = async (req, res) => {
     const userId = req.user.id;
     const { courseId, rating, comment } = req.body;
 
-    if (!courseId || !rating) {
-      return res.status(400).json({
-        success: false,
-        message: "Course ID and rating are required",
-      });
-    }
-
     // 1. Check if user is enrolled in the course
     const enrollment = await Enrollment.findOne({ userId, courseId });
     if (!enrollment) {
@@ -165,13 +158,6 @@ const replyToReview = async (req, res) => {
     const { reviewId } = req.params;
     const { content } = req.body;
     const userId = req.user.id;
-
-    if (!content) {
-      return res.status(400).json({
-        success: false,
-        message: "Reply content is required",
-      });
-    }
 
     const review = await Review.findById(reviewId);
     if (!review) {

@@ -7,14 +7,16 @@ const {
   replyToReview,
 } = require("../controller/reviewController");
 const { protect } = require("../middleware/auth.middleware");
+const { validate } = require("../middleware/validation.middleware");
+const { createReviewValidation, replyReviewValidation } = require("../validations/review.validation");
 
 // Public routes
 router.get("/course/:courseId", getCourseReviews);
 router.get("/course/:courseId/stats", getCourseRatingStats);
 
 // Protected routes
-router.post("/", protect, createReview);
-router.post("/:reviewId/reply", protect, replyToReview);
+router.post("/", protect, createReviewValidation, validate, createReview);
+router.post("/:reviewId/reply", protect, replyReviewValidation, validate, replyToReview);
 
 // Admin global reviews
 const { getAllReviews, deleteReview } = require("../controller/reviewController");

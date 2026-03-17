@@ -117,13 +117,6 @@ exports.enrollFreeCourse = async (req, res) => {
     const userId = req.user._id;
     const { courseId } = req.body;
 
-    if (!courseId) {
-      return res.status(400).json({
-        success: false,
-        message: "courseId is required",
-      });
-    }
-
     // 1. Check course exists
     const course = await Course.findById(courseId).select(
       "title price enrollmentCount status instructorId",
@@ -203,8 +196,8 @@ exports.enrollFreeCourse = async (req, res) => {
     // 8. Gửi thông báo cho học viên
     await sendNotification(req.app, {
       userId,
-      title: "Đăng ký khóa học",
-      message: `Chúc mừng! Bạn đã đăng ký khóa học "${course.title || "mới"}" thành công.`,
+      title: "Course Enrollment",
+      message: `Congratulations! You have successfully enrolled in "${course.title || "new course"}".`,
       type: "success",
       link: `/learning/${courseId}`,
     });
@@ -213,8 +206,8 @@ exports.enrollFreeCourse = async (req, res) => {
     if (course.instructorId) {
       await sendNotification(req.app, {
         userId: course.instructorId,
-        title: "Học viên mới",
-        message: `Học viên ${student?.fullname || student?.username || "mới"} đã tham gia khóa học "${course.title}" của bạn.`,
+        title: "New Student",
+        message: `Student ${student?.fullname || student?.username || "new member"} has joined your course "${course.title}".`,
         type: "info",
         link: `/instructor/courses/edit/${courseId}`, // Assuming instructor dashboard link
       });

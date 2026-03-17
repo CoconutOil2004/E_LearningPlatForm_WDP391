@@ -1,7 +1,7 @@
 /**
- * AdminPageLayout — wrapper dùng chung cho mọi trang Admin
- * Cung cấp: ConfigProvider, motion wrapper, page header (title + subtitle + action button),
- * và optional stats row.
+ * AdminPageLayout — common wrapper for all Admin pages
+ * Provides: ConfigProvider, motion wrapper, page header (title + subtitle + action button),
+ * and optional stats row.
  */
 import { ConfigProvider } from "antd";
 import { motion } from "framer-motion";

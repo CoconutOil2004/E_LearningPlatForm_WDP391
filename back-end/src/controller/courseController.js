@@ -11,11 +11,11 @@ const {
 } = require("../utils/notificationUtils");
 const User = require("../models/User");
 
-/** Enum level dùng cho validation (trùng với Course schema). FE có thể gọi GET /api/courses/levels để lấy. */
+/** Level enum used for validation (matching Course schema). FE can call GET /api/courses/levels to retrieve. */
 const LEVEL_ENUM = ["Beginner", "Intermediate", "Advanced"];
 exports.LEVEL_ENUM = LEVEL_ENUM;
 
-/** Upload buffer video lên Cloudinary, trả về { videoUrl, publicId, duration } */
+/** Upload video buffer to Cloudinary, returns { videoUrl, publicId, duration } */
 function uploadVideoToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -197,7 +197,7 @@ exports.searchCourses = async (req, res) => {
 };
 
 /* =====================================================
-   DANH SÁCH KHÓA HỌC THEO CATEGORY (public)
+   GET COURSES BY CATEGORY (public)
    GET /api/courses/by-category/:categoryId?page=1&limit=10&sortBy=...
 ===================================================== */
 exports.getCoursesByCategory = async (req, res) => {
@@ -271,48 +271,20 @@ exports.getCoursesByCategory = async (req, res) => {
 };
 
 /* =====================================================
-   CREATE COURSE (Instructor) – Yêu cầu 1
-   title bắt buộc max 60, categoryId bắt buộc tồn tại, level enum.
-   Mặc định status: draft, price: 0. Response 201 + populate category name.
+   CREATE COURSE (Instructor)
+   title is required max 60, categoryId must exist, level is enum.
+   Default status: draft, price: 0. Response 201 + populate category name.
 ===================================================== */
 exports.createCourse = async (req, res) => {
   try {
     const { title, description, categoryId, level, thumbnail } = req.body;
     const instructorId = req.user._id;
 
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Title is required and cannot be empty.",
-      });
-    }
-    const trimmedTitle = title.trim();
-    if (trimmedTitle.length > 60) {
-      return res.status(400).json({
-        success: false,
-        message: "Title must be at most 60 characters.",
-      });
-    }
-
-    if (!categoryId) {
-      return res.status(400).json({
-        success: false,
-        message: "Category ID is required. Please select a category.",
-      });
-    }
     const categoryValidation = await validateCategoryId(categoryId);
     if (!categoryValidation.valid) {
       return res.status(400).json({
         success: false,
         message: "categoryId: " + categoryValidation.error,
-      });
-    }
-
-    if (!level || !LEVEL_ENUM.includes(level)) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Level is required and must be one of: " + LEVEL_ENUM.join(", "),
       });
     }
 
@@ -344,8 +316,8 @@ exports.createCourse = async (req, res) => {
 };
 
 /* =====================================================
-   GET COURSE PREVIEW (public) – syllabus only, không trả videoUrl
-   Chỉ khóa published. Cho người chưa enroll xem cấu trúc khóa.
+   GET COURSE PREVIEW (public) – syllabus only, videoUrl excluded
+   Published courses only. For non-enrolled users to view course structure.
 ===================================================== */
 exports.getCoursePreview = async (req, res) => {
   try {
@@ -356,7 +328,7 @@ exports.getCoursePreview = async (req, res) => {
         .json({ success: false, message: "Invalid course ID." });
     }
 
-    // Dòng .select() — thêm "thumbnail"
+    // Select thumbnail
     const course = await Course.findOne({ _id: id, status: "published" })
       .select(
         "title description price level rating enrollmentCount totalDuration thumbnail category instructorId sections",
@@ -372,7 +344,7 @@ exports.getCoursePreview = async (req, res) => {
         .json({ success: false, message: "Course not found." });
     }
 
-    // Response object — thêm thumbnail
+    // Response object — include thumbnail
     res.json({
       success: true,
       message: "Course preview retrieved successfully.",
@@ -401,9 +373,9 @@ exports.getCoursePreview = async (req, res) => {
 
 /* =====================================================
    GET COURSE DETAIL – full (videoUrl + questions)
-   Admin / Instructor của khóa: vào được luôn.
-   Student: chỉ vào được nếu đã enroll (đã mua khóa).
-===================================================== */
+   Admin / Course Instructor: immediate access.
+   Student: access only if enrolled (course purchased).
+==================================================== = */
 exports.getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -466,10 +438,10 @@ exports.getCourseById = async (req, res) => {
 };
 
 /* =====================================================
-   UPDATE COURSE (CRUD) – nhận cả sections từ FE, đổ vào và lưu
+   UPDATE COURSE (CRUD) – receives sections from FE, saves to DB
    Body: title?, description?, categoryId?, level?, price?, status?, sections?
    sections = [ { title, items: [ { itemType, itemRef, title, orderIndex, itemId?, videoUrl?, duration?, videoPublicId?, questions? } ] } ]
-   Item không có itemId → BE tạo Lesson/Quiz mới. ItemId cũ không còn trong payload → xóa Lesson/Quiz tương ứng.
+   Item without itemId → BE creates new Lesson/Quiz. Old ItemId missing from payload → deletes corresponding Lesson/Quiz.
 ===================================================== */
 exports.updateCourse = async (req, res) => {
   try {
@@ -666,7 +638,7 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
-/* ====================== UPLOAD VIDEO (FE gọi trước, rồi gửi url vào PUT course sections) ====================== */
+/* ====================== UPLOAD VIDEO (FE calls first, then sends url into PUT course sections) ====================== */
 exports.uploadVideo = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {

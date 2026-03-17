@@ -19,6 +19,7 @@ import {
   Tag,
   Typography,
 } from "antd";
+import CreateInstructorModal from "../../../components/admin/CreateInstructorModal";
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
 import StatsRow from "../../../components/admin/StatsRow";
@@ -36,73 +37,6 @@ const initials = (name = "") =>
     .toUpperCase()
     .slice(0, 2);
 
-// ─── CreateInstructorModal ────────────────────────────────────────────────────
-const CreateInstructorModal = ({ open, onClose, onSubmit, loading }) => {
-  const [form] = Form.useForm();
-
-  const handleOk = async () => {
-    const values = await form.validateFields();
-    await onSubmit(values);
-    form.resetFields();
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    onClose();
-  };
-
-  return (
-    <Modal
-      open={open}
-      title={
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ fontSize: 18, color: COLOR.ocean }}>
-            Create New Instructor
-          </Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            System will generate a password and send it via email
-          </Text>
-        </Space>
-      }
-      onCancel={handleCancel}
-      onOk={handleOk}
-      okText="Create Instructor"
-      confirmLoading={loading}
-      width={480}
-    >
-      <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-        <Form.Item
-          name="email"
-          label="Email"
-          rules={[
-            { required: true, message: "Email is required" },
-            { type: "email", message: "Enter a valid email" },
-          ]}
-        >
-          <Input
-            prefix={<MailOutlined />}
-            placeholder="instructor@example.com"
-            size="large"
-          />
-        </Form.Item>
-        <Form.Item
-          name="fullname"
-          label="Full Name"
-          rules={[
-            { required: true, message: "Full name is required" },
-            { min: 3, message: "At least 3 characters" },
-          ]}
-        >
-          <Input
-            prefix={<UserOutlined />}
-            placeholder="John Doe"
-            size="large"
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-};
 
 // ─── UsersTable ───────────────────────────────────────────────────────────────
 const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, pagination, onPageChange }) => {
@@ -199,12 +133,12 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
     },
     {
       title: "Status",
-      // BUG FIX 1: đổi dataIndex từ "isLocked" sang "action" — đúng với field BE trả về
+      // BUG FIX 1: change dataIndex from "isLocked" to "action" — matches BE field
       dataIndex: "action",
       key: "status",
       width: 120,
       render: (action) => {
-        // BUG FIX 1: action === "lock" nghĩa là đang bị khóa
+        // BUG FIX 1: action === "lock" means it is currently locked
         const locked = action === "lock";
         return (
           <Tag

@@ -13,6 +13,8 @@ const {
   getInstructorRevenue,
 } = require('../controller/userController');
 const { protect, isAdmin, authorize } = require('../middleware/auth.middleware');
+const { validate } = require('../middleware/validation.middleware');
+const { updateProfileValidation } = require('../validations/user.validation');
 
 // Quản lý student & instructor (admin only)
 router.get('/students', protect, isAdmin, getStudents);

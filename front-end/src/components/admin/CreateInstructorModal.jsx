@@ -20,7 +20,8 @@ const CreateInstructorModal = ({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      onSubmit(values);
+      await onSubmit(values);
+      form.resetFields();
     } catch (error) {
       console.error("Validation failed:", error);
     }
@@ -46,7 +47,7 @@ const CreateInstructorModal = ({
       open={open}
       onCancel={handleCancel}
       footer={[
-        <Button key="cancel" onClick={handleCancel}>
+        <Button key="cancel" onClick={handleCancel} style={{ borderRadius: 8 }}>
           Cancel
         </Button>,
         <Button
@@ -54,6 +55,13 @@ const CreateInstructorModal = ({
           type="primary"
           loading={loading}
           onClick={handleSubmit}
+          style={{ 
+            borderRadius: 8, 
+            background: COLOR.ocean, 
+            borderColor: COLOR.ocean,
+            color: '#ffffff',
+            fontWeight: 600
+          }}
         >
           Create Instructor
         </Button>,
