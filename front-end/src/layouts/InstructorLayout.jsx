@@ -10,9 +10,9 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Tooltip } from "antd";
+import { Avatar, Tooltip } from "antd";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Outlet,
   ScrollRestoration,
@@ -21,8 +21,10 @@ import {
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
+import useNotificationStore from "../store/slices/notificationStore";
 import { ROUTES } from "../utils/constants";
 import { cn } from "../utils/helpers";
+import NotificationBell from "../components/shared/NotificationBell";
 
 const NAV_ITEMS = [
   {
@@ -57,6 +59,13 @@ const NAV_ITEMS = [
   },
   { icon: <UserOutlined />, label: "Profile", path: ROUTES.INSTRUCTOR_PROFILE },
 ];
+const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
 const InstructorLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -66,6 +75,7 @@ const InstructorLayout = () => {
   const { logout } = useAuth();
 
   const isActive = (path) => location.pathname.startsWith(path);
+
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">
@@ -148,6 +158,32 @@ const InstructorLayout = () => {
 
         {/* Footer Actions */}
         <div className="flex flex-col gap-2 p-4 bg-white border-t border-gray-100 shrink-0">
+          {/* User info block */}
+          {!collapsed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => navigate(ROUTES.INSTRUCTOR_PROFILE)}
+              className="flex items-center gap-3 p-3 mb-2 transition-all cursor-pointer rounded-2xl bg-gray-50 hover:bg-gray-100 ring-1 ring-inset ring-gray-200/50"
+            >
+              <Avatar
+                size={40}
+                src={user?.avatarURL}
+                className="font-bold border-2 border-indigo-100 shadow-sm shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600"
+              >
+                {!user?.avatarURL && getInitials(user?.fullname || user?.username || "Instructor")}
+              </Avatar>
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-gray-900 truncate leading-tight">
+                  {user?.fullname || user?.username || "Instructor"}
+                </p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">
+                  Instructor
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           <Tooltip title={collapsed ? "Logout" : ""} placement="right">
             <button
               onClick={logout}
@@ -177,8 +213,28 @@ const InstructorLayout = () => {
       </motion.aside>
 
       {/* ── Main Content Area ── */}
-      <main className="flex-1 overflow-y-auto bg-gray-50">
-        <div className="min-h-full">
+      <main className="flex-1 overflow-hidden flex flex-col bg-gray-50">
+        {/* Top Header */}
+        <header className="h-[72px] bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
+          <div>
+             <h1 className="text-xl font-bold text-gray-900 capitalize">
+                {location.pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard'}
+             </h1>
+          </div>
+          <div className="flex items-center gap-4">
+             <NotificationBell />
+             <div className="h-8 w-[1px] bg-gray-100 mx-2" />
+             <button 
+                onClick={() => navigate(ROUTES.HOME)}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+             >
+                View as Student
+             </button>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-8">
+          <ScrollRestoration />
           <Outlet />
         </div>
       </main>

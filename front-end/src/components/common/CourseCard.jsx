@@ -1,24 +1,11 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { cardVariants } from "../../utils/helpers";
+import {
+  cardVariants,
+  formatDurationClock,
+  formatThousands,
+} from "../../utils/helpers";
 import { Badge, Icon, Stars } from "../ui";
-
-const fmtDuration = (seconds) => {
-  if (!seconds || isNaN(seconds)) return "00:00";
-
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-
-  // Nếu có giờ thì hiển thị hh:mm:ss, không thì mm:ss
-  const parts = [
-    h > 0 ? h : null,
-    m.toString().padStart(2, "0"),
-    s.toString().padStart(2, "0"),
-  ].filter(Boolean); // Loại bỏ phần giờ nếu bằng null
-
-  return parts.join(":");
-};
 
 const countLessons = (sections = []) =>
   sections.reduce(
@@ -42,7 +29,7 @@ const CourseCard = ({
   const instructorName =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
   const lessonCount = countLessons(course.sections);
-  const duration = fmtDuration(course.totalDuration);
+  const duration = formatDurationClock(course.totalDuration);
   const isFree = course.price === 0;
 
   const goToDetail = () => navigate(`/courses/${course._id}`);
@@ -76,27 +63,10 @@ const CourseCard = ({
           className="object-cover w-full transition-transform duration-500 h-44 group-hover:scale-105"
         />
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 flex items-end p-3 transition-opacity duration-300 opacity-0 bg-gradient-to-t from-black/40 to-transparent group-hover:opacity-100">
-          <button
-            onClick={handleEnrollClick}
-            className="flex items-center justify-center w-full gap-2 py-2 text-sm font-bold text-white rounded-xl"
-            style={{ background: "var(--color-primary)" }}
-          >
-            <Icon name="play" size={16} color="white" />
-            {isEnrolled ? "Continue Learning" : "Preview Course"}
-          </button>
-        </div>
-
         {/* Badges */}
         {course.enrollmentCount > 100 && (
           <div className="absolute top-3 left-3">
             <Badge color="yellow">⭐ Bestseller</Badge>
-          </div>
-        )}
-        {isFree && (
-          <div className="absolute top-3 left-3">
-            <Badge color="green">Free</Badge>
           </div>
         )}
 
@@ -141,8 +111,8 @@ const CourseCard = ({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-lg font-black text-heading">
-            {isFree ? "Free" : `$${course.price}`}
+          <span className="font-sans text-lg font-black gradient-text text-heading">
+            {isFree ? "Free" : formatThousands(course.price)}
           </span>
           <div className="flex items-center gap-3 text-xs text-muted">
             {duration && (

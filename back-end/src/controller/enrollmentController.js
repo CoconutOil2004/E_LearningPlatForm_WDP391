@@ -1,5 +1,7 @@
 const Enrollment = require("../models/Enrollment");
 const Course = require("../models/Course");
+const { buildItemsProgress } = require("../utils/buildItemsProgress");
+const { sendNotification } = require("../utils/notificationUtils");
 
 exports.getMyCourses = async (req, res) => {
   try {
@@ -33,20 +35,30 @@ exports.getMyCourses = async (req, res) => {
       return items;
     }
 
-    const data = enrollments
-      .filter((e) => e.courseId)
-      .map((e) => {
+    const filtered = enrollments.filter((e) => e.courseId);
+    const data = await Promise.all(
+      filtered.map(async (e) => {
         const course = e.courseId;
         const lessonItems = getLessonItems(course);
 
-        /* Build set of completed lesson IDs */
+        let itemsProgress = e.itemsProgress || [];
+        if (itemsProgress.length === 0 && e.courseId) {
+          const built = await buildItemsProgress(e.courseId);
+          if (built.length > 0) {
+            await Enrollment.updateOne(
+              { _id: e._id },
+              { $set: { itemsProgress: built } },
+            );
+            itemsProgress = built;
+          }
+        }
+
         const completedIds = new Set(
-          (e.lessonsProgress || [])
-            .filter((l) => l.completed && l.lessonId)
-            .map((l) => l.lessonId.toString()),
+          itemsProgress
+            .filter((i) => i.itemType === "lesson" && i.status === "done")
+            .map((i) => i.itemId?.toString()),
         );
 
-        /* Find first incomplete lesson — itemId is an ObjectId stored directly */
         let continueLesson = null;
         if (lessonItems.length) {
           const next = lessonItems.find(
@@ -66,6 +78,7 @@ exports.getMyCourses = async (req, res) => {
           completed: e.completed,
           lastUpdated: e.updatedAt,
           continueLesson,
+          itemsProgress: itemsProgress.length > 0 ? itemsProgress : undefined,
           course: {
             _id: course._id,
             title: course.title,
@@ -78,7 +91,8 @@ exports.getMyCourses = async (req, res) => {
             category: course.category,
           },
         };
-      });
+      }),
+    );
 
     res.json({
       success: true,
@@ -112,7 +126,7 @@ exports.enrollFreeCourse = async (req, res) => {
 
     // 1. Check course exists
     const course = await Course.findById(courseId).select(
-      "price enrollmentCount status",
+      "title price enrollmentCount status instructorId",
     );
     if (!course) {
       return res.status(404).json({
@@ -165,20 +179,46 @@ exports.enrollFreeCourse = async (req, res) => {
       });
     }
 
-    // 5. Create new enrollment with paymentStatus = "paid"
+    // 5. Build itemsProgress (full syllabus: lesson lock/progress + duration, quiz open)
+    const itemsProgress = await buildItemsProgress(courseId);
+
+    // 6. Create new enrollment with paymentStatus = "paid"
     const enrollment = await Enrollment.create({
       userId,
       courseId,
       paymentStatus: "paid",
       progress: 0,
       completed: false,
-      lessonsProgress: [],
+      itemsProgress,
     });
 
-    // 6. Increment enrollmentCount
+    // 7. Increment enrollmentCount
     await Course.findByIdAndUpdate(courseId, {
       $inc: { enrollmentCount: 1 },
     });
+
+    // 7.1 Fetch student details for instructor notification
+    const student = await User.findById(userId).select("fullname username");
+
+    // 8. Gửi thông báo cho học viên
+    await sendNotification(req.app, {
+      userId,
+      title: "Đăng ký khóa học",
+      message: `Chúc mừng! Bạn đã đăng ký khóa học "${course.title || "mới"}" thành công.`,
+      type: "success",
+      link: `/learning/${courseId}`,
+    });
+
+    // 9. Gửi thông báo cho Giảng viên
+    if (course.instructorId) {
+      await sendNotification(req.app, {
+        userId: course.instructorId,
+        title: "Học viên mới",
+        message: `Học viên ${student?.fullname || student?.username || "mới"} đã tham gia khóa học "${course.title}" của bạn.`,
+        type: "info",
+        link: `/instructor/courses/edit/${courseId}`, // Assuming instructor dashboard link
+      });
+    }
 
     res.status(201).json({
       success: true,

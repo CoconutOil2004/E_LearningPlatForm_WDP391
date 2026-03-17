@@ -82,6 +82,18 @@ class AuthenService {
     }
   }
 
+  async changePasswordRequired(data) {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await api.put("auth/change-password-required", data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async getProfile() {
     try {
       const token = localStorage.getItem("token");
@@ -93,6 +105,21 @@ class AuthenService {
       throw error;
     }
   }
+
+  async toggleWishlist(courseId) {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "users/wishlist/toggle",
+        { courseId },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async logout() {
     try {
       const token = localStorage.getItem("token");

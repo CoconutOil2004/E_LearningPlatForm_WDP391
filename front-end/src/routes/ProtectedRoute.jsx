@@ -7,7 +7,7 @@ import { ROUTES } from "../utils/constants";
  * Pass `requiredRoles` to also check role access.
  */
 export const ProtectedRoute = ({ children, requiredRoles = [] }) => {
-  const { isAuthenticated, role } = useAuthStore();
+  const { isAuthenticated, role, user } = useAuthStore();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -18,6 +18,10 @@ export const ProtectedRoute = ({ children, requiredRoles = [] }) => {
         replace
       />
     );
+  }
+
+  if (user?.mustChangePassword && location.pathname !== ROUTES.CHANGE_PASSWORD_REQUIRED) {
+    return <Navigate to={ROUTES.CHANGE_PASSWORD_REQUIRED} replace />;
   }
 
   if (requiredRoles.length > 0 && !requiredRoles.includes(role)) {
@@ -42,9 +46,13 @@ export const RoleGuard = ({ children, allowedRoles = [], fallback = null }) => {
  * GuestRoute — redirects authenticated users away from auth pages
  */
 export const GuestRoute = ({ children }) => {
-  const { isAuthenticated, role } = useAuthStore();
+  const { isAuthenticated, role, user } = useAuthStore();
 
   if (isAuthenticated) {
+    if (user?.mustChangePassword) {
+      return <Navigate to={ROUTES.CHANGE_PASSWORD_REQUIRED} replace />;
+    }
+
     const redirectMap = {
       admin: ROUTES.ADMIN_DASHBOARD,
       instructor: ROUTES.INSTRUCTOR_DASHBOARD,

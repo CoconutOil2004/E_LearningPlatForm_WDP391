@@ -12,7 +12,33 @@ require("./src/config/passport");
 
 connectDB();
 
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  },
+});
+
+// Store io in app for easy access in controllers
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  console.log("⚡ User connected:", socket.id);
+
+  socket.on("join", (userId) => {
+    socket.join(userId);
+    console.log(`👤 User ${userId} joined their notification room`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔥 User disconnected");
+  });
+});
 
 app.use(
   cors({
@@ -38,9 +64,13 @@ app.use("/api/upload", require("./src/routes/uploadRoutes"));
 app.use("/api/payments", require("./src/routes/paymentRoutes"));
 app.use("/api/enrollments", require("./src/routes/enrollmentRoutes"));
 app.use("/api/blogs", require("./src/routes/blogRoutes"));
+app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+app.use("/api/reviews", require("./src/routes/reviewRoutes"));
+app.use("/api/comments", require("./src/routes/commentRoutes"));
+app.use("/api/analytics", require("./src/routes/analyticsRoutes"));
 /* ========================================== */
 
 const PORT = process.env.PORT || 9999;
-app.listen(PORT, () =>
+server.listen(PORT, () =>
   console.log(`✅ Server running on http://localhost:${PORT}`),
 );

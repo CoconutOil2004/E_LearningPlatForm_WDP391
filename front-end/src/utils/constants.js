@@ -2,7 +2,7 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:9999";
 const BACKEND_API_URI = `${API_BASE_URL}/api`;
 
-// Format tiền tệ VND
+// Format VND currency
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -26,6 +26,11 @@ const ROUTES = {
   SEARCH: "/search",
   ABOUT: "/about",
   CONTACT: "/contact",
+  ROADMAP: "/roadmap",
+
+  // Blog public
+  BLOG_LIST: "/blog",
+  BLOG_DETAIL: "/blog/:id",
 
   // Auth
   LOGIN: "/signin",
@@ -35,11 +40,12 @@ const ROUTES = {
   RESET_PASSWORD: "/reset-password",
 
   // Student
-  STUDENT_DASHBOARD: "/student/dashboard",
+  STUDENT_DASHBOARD: "/",
   MY_COURSES: "/student/my-courses",
   LEARNING: "/student/learning/:courseId",
   QUIZ: "/student/quiz/:courseId",
   CERTIFICATE: "/student/certificate/:courseId",
+  MY_CERTIFICATES: "/student/certificates",
   WISHLIST: "/student/wishlist",
   PROGRESS: "/student/progress",
   STUDENT_PROFILE: "/student/profile",
@@ -56,6 +62,7 @@ const ROUTES = {
   INSTRUCTOR_PROFILE: "/instructor/profile",
   INSTRUCTOR_BLOG: "/instructor/blog",
   INSTRUCTOR_BLOG_CREATE: "/instructor/blog/create",
+  INSTRUCTOR_BLOG_EDIT: "/instructor/blog/edit/:id",
 
   // Admin
   ADMIN_DASHBOARD: "/admin/dashboard",
@@ -67,6 +74,11 @@ const ROUTES = {
   ADMIN_REPORTS: "/admin/reports",
   ADMIN_SETTINGS: "/admin/settings",
   ADMIN_LOGS: "/admin/logs",
+  ADMIN_BLOG: "/admin/blog",
+  ADMIN_REVIEWS: "/admin/reviews",
+  ADMIN_COMMENTS: "/admin/comments",
+  ADMIN_PROFILE: "/admin/profile",
+  CHANGE_PASSWORD_REQUIRED: "/change-password-required",
 };
 
 export { API_BASE_URL, BACKEND_API_URI, formatCurrency, formatUSD, ROLES, ROUTES };

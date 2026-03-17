@@ -43,6 +43,7 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
               user.fullname = user.fullname || profile.displayName;
               user.avatarURL = user.avatarURL || profile.photos?.[0]?.value;
               user.isVerified = true;
+              user.mustChangePassword = false; // Google login bypasses temp password
 
               if (!user.username) {
                 user.username = email.split("@")[0] + "_" + Date.now();
@@ -88,6 +89,11 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_CALLBACK_URL) {
 
             if (!user.isVerified) {
               user.isVerified = true;
+              needSave = true;
+            }
+
+            if (user.mustChangePassword) {
+              user.mustChangePassword = false;
               needSave = true;
             }
 

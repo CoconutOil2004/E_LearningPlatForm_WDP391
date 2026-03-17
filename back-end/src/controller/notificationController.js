@@ -7,7 +7,7 @@ const Notification = require('../models/Notification');
 // Lấy danh sách thông báo của người dùng hiện tại
 exports.getNotifications = async (req, res) => {
     try {
-        const userId = req.user.id; // Lấy ID người dùng (dùng .id hoặc ._id tùy config của middleware)
+        const userId = req.user._id; // Lấy ID người dùng (dùng .id hoặc ._id tùy config của middleware)
         
         // Lấy tối đa 50 thông báo, sắp xếp theo thời gian mới nhất
         const notifications = await Notification.find({ user: userId })
@@ -32,7 +32,7 @@ exports.getNotifications = async (req, res) => {
 exports.markOneAsRead = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user.id; 
+        const userId = req.user._id; 
 
         const notification = await Notification.findOneAndUpdate(
             { _id: id, user: userId, isRead: false },
@@ -66,7 +66,7 @@ exports.markOneAsRead = async (req, res) => {
 // Đánh dấu TẤT CẢ thông báo là đã đọc
 exports.markAllAsRead = async (req, res) => {
     try {
-        const userId = req.user.id; 
+        const userId = req.user._id; 
 
         // Cập nhật tất cả thông báo CHƯA ĐỌC của người dùng này
         const result = await Notification.updateMany(

@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, Enrollment, Course, Order } = require('../models');
 const logger = require('../utils/logger');
 const bcrypt = require("bcryptjs");
 const { sendEmail } = require('../services/emailService');
@@ -138,34 +138,64 @@ const getProfile = async (req, res) => {
  * Lấy danh sách student
  */
 // /api/users/students?page=1&limit=20
+/**
+ * Lấy danh sách student kèm thống kê enrollment
+ */
 const getStudents = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-    const skip = (Math.max(1, parseInt(page)) - 1) * Math.min(100, Math.max(1, parseInt(limit)));
+    const p = Math.max(1, parseInt(page));
+    const l = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (p - 1) * l;
 
     const [students, total] = await Promise.all([
-      User.find({ role: 'student' })
-        .select('-password -otp -otpExpires')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Math.min(100, Math.max(1, parseInt(limit)))),
+      User.aggregate([
+        { $match: { role: 'student' } },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: l },
+        // Join với Enrollments để đếm khóa học đã tham gia
+        {
+          $lookup: {
+            from: 'enrollments',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'enrollments'
+          }
+        },
+        {
+          $addFields: {
+            enrolledCourses: { $size: '$enrollments' },
+            completedCourses: {
+              $size: {
+                $filter: {
+                  input: '$enrollments',
+                  as: 'e',
+                  cond: { $eq: ['$$e.completed', true] }
+                }
+              }
+            }
+          }
+        },
+        { $project: { password: 0, otp: 0, otpExpires: 0, enrollments: 0 } }
+      ]),
       User.countDocuments({ role: 'student' }),
     ]);
 
-    logger.info(`Fetched ${students.length} students (total: ${total})`);
+    logger.info(`Fetched ${students.length} students with stats (total: ${total})`);
 
     return res.status(200).json({
       success: true,
       students,
       pagination: {
-        page: Math.max(1, parseInt(page)),
-        limit: Math.min(100, Math.max(1, parseInt(limit))),
+        page: p,
+        limit: l,
         total,
-        totalPages: Math.ceil(total / Math.min(100, Math.max(1, parseInt(limit)))),
+        totalPages: Math.ceil(total / l),
       },
     });
   } catch (error) {
-    logger.error('Error fetching students:', error);
+    logger.error('Error fetching students with stats:', error);
     return res.status(500).json({
       success: false,
       message: 'Lỗi server khi lấy danh sách student',
@@ -258,34 +288,78 @@ Vui lòng đăng nhập và đổi mật khẩu để bảo mật tài khoản.`
  * Lấy danh sách instructor
  */
 // /api/users/instructors?page=1&limit=20
+/**
+ * Lấy danh sách instructor kèm thống kê (Courses, Students, Revenue)
+ */
 const getInstructors = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
-    const skip = (Math.max(1, parseInt(page)) - 1) * Math.min(100, Math.max(1, parseInt(limit)));
+    const p = Math.max(1, parseInt(page));
+    const l = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (p - 1) * l;
 
     const [instructors, total] = await Promise.all([
-      User.find({ role: 'instructor' })
-        .select('-password -otp -otpExpires')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Math.min(100, Math.max(1, parseInt(limit)))),
+      User.aggregate([
+        { $match: { role: 'instructor' } },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: l },
+        // 1. Join Courses để đếm số lượng khóa học
+        {
+          $lookup: {
+            from: 'courses',
+            localField: '_id',
+            foreignField: 'instructorId',
+            as: 'courses'
+          }
+        },
+        // 2. Join Enrollments thông qua các khóa học đó để đếm tổng học viên
+        {
+          $lookup: {
+            from: 'enrollments',
+            localField: 'courses._id',
+            foreignField: 'courseId',
+            as: 'allEnrollments'
+          }
+        },
+        // 3. Join Orders thông qua các khóa học đó để tính tổng doanh thu
+        {
+          $lookup: {
+            from: 'orders',
+            let: { courseIds: '$courses._id' },
+            pipeline: [
+              { $match: { $expr: { $and: [{ $in: ['$courseId', '$$courseIds'] }, { $eq: ['$status', 'paid'] }] } } }
+            ],
+            as: 'paidOrders'
+          }
+        },
+        {
+          $addFields: {
+            coursesCount: { $size: '$courses' },
+            // Đếm số lượng học viên duy nhất (unique userIds)
+            studentsCount: { $size: { $setUnion: ['$allEnrollments.userId'] } },
+            totalRevenue: { $sum: '$paidOrders.amount' }
+          }
+        },
+        { $project: { password: 0, otp: 0, otpExpires: 0, courses: 0, allEnrollments: 0, paidOrders: 0 } }
+      ]),
       User.countDocuments({ role: 'instructor' }),
     ]);
 
-    logger.info(`Fetched ${instructors.length} instructors (total: ${total})`);
+    logger.info(`Fetched ${instructors.length} instructors with stats (total: ${total})`);
 
     return res.status(200).json({
       success: true,
       instructors,
       pagination: {
-        page: Math.max(1, parseInt(page)),
-        limit: Math.min(100, Math.max(1, parseInt(limit))),
+        page: p,
+        limit: l,
         total,
-        totalPages: Math.ceil(total / Math.min(100, Math.max(1, parseInt(limit)))),
+        totalPages: Math.ceil(total / l),
       },
     });
   } catch (error) {
-    logger.error('Error fetching instructors:', error);
+    logger.error('Error fetching instructors with stats:', error);
     return res.status(500).json({
       success: false,
       message: 'Lỗi server khi lấy danh sách instructor',
@@ -350,6 +424,44 @@ const updateInstructorAction = async (req, res) => {
   }
 };
 
+const toggleWishlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { courseId } = req.body;
+
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: "Course ID is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const isWishlisted = user.watchlist.includes(courseId);
+    if (isWishlisted) {
+      // Remove from wishlist
+      user.watchlist = user.watchlist.filter((id) => id.toString() !== courseId);
+    } else {
+      // Add to wishlist
+      user.watchlist.push(courseId);
+    }
+
+    await user.save();
+    
+    logger.info(`User ${userId} toggled wishlist for course ${courseId}. New state: ${!isWishlisted}`);
+
+    res.json({ 
+      success: true, 
+      message: isWishlisted ? "Removed from wishlist" : "Added to wishlist",
+      wishlistIds: user.watchlist 
+    });
+  } catch (error) {
+    logger.error("Error toggling wishlist:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 const updateStudentAction = async (req, res) => {
   try {
     const { id } = req.params;
@@ -403,6 +515,135 @@ const updateStudentAction = async (req, res) => {
   }
 };
 
+/**
+ * Lấy danh sách học viên của Instructor hiện tại
+ */
+const getInstructorStudents = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const { page = 1, limit = 20 } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (p - 1) * l;
+
+    // 1. Tìm các khóa học của instructor này
+    const instructorCourses = await Course.find({ instructorId }).select('_id');
+    const courseIds = instructorCourses.map(c => c._id);
+
+    // 2. Aggregate Enrollments của các khóa học đó
+    const [enrollments, total] = await Promise.all([
+      Enrollment.aggregate([
+        { $match: { courseId: { $in: courseIds } } },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: l },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'student'
+          }
+        },
+        { $unwind: '$student' },
+        {
+          $lookup: {
+            from: 'courses',
+            localField: 'courseId',
+            foreignField: '_id',
+            as: 'course'
+          }
+        },
+        { $unwind: '$course' },
+        {
+          $project: {
+            _id: 1,
+            enrollmentDate: 1,
+            progress: 1,
+            completed: 1,
+            'student.fullname': 1,
+            'student.email': 1,
+            'student.avatarURL': 1,
+            'course.title': 1,
+            'course.thumbnail': 1
+          }
+        }
+      ]),
+      Enrollment.countDocuments({ courseId: { $in: courseIds } })
+    ]);
+
+    res.json({
+      success: true,
+      students: enrollments,
+      pagination: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l)
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching instructor students:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+/**
+ * Lấy thống kê doanh thu cho Instructor hiện tại
+ */
+const getInstructorRevenue = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    
+    // Tìm các khóa học của instructor này
+    const instructorCourses = await Course.find({ instructorId }).select('_id');
+    const courseIds = instructorCourses.map(c => c._id);
+
+    // Tính toán doanh thu
+    const now = new Date();
+    const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0));
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [totalStats, todayStats, monthStats, recentOrders] = await Promise.all([
+      // Tổng doanh thu
+      Order.aggregate([
+        { $match: { courseId: { $in: courseIds }, status: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+      ]),
+      // Doanh thu hôm nay
+      Order.aggregate([
+        { $match: { courseId: { $in: courseIds }, status: 'paid', createdAt: { $gte: todayStart } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // Doanh thu tháng này
+      Order.aggregate([
+        { $match: { courseId: { $in: courseIds }, status: 'paid', createdAt: { $gte: monthStart } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // Đơn hàng gần đây
+      Order.find({ courseId: { $in: courseIds }, status: 'paid' })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate('userId', 'fullname email avatarURL')
+        .populate('courseId', 'title thumbnail')
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        totalRevenue: totalStats[0]?.total || 0,
+        totalSales: totalStats[0]?.count || 0,
+        todayRevenue: todayStats[0]?.total || 0,
+        monthRevenue: monthStats[0]?.total || 0
+      },
+      recentOrders
+    });
+  } catch (error) {
+    logger.error('Error fetching instructor revenue:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 module.exports = {
   searchUsers,
   getUserById,
@@ -413,4 +654,7 @@ module.exports = {
   createInstructor,
   updateInstructorAction,
   updateStudentAction,
+  toggleWishlist,
+  getInstructorStudents,
+  getInstructorRevenue,
 };

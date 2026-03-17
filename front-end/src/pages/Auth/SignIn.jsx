@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
 import AuthenService from "../../services/api/AuthenService";
 import useAuthStore from "../../store/slices/authStore";
-import { API_BASE_URL } from "../../utils/constants";
+import { API_BASE_URL, ROUTES } from "../../utils/constants";
 
 const EyeIcon = ({ off }) =>
   off ? (
@@ -118,6 +118,12 @@ const SignIn = () => {
       });
       setCredentials(response.user, response.token);
       toast.success("Signed in successfully!");
+
+      if (response.user?.mustChangePassword) {
+        navigate(ROUTES.CHANGE_PASSWORD_REQUIRED);
+        return;
+      }
+
       if (response.user?.role === "admin") navigate("/admin/dashboard");
       else if (response.user?.role === "instructor")
         navigate("/instructor/dashboard");
@@ -303,7 +309,7 @@ const SignIn = () => {
             className="auth-btn-social"
           >
             <GoogleIcon />
-            Tiếp tục với Google
+            Continue with Google
           </button>
 
           <p

@@ -1,22 +1,22 @@
 /**
- * Merge class names (Tailwind-safe)
- * @param {...string} classes
- * @returns {string}
+ * helpers.js — Centralized utility helpers
+ * All shared formatting, animation, and UI helpers live here.
  */
+
+// ─── Class merging ────────────────────────────────────────────────────────────
 export const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-/**
- * Framer Motion page transition variants
- */
+// ─── Framer Motion variants ───────────────────────────────────────────────────
 export const pageVariants = {
   initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" },
+  },
   exit: { opacity: 0, y: -10, transition: { duration: 0.2 } },
 };
 
-/**
- * Framer Motion card hover variants
- */
 export const cardVariants = {
   initial: { opacity: 0, scale: 0.95 },
   animate: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
@@ -27,9 +27,6 @@ export const cardVariants = {
   },
 };
 
-/**
- * Framer Motion sidebar item variants
- */
 export const sidebarItemVariants = {
   hidden: { opacity: 0, x: -20 },
   visible: (i) => ({
@@ -39,19 +36,15 @@ export const sidebarItemVariants = {
   }),
 };
 
+// ─── String helpers ───────────────────────────────────────────────────────────
 /**
- * Truncate text
- * @param {string} str
- * @param {number} maxLen
- * @returns {string}
+ * Truncate text to a max length with "..."
  */
 export const truncate = (str, maxLen = 60) =>
   str.length > maxLen ? str.slice(0, maxLen) + "..." : str;
 
 /**
- * Get initials from name
- * @param {string} name
- * @returns {string}
+ * Get initials from a full name (up to 2 chars)
  */
 export const getInitials = (name = "") =>
   name
@@ -61,13 +54,77 @@ export const getInitials = (name = "") =>
     .toUpperCase()
     .slice(0, 2);
 
+// ─── Number formatting ────────────────────────────────────────────────────────
+
+export const formatThousands = (num) => {
+  if (num == null || isNaN(num)) return "0";
+  // Sử dụng 'vi-VN' để đảm bảo đúng định dạng tiếng Việt
+  return Number(num).toLocaleString("vi-VN") + "₫";
+};
+
+// ─── Duration formatting ──────────────────────────────────────────────────────
 /**
- * Format large numbers
- * @param {number} num
- * @returns {string}
+ * Format duration in seconds to "Xh Ym" (used in course cards, course detail)
+ * e.g. 3700 → "1h 1m", 180 → "3m"
  */
-export const formatNumber = (num) => {
-  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
-  if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
-  return num.toString();
+export const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return null;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
+
+/**
+ * Format duration in seconds to "hh:mm:ss" or "mm:ss" (used in lesson/video lists)
+ * e.g. 3700 → "1:01:40", 185 → "3:05"
+ */
+export const formatDurationClock = (seconds) => {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const parts = [
+    h > 0 ? h : null,
+    m.toString().padStart(2, "0"),
+    s.toString().padStart(2, "0"),
+  ].filter(Boolean);
+  return parts.join(":");
+};
+
+/**
+ * Format duration in seconds to short "m:ss" (used in sidebar / lesson row)
+ * e.g. 185 → "3:05"
+ */
+export const formatDurationShort = (seconds) => {
+  if (!seconds) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
+/**
+ * Format date to "X units ago"
+ * e.g. "5 minutes ago", "2 hours ago", "yesterday", "3 days ago"
+ */
+export const formatTimeAgo = (date) => {
+  if (!date) return "";
+  const now = new Date();
+  const past = new Date(date);
+  const diffInSeconds = Math.floor((now - past) / 1000);
+
+  if (diffInSeconds < 60) return "just now";
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return "yesterday";
+  if (diffInDays < 30) return `${diffInDays}d ago`;
+  
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return `${diffInMonths}mo ago`;
+  
+  return past.toLocaleDateString("vi-VN");
 };

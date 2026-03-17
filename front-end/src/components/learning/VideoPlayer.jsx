@@ -1,94 +1,162 @@
 import { PlayCircleOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 
 const { Text } = Typography;
 
 /**
- * VideoPlayer (HTML5 native — không dùng ReactPlayer)
+ * VideoPlayer (HTML5 native)
  *
  * Anti-cheat rules:
- *  1. Cho phép tua TỰ DO nhưng KHÔNG được tua vượt quá điểm cao nhất đã xem
- *     (highestWatched). Nếu seeked > highestWatched → snap back.
- *  2. Sau khi xem đủ 80% tổng thời lượng → gọi onReached80() (1 lần duy nhất).
- *  3. Khi video kết thúc (ended) → gọi onEnded().
+ *  1. Không tua vượt quá highestWatched → snap back + hiện toast cảnh báo overlay.
+ *  2. Sau khi xem đủ threshold% (mặc định 30%) → gọi onReachedThreshold() 1 lần.
+ *  3. Khi video kết thúc → gọi onEnded().
  *
  * Props:
- *  url           – string | undefined
- *  lessonKey     – unique key để reset player khi chuyển bài (VD: flatIdx)
- *  onReached80   – () => void   → triggered một lần khi watched ≥ 80%
- *  onEnded       – () => void   → triggered khi video kết thúc hoàn toàn
+ *  url                – string | undefined
+ *  lessonKey          – unique key để reset player khi chuyển bài
+ *  initialWatched     – số giây đã xem từ server (để restore progress)
+ *  threshold          – % để đánh dấu done (mặc định 0.3 = 30%)
+ *  onReachedThreshold – () => void
+ *  onEnded            – () => void
+ *  onTimeUpdate       – (currentTime, duration) => void
+ *
+ * Ref: getWatchedSeconds() → number
  */
-const VideoPlayer = ({ url, lessonKey, onReached80, onEnded }) => {
+const VideoPlayer = forwardRef(function VideoPlayer(
+  {
+    url,
+    lessonKey,
+    initialWatched = 0,
+    threshold = 0.3,
+    onReachedThreshold,
+    onEnded,
+    onTimeUpdate,
+  },
+  ref,
+) {
   const videoRef = useRef(null);
-
-  // highestWatched: số giây cao nhất người dùng đã thực sự xem đến
-  const highestWatchedRef = useRef(0);
-  // tránh gọi onReached80 nhiều lần
-  const reached80Fired = useRef(false);
-  // lưu thời điểm seek bắt đầu để detect seek quá xa
-  const lastTimeRef = useRef(0);
+  // Số giây cao nhất đã thực sự xem (chỉ tăng khi video đang PLAY, không phải khi seeking)
+  const highestWatchedRef = useRef(initialWatched);
+  const thresholdFiredRef = useRef(false);
+  // Snapshot highestWatched tại thời điểm onSeeking bắt đầu — dùng để so sánh trong onSeeked
+  const watchedAtSeekStartRef = useRef(initialWatched);
+  // Flag: đang trong quá trình snap back (tránh vòng lặp seeking → seeked → seeking)
+  const isSnappingRef = useRef(false);
 
   const [showNoVideo, setShowNoVideo] = useState(!url);
 
-  // Reset state khi chuyển bài
-  useEffect(() => {
-    highestWatchedRef.current = 0;
-    reached80Fired.current = false;
-    lastTimeRef.current = 0;
-    setShowNoVideo(!url);
-  }, [lessonKey, url]);
+  // Toast cảnh báo overlay trên video
+  const [toast, setToast] = useState(null); // { msg, key }
+  const toastTimerRef = useRef(null);
 
-  /** Cập nhật highestWatched liên tục khi video đang chạy bình thường */
+  const showToast = useCallback((msg) => {
+    clearTimeout(toastTimerRef.current);
+    setToast({ msg, key: Date.now() });
+    toastTimerRef.current = setTimeout(() => setToast(null), 2800);
+  }, []);
+
+  // Reset khi chuyển bài
+  useEffect(() => {
+    highestWatchedRef.current = initialWatched;
+    thresholdFiredRef.current = false;
+    watchedAtSeekStartRef.current = initialWatched;
+    isSnappingRef.current = false;
+    setShowNoVideo(!url);
+    setToast(null);
+    clearTimeout(toastTimerRef.current);
+  }, [lessonKey, url, initialWatched]);
+
+  // Restore currentTime từ server watchedSeconds khi load metadata
+  useEffect(() => {
+    if (!videoRef.current || !initialWatched) return;
+    const video = videoRef.current;
+    const onLoaded = () => {
+      if (initialWatched > 0 && video.duration > 0) {
+        const restoreTo = Math.min(initialWatched, video.duration * 0.98);
+        video.currentTime = restoreTo;
+      }
+    };
+    video.addEventListener("loadedmetadata", onLoaded);
+    return () => video.removeEventListener("loadedmetadata", onLoaded);
+  }, [lessonKey, initialWatched]);
+
+  useImperativeHandle(ref, () => ({
+    getWatchedSeconds: () => highestWatchedRef.current,
+  }));
+
+  // Cập nhật highestWatched khi video chạy bình thường
+  // QUAN TRỌNG: bỏ qua hoàn toàn khi video.seeking = true hoặc đang snap
+  // để tránh highestWatched bị cập nhật trong lúc user đang kéo thanh seek
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
-    if (!video || video.paused) return;
+    if (!video || video.paused || video.seeking || isSnappingRef.current)
+      return;
 
     const current = video.currentTime;
     const duration = video.duration;
 
-    // Cập nhật cao điểm đã xem
     if (current > highestWatchedRef.current) {
       highestWatchedRef.current = current;
-      lastTimeRef.current = current;
     }
 
-    // Kiểm tra đạt 80%
-    if (!reached80Fired.current && duration > 0) {
-      const watchedPct = highestWatchedRef.current / duration;
-      if (watchedPct >= 0.8) {
-        reached80Fired.current = true;
-        onReached80?.();
+    onTimeUpdate?.(current, duration);
+
+    if (!thresholdFiredRef.current && duration > 0) {
+      if (highestWatchedRef.current / duration >= threshold) {
+        thresholdFiredRef.current = true;
+        onReachedThreshold?.();
       }
     }
-  }, [onReached80]);
+  }, [onReachedThreshold, onTimeUpdate, threshold]);
 
-  /**
-   * Anti-cheat: khi người dùng seek, kiểm tra xem vị trí mới có vượt
-   * highestWatched không. Nếu vượt → snap về highestWatched.
-   * Cho phép seek NGƯỢC (backward) tự do.
-   */
+  // Ghi lại snapshot của highestWatched tại thời điểm seek BẮT ĐẦU
+  // (trước khi highestWatched có thể bị ảnh hưởng bởi bất kỳ event nào khác)
+  const handleSeeking = useCallback(() => {
+    if (isSnappingRef.current) return; // đang snap back → bỏ qua
+    // Freeze snapshot — đây là "điểm tối đa được phép" cho lần seek này
+    watchedAtSeekStartRef.current = highestWatchedRef.current;
+  }, []);
+
+  // Sau khi seek xong → so sánh với snapshot đã freeze ở onSeeking
   const handleSeeked = useCallback(() => {
+    if (isSnappingRef.current) {
+      isSnappingRef.current = false;
+      return;
+    }
     const video = videoRef.current;
     if (!video) return;
 
     const seekedTo = video.currentTime;
-    const maxAllowed = highestWatchedRef.current;
+    // Dùng snapshot đã đóng băng lúc seeking bắt đầu, không phải giá trị hiện tại
+    const maxAllowed = watchedAtSeekStartRef.current;
 
-    if (seekedTo > maxAllowed + 0.5) {
-      // +0.5s buffer tránh giật liên tục
+    // Buffer 0.3s để tránh false positive khi click chính xác vào thanh seek
+    if (seekedTo > maxAllowed + 0.3) {
+      isSnappingRef.current = true;
       video.currentTime = maxAllowed;
+
+      const overBy = Math.round(seekedTo - maxAllowed);
+      showToast(
+        `⛔ Không thể tua vượt! Quay lại ${formatTime(maxAllowed)} (tua thêm ~${overBy}s)`,
+      );
     }
-  }, []);
+  }, [showToast]);
 
   const handleEnded = useCallback(() => {
-    // Đảm bảo 80% đã fire trước khi báo ended
-    if (!reached80Fired.current) {
-      reached80Fired.current = true;
-      onReached80?.();
+    if (!thresholdFiredRef.current) {
+      thresholdFiredRef.current = true;
+      onReachedThreshold?.();
     }
     onEnded?.();
-  }, [onReached80, onEnded]);
+  }, [onReachedThreshold, onEnded]);
 
   if (showNoVideo || !url) {
     return (
@@ -107,7 +175,7 @@ const VideoPlayer = ({ url, lessonKey, onReached80, onEnded }) => {
           style={{ fontSize: 48, color: "rgba(255,255,255,0.2)" }}
         />
         <Text style={{ color: "rgba(255,255,255,0.5)" }}>
-          Bài học này chưa có video
+          This lesson has no video yet
         </Text>
       </div>
     );
@@ -126,14 +194,15 @@ const VideoPlayer = ({ url, lessonKey, onReached80, onEnded }) => {
       }}
     >
       <video
-        key={lessonKey} // force remount khi đổi bài
+        key={lessonKey}
         ref={videoRef}
         src={url}
         controls
         autoPlay
-        controlsList="nodownload nofullscreen" // bỏ nút tải về
+        controlsList="nodownload nofullscreen"
         disablePictureInPicture
         onTimeUpdate={handleTimeUpdate}
+        onSeeking={handleSeeking}
         onSeeked={handleSeeked}
         onEnded={handleEnded}
         style={{
@@ -143,26 +212,70 @@ const VideoPlayer = ({ url, lessonKey, onReached80, onEnded }) => {
           objectFit: "contain",
           outline: "none",
         }}
-        // Chặn context menu chuột phải để tránh "save video"
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* Anti-cheat overlay tooltip */}
+      {/* Anti-cheat hint cố định góc phải */}
       <div
         style={{
           position: "absolute",
-          bottom: 12,
+          bottom: 52,
           right: 16,
           fontSize: 11,
-          color: "rgba(255,255,255,0.35)",
+          color: "rgba(255,255,255,0.3)",
           pointerEvents: "none",
           userSelect: "none",
         }}
       >
-        🔒 Tua tối đa đến điểm đã xem
+        🔒 Chỉ tua đến điểm đã xem
       </div>
+
+      {/* Toast cảnh báo khi tua quá — nổi bật trung tâm */}
+      {toast && (
+        <div
+          key={toast.key}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "rgba(239,68,68,0.92)",
+            backdropFilter: "blur(6px)",
+            color: "#fff",
+            padding: "14px 24px",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            textAlign: "center",
+            maxWidth: 380,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+            pointerEvents: "none",
+            userSelect: "none",
+            animation: "fadeInPop 0.2s ease",
+            zIndex: 10,
+            lineHeight: 1.5,
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeInPop {
+          from { opacity: 0; transform: translate(-50%, -46%) scale(0.93); }
+          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+      `}</style>
     </div>
   );
-};
+});
+
+/** Định dạng giây → mm:ss */
+function formatTime(secs) {
+  const s = Math.floor(secs);
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}:${rem.toString().padStart(2, "0")}`;
+}
 
 export default VideoPlayer;

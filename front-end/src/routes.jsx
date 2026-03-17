@@ -4,6 +4,7 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
+import { ROUTES } from "./utils/constants";
 
 // ─── Layouts ─────────────────────────────────────────────────────────────────
 import AdminLayout from "./layouts/AdminLayout";
@@ -26,6 +27,8 @@ import ResendOTP from "./pages/Auth/ResendOTP";
 import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
 import StoreRegistration from "./pages/Auth/StoreRegistration";
+import ForcedPasswordChange from "./pages/Auth/ForcedPasswordChange";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 // ─── Public Pages ─────────────────────────────────────────────────────────────
 import AboutPage from "./pages/Public/About/AboutPage";
@@ -34,9 +37,12 @@ import CourseDetailPage from "./pages/Public/CourseDetail/CourseDetailPage";
 import CoursesPage from "./pages/Public/Courses/CoursesPage";
 import HomePage from "./pages/Public/Home/HomePage";
 import SearchPage from "./pages/Public/Search/SearchPage";
+import BlogListPage from "./pages/Instructor/Blog/BlogListPage";
+import BlogDetailPage from "./pages/Public/Blog/BlogDetailPage";
 
 // ─── Student Pages ────────────────────────────────────────────────────────────
 import CertificatePage from "./pages/Student/Certificate/CertificatePage";
+import MyCertificatesPage from "./pages/Student/Certificate/MyCertificatesPage";
 import StudentDashboard from "./pages/Student/Dashboard/StudentDashboard";
 import LearningPage from "./pages/Student/Learning/LearningPage";
 import MyCoursesPage from "./pages/Student/MyCourses/MyCoursesPage";
@@ -45,6 +51,7 @@ import LearningProgressPage from "./pages/Student/Progress/LearningProgressPage"
 import QuizPage from "./pages/Student/Quiz/QuizPage";
 import StudentSettingsPage from "./pages/Student/Settings/StudentSettingsPage";
 import WishlistPage from "./pages/Student/Wishlist/WishlistPage";
+import RoadmapPage from "./pages/Student/Roadmap/RoadmapPage";
 
 // ─── Instructor Pages ─────────────────────────────────────────────────────────
 import InstructorAnalyticsPage from "./pages/Instructor/Analytics/InstructorAnalyticsPage";
@@ -67,7 +74,10 @@ import AdminReportsPage from "./pages/Admin/Reports/AdminReportsPage";
 import AdminRevenuePage from "./pages/Admin/Revenue/AdminRevenuePage";
 import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
 import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
-import ResetPassword from "./pages/Auth/ResetPassword";
+import AdminProfilePage from "./pages/Admin/Profile/AdminProfilePage";
+import AdminBlogPage from "./pages/Admin/Blog/AdminBlogPage";
+import AdminReviewPage from "./pages/Admin/Review/AdminReviewPage";
+import AdminCommentPage from "./pages/Admin/Comment/AdminCommentPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -90,7 +100,9 @@ const router = createBrowserRouter(
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
-      {/* Public Routes */}
+      <Route path={ROUTES.CHANGE_PASSWORD_REQUIRED} element={<ForcedPasswordChange />} />
+
+      {/* Public Routes — accessible by everyone including guests */}
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
         <Route path="/courses" element={<CoursesPage />} />
@@ -98,6 +110,9 @@ const router = createBrowserRouter(
         <Route path="/search" element={<SearchPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        {/* ── Blog public routes (no auth required) ── */}
+        <Route path="/blog" element={<BlogListPage />} />
+        <Route path="/blog/:id" element={<BlogDetailPage />} />
       </Route>
 
       {/* Student Routes */}
@@ -108,12 +123,14 @@ const router = createBrowserRouter(
           </ProtectedRoute>
         }
       >
-        <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <Route path="/" element={<StudentDashboard />} />
         <Route path="/student/my-courses" element={<MyCoursesPage />} />
+        <Route path="/student/certificates" element={<MyCertificatesPage />} />
         <Route path="/student/wishlist" element={<WishlistPage />} />
         <Route path="/student/progress" element={<LearningProgressPage />} />
         <Route path="/student/profile" element={<StudentProfilePage />} />
         <Route path="/student/settings" element={<StudentSettingsPage />} />
+        <Route path={ROUTES.ROADMAP} element={<RoadmapPage />} />
       </Route>
 
       {/* Student fullscreen pages */}
@@ -126,10 +143,7 @@ const router = createBrowserRouter(
       >
         <Route path="/student/learning/:courseId" element={<LearningPage />} />
         <Route path="/student/quiz/:courseId" element={<QuizPage />} />
-        <Route
-          path="/student/certificate/:courseId"
-          element={<CertificatePage />}
-        />
+        <Route path="/student/certificate/:courseId" element={<CertificatePage />} />
       </Route>
 
       {/* Instructor Routes */}
@@ -142,27 +156,14 @@ const router = createBrowserRouter(
       >
         <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
         <Route path="/instructor/courses" element={<InstructorCoursesPage />} />
-        <Route
-          path="/instructor/courses/create"
-          element={<CreateCoursePage />}
-        />
-        <Route
-          path="/instructor/courses/edit/:id"
-          element={<CreateCoursePage />}
-        />
+        <Route path="/instructor/courses/create" element={<CreateCoursePage />} />
+        <Route path="/instructor/courses/edit/:id" element={<CreateCoursePage />} />
         <Route path="/instructor/revenue" element={<InstructorRevenuePage />} />
-        <Route
-          path="/instructor/students"
-          element={<InstructorStudentsPage />}
-        />
+        <Route path="/instructor/students" element={<InstructorStudentsPage />} />
         <Route path="/instructor/blog" element={<InstructorBlogPage />} />
         <Route path="/instructor/blog/create" element={<CreateBlogPage />} />
-        <Route
-          path="/instructor/analytics"
-          element={<InstructorAnalyticsPage />}
-        />
+        <Route path="/instructor/analytics" element={<InstructorAnalyticsPage />} />
         <Route path="/instructor/profile" element={<InstructorProfilePage />} />
-        
       </Route>
 
       {/* Admin Routes */}
@@ -182,6 +183,10 @@ const router = createBrowserRouter(
         <Route path="/admin/reports" element={<AdminReportsPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="/admin/logs" element={<AdminLogsPage />} />
+        <Route path="/admin/blog" element={<AdminBlogPage />} />
+        <Route path="/admin/reviews" element={<AdminReviewPage />} />
+        <Route path="/admin/comments" element={<AdminCommentPage />} />
+        <Route path="/admin/profile" element={<AdminProfilePage />} />
       </Route>
 
       <Route path="*" element={<ErrorPage />} />

@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "import-data": "node scripts/import-data.js",
     "test:create-course": "node scripts/test-create-course.js",
-    "test:upload": "node scripts/test-upload-api.js"
+    "test:upload": "node scripts/test-upload-api.js",
+    "test:enrollment-itemsProgress": "node scripts/test-enrollment-itemsProgress.js"
   },
   "keywords": [
     "nodejs",
@@ -47,7 +48,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "qs": "^6.15.0",
-    "socket.io": "^4.8.1",
+    "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }

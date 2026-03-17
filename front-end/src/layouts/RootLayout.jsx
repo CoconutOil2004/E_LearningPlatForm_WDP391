@@ -1,14 +1,15 @@
 import { Outlet } from "react-router-dom";
+import GlobalInitializer from "../components/shared/GlobalInitializer";
 import { AuthProvider } from "../contexts/AuthContext";
+import { ToastProvider } from "../contexts/ToastContext";
 
-/**
- * RootLayout — bọc AuthProvider 1 lần duy nhất cho toàn bộ app.
- * Nằm bên trong RouterProvider nên useNavigate() hoạt động bình thường.
- */
 const RootLayout = () => (
-  <AuthProvider>
-    <Outlet />
-  </AuthProvider>
+  <ToastProvider>
+    <AuthProvider>
+      <GlobalInitializer />
+      <Outlet />
+    </AuthProvider>
+  </ToastProvider>
 );
 
 export default RootLayout;

@@ -9,7 +9,11 @@ import CourseService from "../../../services/api/CourseService";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
-import { pageVariants } from "../../../utils/helpers";
+import {
+  formatDurationClock,
+  formatThousands,
+  pageVariants,
+} from "../../../utils/helpers";
 
 const SORT_OPTIONS = [
   { value: "popular", label: "Most Popular" },
@@ -27,13 +31,18 @@ const LEVEL_COLORS = {
 };
 
 // ─── CourseCard — giữ nguyên 100% ────────────────────────────────────────────
-const CourseCard = ({ course, onEnroll, onWishlist, isEnrolled, isWishlisted }) => {
+const CourseCard = ({
+  course,
+  onEnroll,
+  onWishlist,
+  isEnrolled,
+  isWishlisted,
+}) => {
   const navigate = useNavigate();
   const level = LEVEL_COLORS[course.level] || LEVEL_COLORS.Beginner;
-  const instructor = course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
-  const duration = course.totalDuration
-    ? `${Math.floor(course.totalDuration / 3600)}h ${Math.floor((course.totalDuration % 3600) / 60)}m`
-    : null;
+  const instructor =
+    course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
+  const duration = formatDurationClock(course.totalDuration);
   const lessonCount = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
     0,
@@ -51,7 +60,10 @@ const CourseCard = ({ course, onEnroll, onWishlist, isEnrolled, isWishlisted }) 
     >
       <div className="relative w-full overflow-hidden aspect-video bg-gradient-to-br from-primary/10 to-secondary/20 group">
         <img
-          src={course.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop"}
+          src={
+            course.thumbnail ||
+            "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop"
+          }
           alt={course.title}
           className="absolute inset-0 object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
         />
@@ -61,10 +73,17 @@ const CourseCard = ({ course, onEnroll, onWishlist, isEnrolled, isWishlisted }) 
           </div>
         )}
         <button
-          onClick={(e) => { e.stopPropagation(); onWishlist(course._id); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onWishlist(course._id);
+          }}
           className="absolute flex items-center justify-center w-8 h-8 transition-all rounded-full top-3 right-3 bg-white/80 backdrop-blur hover:scale-110"
         >
-          <Icon name="heart" size={15} color={isWishlisted ? "#EF4444" : "var(--text-muted)"} />
+          <Icon
+            name="heart"
+            size={15}
+            color={isWishlisted ? "#EF4444" : "var(--text-muted)"}
+          />
         </button>
       </div>
 
@@ -114,15 +133,21 @@ const CourseCard = ({ course, onEnroll, onWishlist, isEnrolled, isWishlisted }) 
           <div>
             {course.price > 0 && (
               <span className="block text-xs line-through text-muted">
-                ${(course.price * 1.4).toFixed(2)}
+                {formatThousands(Math.round(course.price * 1.4))}
               </span>
             )}
-            <span className="text-2xl font-black gradient-text" style={{ letterSpacing: "-0.02em" }}>
-              {course.price === 0 ? "Free" : `$${course.price}`}
+            <span
+              className="text-2xl font-black gradient-text"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              {course.price === 0 ? "Free" : formatThousands(course.price)}
             </span>
           </div>
           <button
-            onClick={(e) => { e.stopPropagation(); onEnroll(course); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnroll(course);
+            }}
             className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all ${
               isEnrolled
                 ? "bg-secondary/10 text-secondary border border-secondary/30"
@@ -142,12 +167,17 @@ const CoursesPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } = useCourseStore();
+  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } =
+    useCourseStore();
   const toast = useToast();
 
   const [keyword, setKeyword] = useState(searchParams.get("q") ?? "");
-  const [activeCategory, setActiveCategory] = useState(searchParams.get("category") ?? "");
-  const [activeLevel, setActiveLevel] = useState(searchParams.get("level") ?? "All");
+  const [activeCategory, setActiveCategory] = useState(
+    searchParams.get("category") ?? "",
+  );
+  const [activeLevel, setActiveLevel] = useState(
+    searchParams.get("level") ?? "All",
+  );
   const [sortBy, setSortBy] = useState(searchParams.get("sort") ?? "popular");
 
   const [courses, setCourses] = useState([]);
@@ -159,7 +189,9 @@ const CoursesPage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
-    CourseService.getCategories().then(setCategories).catch(() => {});
+    CourseService.getCategories()
+      .then(setCategories)
+      .catch(() => {});
   }, []);
 
   const fetchCourses = useCallback(
@@ -167,14 +199,18 @@ const CoursesPage = () => {
       const setter = append ? setLoadingMore : setLoading;
       setter(true);
       const params = {
-        sortBy, page: p, limit: 9,
+        sortBy,
+        page: p,
+        limit: 9,
         ...(keyword.trim() && { keyword: keyword.trim() }),
         ...(activeCategory && { category: activeCategory }),
         ...(activeLevel !== "All" && { level: activeLevel }),
       };
       CourseService.searchCourses(params)
         .then((res) => {
-          setCourses((prev) => append ? [...prev, ...res.courses] : res.courses);
+          setCourses((prev) =>
+            append ? [...prev, ...res.courses] : res.courses,
+          );
           setTotal(res.total);
           setPage(p);
           setTotalPages(res.pages);
@@ -186,7 +222,10 @@ const CoursesPage = () => {
   );
 
   useEffect(() => {
-    const t = setTimeout(() => { fetchCourses(1); setPage(1); }, 400);
+    const t = setTimeout(() => {
+      fetchCourses(1);
+      setPage(1);
+    }, 400);
     return () => clearTimeout(t);
   }, [fetchCourses]);
 
@@ -200,29 +239,55 @@ const CoursesPage = () => {
   }, [keyword, activeCategory, activeLevel, sortBy]);
 
   const handleEnroll = (course) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     enroll(course._id);
     toast.success(`Enrolled in "${course.title}"!`);
     navigate(`/student/learning/${course._id}`);
   };
 
   const handleWishlist = (courseId) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     toggleWishlist(courseId);
-    toast.success(wishlistIds.includes(courseId) ? "Removed from wishlist" : "Added to wishlist");
+    toast.success(
+      wishlistIds.includes(courseId)
+        ? "Removed from wishlist"
+        : "Added to wishlist",
+    );
   };
 
-  const handleFilter = (setter, value) => { setter(value); setPage(1); };
-  const clearFilters = () => { setKeyword(""); setActiveCategory(""); setActiveLevel("All"); setSortBy("popular"); };
+  const handleFilter = (setter, value) => {
+    setter(value);
+    setPage(1);
+  };
+  const clearFilters = () => {
+    setKeyword("");
+    setActiveCategory("");
+    setActiveLevel("All");
+    setSortBy("popular");
+  };
   const hasFilters = keyword || activeCategory || activeLevel !== "All";
 
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
       <div className="px-6 pt-10 pb-20 mx-auto max-w-7xl">
-
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col justify-between gap-6 mb-10 md:flex-row md:items-end">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
             <h1 className="mb-4 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
               All Courses
               <br />
@@ -242,7 +307,9 @@ const CoursesPage = () => {
           >
             {/* ANTD Input.Search thay thế custom input trong glass-card */}
             <Input
-              prefix={<Icon name="search" size={16} color="var(--text-muted)" />}
+              prefix={
+                <Icon name="search" size={16} color="var(--text-muted)" />
+              }
               value={keyword}
               onChange={(e) => handleFilter(setKeyword, e.target.value)}
               placeholder="Search courses..."
@@ -303,7 +370,8 @@ const CoursesPage = () => {
         {!loading && (
           <div className="flex items-center justify-between mb-8">
             <p className="text-sm font-medium text-muted">
-              Showing <span className="font-bold text-heading">{courses.length}</span>{" "}
+              Showing{" "}
+              <span className="font-bold text-heading">{courses.length}</span>{" "}
               of <span className="font-bold text-heading">{total}</span> courses
             </p>
             {hasFilters && (
@@ -311,7 +379,8 @@ const CoursesPage = () => {
                 onClick={clearFilters}
                 className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
               >
-                <Icon name="x" size={12} color="var(--color-primary)" /> Clear filters
+                <Icon name="x" size={12} color="var(--color-primary)" /> Clear
+                filters
               </button>
             )}
           </div>
@@ -321,7 +390,10 @@ const CoursesPage = () => {
         {loading ? (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(9)].map((_, i) => (
-              <div key={i} className="glass-card rounded-[1.5rem] overflow-hidden animate-pulse">
+              <div
+                key={i}
+                className="glass-card rounded-[1.5rem] overflow-hidden animate-pulse"
+              >
                 <div className="aspect-video bg-white/40" />
                 <div className="p-6 space-y-3">
                   <div className="w-3/4 h-5 rounded-full bg-white/40" />
@@ -334,10 +406,15 @@ const CoursesPage = () => {
           </div>
         ) : courses.length === 0 ? (
           <div className="py-24 text-center">
-            <p className="mt-4 text-lg font-medium text-muted">No courses match your search.</p>
+            <p className="mt-4 text-lg font-medium text-muted">
+              No courses match your search.
+            </p>
           </div>
         ) : (
-          <motion.div layout className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <motion.div
+            layout
+            className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
+          >
             <AnimatePresence mode="popLayout">
               {courses.map((course) => (
                 <CourseCard
@@ -370,7 +447,6 @@ const CoursesPage = () => {
             </button>
           </div>
         )}
-
       </div>
     </motion.div>
   );

@@ -12,6 +12,7 @@ import {
 import { Button, Image, Space, Table, Tag, Tooltip, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 import { COLOR, STATUS_CONFIG } from "../../../src/styles/adminTheme";
+import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 const { Text } = Typography;
 
 const CoursesTable = ({
@@ -21,14 +22,6 @@ const CoursesTable = ({
   submitting = null,
 }) => {
   const navigate = useNavigate();
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return "—";
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-  };
-
   const columns = [
     {
       title: "COURSE",
@@ -93,7 +86,7 @@ const CoursesTable = ({
       width: 100,
       render: (price) => (
         <Text strong style={{ fontFamily: "monospace", color: COLOR.ocean }}>
-          {price === 0 ? "Free" : `$${price}`}
+          {price === 0 ? "Free" : formatThousands(price)}
         </Text>
       ),
     },
@@ -117,7 +110,7 @@ const CoursesTable = ({
         <Space size={4}>
           <ClockCircleOutlined style={{ color: COLOR.gray400, fontSize: 12 }} />
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {formatDuration(duration)}
+            {formatDurationClock(duration)}
           </Text>
         </Space>
       ),

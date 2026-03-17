@@ -1,16 +1,19 @@
 import {
-  BarChartOutlined,
+  // BarChartOutlined,
   BookOutlined,
   CheckSquareOutlined,
-  DollarOutlined,
+  // DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MessageOutlined,
   SafetyCertificateOutlined,
-  SettingOutlined,
+  // SettingOutlined,
+  StarOutlined,
   TeamOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -21,7 +24,7 @@ import {
   Typography,
 } from "antd";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Outlet,
   ScrollRestoration,
@@ -30,8 +33,10 @@ import {
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
+import useNotificationStore from "../store/slices/notificationStore";
 import { adminTheme, COLOR } from "../styles/adminTheme";
 import { ROUTES } from "../utils/constants";
+import NotificationBell from "../components/shared/NotificationBell";
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -49,19 +54,23 @@ const NAV_ITEMS = [
     icon: <CheckSquareOutlined />,
     label: "Course Approval",
   },
-  {
-    key: ROUTES.ADMIN_ANALYTICS,
-    icon: <BarChartOutlined />,
-    label: "Analytics",
-  },
-  { key: ROUTES.ADMIN_REVENUE, icon: <DollarOutlined />, label: "Revenue" },
-  { key: ROUTES.ADMIN_REPORTS, icon: <FileTextOutlined />, label: "Reports" },
-  { key: ROUTES.ADMIN_SETTINGS, icon: <SettingOutlined />, label: "Settings" },
+  // {
+  //   key: ROUTES.ADMIN_ANALYTICS,
+  //   icon: <BarChartOutlined />,
+  //   label: "Analytics",
+  // },
+  // { key: ROUTES.ADMIN_REVENUE, icon: <DollarOutlined />, label: "Revenue" },
+  // { key: ROUTES.ADMIN_REPORTS, icon: <FileTextOutlined />, label: "Reports" },
+  // { key: ROUTES.ADMIN_SETTINGS, icon: <SettingOutlined />, label: "Settings" },
   {
     key: ROUTES.ADMIN_LOGS,
     icon: <SafetyCertificateOutlined />,
     label: "Operations Hub",
   },
+  { key: ROUTES.ADMIN_BLOG, icon: <FileTextOutlined />, label: "Blog Management" },
+  { key: ROUTES.ADMIN_REVIEWS, icon: <StarOutlined />, label: "Reviews" },
+  { key: ROUTES.ADMIN_COMMENTS, icon: <MessageOutlined />, label: "Comments" },
+  { key: ROUTES.ADMIN_PROFILE, icon: <UserOutlined />, label: "Profile" },
 ];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -235,6 +244,7 @@ const AdminLayout = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  onClick={() => navigate(ROUTES.ADMIN_PROFILE)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -243,11 +253,15 @@ const AdminLayout = () => {
                     borderRadius: 10,
                     background: "rgba(255,255,255,0.05)",
                     marginBottom: 6,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
                   }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                 >
                   <Avatar
                     size={32}
-                    src={user?.avatar}
+                    src={user?.avatarURL}
                     style={{
                       background: `linear-gradient(135deg, ${COLOR.teal}, ${COLOR.ocean})`,
                       fontWeight: 900,
@@ -256,7 +270,7 @@ const AdminLayout = () => {
                       border: "2px solid #00BFA5",
                     }}
                   >
-                    {!user?.avatar && initials(user?.fullname || "Admin")}
+                    {!user?.avatarURL && initials(user?.fullname || user?.username || "Admin")}
                   </Avatar>
                   <div style={{ minWidth: 0 }}>
                     <div
@@ -268,7 +282,7 @@ const AdminLayout = () => {
                       }}
                       className="truncate"
                     >
-                      {user?.fullname || "Admin"}
+                      {user?.fullname || user?.username || "Admin"}
                     </div>
                     <div
                       style={{
@@ -360,12 +374,55 @@ const AdminLayout = () => {
         <Content
           style={{
             background: "#F5F7FA",
-            overflowY: "auto",
-            minHeight: "100vh",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
           }}
         >
-          <ScrollRestoration />
-          <Outlet />
+          {/* Dashboard Header */}
+          <header 
+            style={{ 
+              height: 56, 
+              background: "white", 
+              borderBottom: "1px solid rgba(0,0,0,0.05)", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "space-between", 
+              padding: "0 24px",
+              flexShrink: 0
+            }}
+          >
+            <div>
+               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#1e293b" }}>
+                  {location.pathname.split('/').pop()?.replace('-', ' ') || 'Admin Dashboard'}
+               </h2>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+               <NotificationBell />
+               <div style={{ width: 1, height: 24, background: "rgba(0,0,0,0.05)" }} />
+               <button 
+                  onClick={() => navigate(ROUTES.HOME)}
+                  style={{ 
+                    fontSize: 12, 
+                    fontWeight: 700, 
+                    color: "#00BFA5", 
+                    background: "#F0FDFA", 
+                    border: "none", 
+                    padding: "6px 12px", 
+                    borderRadius: 8, 
+                    cursor: "pointer" 
+                  }}
+               >
+                  Public View
+               </button>
+            </div>
+          </header>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+            <ScrollRestoration />
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </ConfigProvider>

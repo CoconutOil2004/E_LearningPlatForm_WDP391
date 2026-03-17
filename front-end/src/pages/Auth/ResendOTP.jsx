@@ -1,12 +1,13 @@
 // src/components/ResendOTP.jsx
-import { useState, useEffect } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
-import { API_BASE_URL } from '../../utils/constants';
+import { useEffect, useState } from "react";
+import { useToast } from "../../contexts/ToastContext";
+import { API_BASE_URL } from "../../utils/constants";
 
 const ResendOTP = ({ email, onResend }) => {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const toast = useToast();
 
   // Timer cooldown
   useEffect(() => {
@@ -26,7 +27,9 @@ const ResendOTP = ({ email, onResend }) => {
 
       console.log("Resend response:", res.data);
       if (res.data.success) {
-        toast.success(res.data.message || "A new OTP has been sent to your email");
+        toast.success(
+          res.data.message || "A new OTP has been sent to your email",
+        );
         setResendCooldown(30);
         onResend && onResend();
       } else {
@@ -46,14 +49,16 @@ const ResendOTP = ({ email, onResend }) => {
       onClick={handleResendOTP}
       disabled={resendLoading || resendCooldown > 0}
       className={`w-full py-3 px-4 mt-2 text-sm font-medium rounded-lg text-primary border border-primary hover:bg-primary hover:text-white transition-all duration-200 ${
-        resendLoading || resendCooldown > 0 ? "opacity-70 cursor-not-allowed" : ""
+        resendLoading || resendCooldown > 0
+          ? "opacity-70 cursor-not-allowed"
+          : ""
       }`}
     >
       {resendLoading
         ? "Sending again..."
         : resendCooldown > 0
-        ? `Resend OTP (${resendCooldown}s)`
-        : "Resend OTP"}
+          ? `Resend OTP (${resendCooldown}s)`
+          : "Resend OTP"}
     </button>
   );
 };

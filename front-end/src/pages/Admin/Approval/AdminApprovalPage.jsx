@@ -29,16 +29,10 @@ import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR } from "../../../styles/adminTheme";
+import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 
 const { Text, Paragraph, Title } = Typography;
 const { TextArea } = Input;
-
-const fmtDuration = (s) => {
-  if (!s) return null;
-  const h = Math.floor(s / 3600),
-    m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
 
 // ─── CourseCard ───────────────────────────────────────────────────────────────
 const CourseCard = ({
@@ -50,7 +44,7 @@ const CourseCard = ({
 }) => {
   const instructor =
     course.instructorId?.fullname ?? course.instructorId?.email ?? "Instructor";
-  const duration = fmtDuration(course.totalDuration);
+  const duration = formatDurationClock(course.totalDuration);
   const totalLessons = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
     0,
@@ -138,7 +132,7 @@ const CourseCard = ({
               textShadow: "0 1px 6px rgba(0,0,0,0.6)",
             }}
           >
-            {course.price === 0 ? "Free" : `$${course.price}`}
+            {course.price === 0 ? "Free" : formatThousands(course.price)}
           </Text>
         </div>
       </div>
