@@ -639,7 +639,7 @@ const CreateCoursePage = () => {
       >
         <div className="max-w-5xl px-6 py-10 mx-auto">
           {/* ── Header ── */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-10 py-6 border-b border-gray-100 px-6 bg-white rounded-2xl shadow-sm">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)}
@@ -648,25 +648,81 @@ const CreateCoursePage = () => {
                 <ArrowLeftOutlined />
               </button>
               <div>
-                <Title level={2} className="m-0 font-black text-gray-900">
+                <Title level={2} className="m-0 font-black text-gray-900 !text-2xl">
                   {isEdit ? "Edit Course" : "Create New Course"}
                 </Title>
-                <Text type="secondary">Build your course curriculum</Text>
+                <Text type="secondary" className="text-xs">Build your course curriculum</Text>
               </div>
             </div>
 
-            {status && (
-              <div
-                className="px-4 py-2 text-sm font-bold border shadow-sm rounded-xl"
-                style={{
-                  backgroundColor: currentStatus.bg,
-                  color: currentStatus.text,
-                  borderColor: currentStatus.border,
-                }}
-              >
-                {currentStatus.label}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {status && (
+                <div
+                  className="px-3 py-1.5 text-xs font-bold border shadow-sm rounded-lg mr-2"
+                  style={{
+                    backgroundColor: currentStatus.bg,
+                    color: currentStatus.text,
+                    borderColor: currentStatus.border,
+                  }}
+                >
+                  {currentStatus.label}
+                </div>
+              )}
+
+              {!isLocked && (
+                <div className="flex items-center gap-2">
+                  <Tooltip
+                    title={
+                      uploadingCount > 0
+                        ? `Đang upload ${uploadingCount} video, vui lòng chờ...`
+                        : ""
+                    }
+                  >
+                    <Button
+                      size="middle"
+                      icon={
+                        uploadingCount > 0 ? (
+                          <LoadingOutlined spin />
+                        ) : (
+                          <SaveOutlined />
+                        )
+                      }
+                      loading={saving}
+                      disabled={uploadingCount > 0}
+                      onClick={handleSaveDraft}
+                      className="px-4 font-semibold text-gray-700 border-gray-300 rounded-lg hover:text-purple-600 hover:border-purple-300 h-10"
+                    >
+                      {uploadingCount > 0
+                        ? `Uploading (${uploadingCount})`
+                        : "Save Draft"}
+                    </Button>
+                  </Tooltip>
+                  <Tooltip
+                    title={
+                      uploadingCount > 0
+                        ? `Chờ ${uploadingCount} video upload xong`
+                        : ""
+                    }
+                  >
+                    <button
+                      onClick={handleSubmitForReview}
+                      disabled={submitting || uploadingCount > 0}
+                      className="flex items-center gap-2 px-6 py-2 font-bold text-white transition-all transform shadow-md rounded-lg hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed h-10 text-sm"
+                      style={{
+                        background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
+                      }}
+                    >
+                      {submitting ? (
+                        <SaveOutlined className="animate-spin" />
+                      ) : (
+                        <SendOutlined />
+                      )}
+                      Submit
+                    </button>
+                  </Tooltip>
+                </div>
+              )}
+            </div>
           </div>
 
           {isLocked && (
@@ -955,60 +1011,6 @@ const CreateCoursePage = () => {
             </div>
           </Form>
 
-          {/* ── Actions Footer ── */}
-          {!isLocked && (
-            <div className="sticky flex items-center justify-end gap-4 p-4 border border-gray-200 shadow-lg bottom-6 bg-white/80 backdrop-blur-md rounded-2xl">
-              <Tooltip
-                title={
-                  uploadingCount > 0
-                    ? `Đang upload ${uploadingCount} video, vui lòng chờ...`
-                    : ""
-                }
-              >
-                <Button
-                  size="large"
-                  icon={
-                    uploadingCount > 0 ? (
-                      <LoadingOutlined spin />
-                    ) : (
-                      <SaveOutlined />
-                    )
-                  }
-                  loading={saving}
-                  disabled={uploadingCount > 0}
-                  onClick={handleSaveDraft}
-                  className="px-6 font-semibold text-gray-700 border-gray-300 rounded-xl hover:text-purple-600 hover:border-purple-300"
-                >
-                  {uploadingCount > 0
-                    ? `Uploading (${uploadingCount})...`
-                    : "Save Draft"}
-                </Button>
-              </Tooltip>
-              <Tooltip
-                title={
-                  uploadingCount > 0
-                    ? `Chờ ${uploadingCount} video upload xong`
-                    : ""
-                }
-              >
-                <button
-                  onClick={handleSubmitForReview}
-                  disabled={submitting || uploadingCount > 0}
-                  className="flex items-center gap-2 px-8 py-3 font-bold text-white transition-all transform shadow-lg rounded-xl hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
-                  }}
-                >
-                  {submitting ? (
-                    <SaveOutlined className="animate-spin" />
-                  ) : (
-                    <SendOutlined />
-                  )}
-                  Submit for Review
-                </button>
-              </Tooltip>
-            </div>
-          )}
         </div>
       </motion.div>
     </UploadingContext.Provider>
