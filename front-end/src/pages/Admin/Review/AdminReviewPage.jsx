@@ -17,13 +17,14 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import ReviewService from "../../../services/api/ReviewService";
 import { COLOR } from "../../../styles/adminTheme";
-import { formatTimeAgo, pageVariants } from "../../../utils/helpers";
+import { formatTimeAgo } from "../../../utils/helpers";
+import AdminPageLayout from "../../../components/admin/AdminPageLayout";
+import PageHeader from "../../../components/admin/PageHeader";
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const AdminReviewPage = () => {
   const [data, setData] = useState([]);
@@ -131,43 +132,38 @@ const AdminReviewPage = () => {
       width: 80,
       align: 'center',
       render: (_, record) => (
-        <Button 
-          type="text" 
-          danger 
-          icon={<DeleteOutlined />} 
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
           onClick={() => handleDelete(record._id)}
         />
       ),
     },
   ];
 
-  const filteredData = data.filter(item => 
+  const filteredData = data.filter(item =>
     item.comment?.toLowerCase().includes(searchText.toLowerCase()) ||
     item.userId?.fullname?.toLowerCase().includes(searchText.toLowerCase()) ||
     item.courseId?.title?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>Review Management</Title>
-          <Text type="secondary">Monitor platform quality and student feedback</Text>
-        </div>
-        <Input
-          placeholder="Search reviews, users or courses..."
-          prefix={<SearchOutlined />}
-          style={{ width: 300, borderRadius: 8 }}
-          onChange={e => setSearchText(e.target.value)}
-        />
-      </div>
+    <AdminPageLayout>
+      <PageHeader
+        title="Review Management"
+        subtitle="Monitor platform quality and student feedback"
+        extra={
+          <Input
+            placeholder="Search reviews, users or courses..."
+            prefix={<SearchOutlined />}
+            style={{ width: 300, borderRadius: 8 }}
+            onChange={e => setSearchText(e.target.value)}
+          />
+        }
+      />
 
-      <Card bordered={false} style={{ borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+      <Card bordered={false} style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", overflow: 'hidden' }}>
         <Table
           columns={columns}
           dataSource={filteredData}
@@ -180,7 +176,7 @@ const AdminReviewPage = () => {
           size="middle"
         />
       </Card>
-    </motion.div>
+    </AdminPageLayout>
   );
 };
 

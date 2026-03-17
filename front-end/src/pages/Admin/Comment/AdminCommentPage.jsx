@@ -15,13 +15,14 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import CommentService from "../../../services/api/CommentService";
 import { COLOR } from "../../../styles/adminTheme";
-import { formatTimeAgo, pageVariants } from "../../../utils/helpers";
+import { formatTimeAgo } from "../../../utils/helpers";
+import AdminPageLayout from "../../../components/admin/AdminPageLayout";
+import PageHeader from "../../../components/admin/PageHeader";
 
-const { Text, Title, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const AdminCommentPage = () => {
   const [data, setData] = useState([]);
@@ -116,43 +117,38 @@ const AdminCommentPage = () => {
       width: 80,
       align: 'center',
       render: (_, record) => (
-        <Button 
-          type="text" 
-          danger 
-          icon={<DeleteOutlined />} 
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
           onClick={() => handleDelete(record._id)}
         />
       ),
     },
   ];
 
-  const filteredData = data.filter(item => 
+  const filteredData = data.filter(item =>
     item.content?.toLowerCase().includes(searchText.toLowerCase()) ||
     item.userId?.fullname?.toLowerCase().includes(searchText.toLowerCase()) ||
     item.courseId?.title?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={3} style={{ margin: 0 }}>Comment Management</Title>
-          <Text type="secondary">Review and moderate user discussions across all courses</Text>
-        </div>
-        <Input
-          placeholder="Search comments, users or courses..."
-          prefix={<SearchOutlined />}
-          style={{ width: 300, borderRadius: 8 }}
-          onChange={e => setSearchText(e.target.value)}
-        />
-      </div>
+    <AdminPageLayout>
+      <PageHeader
+        title="Comment Management"
+        subtitle="Review and moderate user discussions across all courses"
+        extra={
+          <Input
+            placeholder="Search comments, users or courses..."
+            prefix={<SearchOutlined />}
+            style={{ width: 300, borderRadius: 8 }}
+            onChange={e => setSearchText(e.target.value)}
+          />
+        }
+      />
 
-      <Card bordered={false} style={{ borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+      <Card bordered={false} style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", overflow: 'hidden' }}>
         <Table
           columns={columns}
           dataSource={filteredData}
@@ -165,7 +161,7 @@ const AdminCommentPage = () => {
           size="middle"
         />
       </Card>
-    </motion.div>
+    </AdminPageLayout>
   );
 };
 
