@@ -611,6 +611,21 @@ exports.updateProfile = async (req, res) => {
       user.email = email;
     }
 
+    if (req.body.username && req.body.username !== user.username) {
+      const existingUsername = await User.findOne({
+        username: req.body.username,
+        _id: { $ne: user._id },
+      });
+
+      if (existingUsername) {
+        return res.status(400).json({
+          success: false,
+          message: "Username already in use",
+        });
+      }
+      user.username = req.body.username;
+    }
+
     if (fullname) user.fullname = fullname;
     if (avatarURL) user.avatarURL = avatarURL;
 

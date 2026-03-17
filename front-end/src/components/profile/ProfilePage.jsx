@@ -43,6 +43,7 @@ const ProfilePage = () => {
   const roleMeta = ROLE_META[user?.role] || ROLE_META.student;
 
   const [form, setForm] = useState({
+    username: user?.username || "",
     fullname: user?.fullname || "",
     avatarURL: user?.avatarURL || "",
   });
@@ -66,6 +67,7 @@ const ProfilePage = () => {
   // Sync form when user updates in store
   useEffect(() => {
     setForm({
+      username: user?.username || "",
       fullname: user?.fullname || "",
       avatarURL: user?.avatarURL || "",
     });
@@ -108,12 +110,14 @@ const ProfilePage = () => {
     setMsg(null);
     try {
       const res = await AuthenService.updateProfile({
+        username: form.username,
         fullname: form.fullname,
         avatarURL: form.avatarURL,
       });
       if (res.success) {
         // Correctly map backend 'data' property to auth store
         updateUser({ 
+          username: res.data?.username,
           fullname: res.data?.fullname, 
           avatarURL: res.data?.avatarURL 
         });
@@ -297,7 +301,20 @@ const ProfilePage = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                  <label className="block mb-2 text-xs font-bold uppercase text-muted">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                    className="w-full px-4 py-3 text-sm border rounded-xl bg-white/60 border-border focus:outline-none focus:ring-2 focus:ring-primary/30 text-heading"
+                    placeholder="Your username"
+                    required
+                  />
+                </div>
                 <div>
                   <label className="block mb-2 text-xs font-bold uppercase text-muted">
                     Full Name
