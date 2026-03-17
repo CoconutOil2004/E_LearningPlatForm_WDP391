@@ -43,14 +43,14 @@ function uploadVideoBufferToCloudinary(buffer) {
 exports.uploadImages = async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: "Cần gửi ít nhất một file ảnh (field: images)." });
+      return res.status(400).json({ success: false, message: "Please send at least one image file (field: images)." });
     }
     const results = await Promise.all(
       req.files.map((file) => uploadImageBufferToCloudinary(file.buffer))
     );
-    res.json({ success: true, data: results });
+    res.json({ success: true, message: "Images uploaded successfully.", data: results });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || "Upload ảnh thất bại." });
+    res.status(500).json({ success: false, message: err.message || "Image upload failed." });
   }
 };
 
