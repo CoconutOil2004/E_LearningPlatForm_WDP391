@@ -168,7 +168,7 @@ const AdminBlogPage = () => {
         setPagination(p => ({ ...p, total: res.pagination?.totalItems || 0 }));
       }
     } catch (err) {
-      message.error("Failed to load blogs");
+      // API interceptor handles the error message
     } finally {
       setLoading(false);
     }
@@ -206,7 +206,7 @@ const AdminBlogPage = () => {
           message.success("Blog post deleted.");
           fetchBlogs();
         } catch (err) {
-          message.error("Failed to delete blog.");
+          // API interceptor handles the error message
         }
       }
     });
@@ -231,8 +231,8 @@ const AdminBlogPage = () => {
       key: "author",
       render: (_, r) => (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar 
-            src={r.author?.avatarURL} 
+          <Avatar
+            src={r.author?.avatarURL}
             style={{ background: `linear-gradient(135deg, ${COLOR.ocean}, ${COLOR.teal})`, fontWeight: 900 }}
           >
             {r.author?.fullname?.[0]?.toUpperCase()}
@@ -294,8 +294,8 @@ const AdminBlogPage = () => {
 
   return (
     <AdminPageLayout>
-      <PageHeader 
-        title="Blog Management" 
+      <PageHeader
+        title="Blog Management"
         subtitle="Review and manage platform articles"
         extra={
           <Space>

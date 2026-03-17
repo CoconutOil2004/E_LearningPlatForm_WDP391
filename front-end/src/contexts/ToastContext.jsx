@@ -1,11 +1,44 @@
-import { createContext, useCallback, useContext, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 const ToastContext = createContext(null);
 
 /**
- * Global toast provider — wraps the entire app.
- * Usage: const toast = useToast(); toast.success("Done!"); toast.error("Oops!");
+ * toastEmitter — module-level bridge cho axios interceptor.
+ *
+ * Vì axios interceptor nằm NGOÀI React tree, nó không thể gọi useToast() trực tiếp.
+ * Giải pháp: ToastProvider khi mount sẽ đăng ký hàm push() của mình vào đây.
+ * Interceptor chỉ cần gọi toastEmitter.emit(msg, type) — emitter tự forward vào React state.
+ *
+ * Dùng ở services/index.js:
+ *   import { toastEmitter } from "../contexts/ToastContext";
+ *   toastEmitter.emit("Lỗi từ server", "error");
+ *   toastEmitter.emit("Lưu thành công!", "success");
+ */
+export const toastEmitter = {
+  _handler: null,
+  emit(message, type = "error") {
+    if (this._handler) this._handler(message, type);
+  },
+  register(handler) {
+    this._handler = handler;
+  },
+  unregister() {
+    this._handler = null;
+  },
+};
+
+/**
+ * Global ToastProvider — đặt ở RootLayout (bên trong RouterProvider).
+ *
+ * - Tự động hiện toast từ mọi API response qua toastEmitter (không cần gọi thủ công từng page).
+ * - Vẫn export useToast() cho các page cần toast thủ công (edge case).
  */
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
@@ -13,8 +46,16 @@ export const ToastProvider = ({ children }) => {
   const push = useCallback((message, type = "success") => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    setTimeout(
+      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+      3500,
+    );
   }, []);
+
+  useEffect(() => {
+    toastEmitter.register(push);
+    return () => toastEmitter.unregister();
+  }, [push]);
 
   const dismiss = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -50,11 +91,13 @@ export const ToastProvider = ({ children }) => {
                 style={{ backgroundColor: style.bg }}
                 onClick={() => dismiss(t.id)}
               >
-                <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
+                <span className="flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full bg-white/20 shrink-0">
                   {style.icon}
                 </span>
                 <span className="flex-1">{t.message}</span>
-                <span className="opacity-60 hover:opacity-100 transition-opacity text-xs">✕</span>
+                <span className="text-xs transition-opacity opacity-60 hover:opacity-100">
+                  ✕
+                </span>
               </motion.div>
             );
           })}

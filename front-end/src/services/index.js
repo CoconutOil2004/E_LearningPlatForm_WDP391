@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toastEmitter } from "../contexts/ToastContext";
 import { BACKEND_API_URI } from "../utils/constants";
 
 axios.defaults.withCredentials = true;
@@ -31,7 +32,19 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = response.config?.method?.toUpperCase();
+    const data = response.data;
+    if (
+      method !== "GET" &&
+      data?.success === true &&
+      typeof data?.message === "string" &&
+      data.message.trim()
+    ) {
+      toastEmitter.emit(data.message, "success");
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
@@ -101,6 +114,15 @@ api.interceptors.response.use(
     if (error.response?.data?.message) {
       error.message = error.response.data.message;
     }
+    // Auto toast: bắn error từ BE message
+    const _status = error.response?.status;
+    if (_status && _status !== 401) {
+      const _msg = error.response?.data?.message || error.message;
+      if (_msg && typeof _msg === "string" && _msg.trim()) {
+        toastEmitter.emit(_msg, "error");
+      }
+    }
+
     return Promise.reject(error);
   },
 );
