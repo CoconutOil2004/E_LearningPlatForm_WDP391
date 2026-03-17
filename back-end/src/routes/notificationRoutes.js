@@ -5,7 +5,7 @@ const {
   markOneAsRead,
   markAllAsRead,
 } = require("../controller/notificationController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth.middleware");
 
 // All notification routes require authentication
 router.use(protect);

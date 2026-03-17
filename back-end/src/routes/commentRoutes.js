@@ -5,7 +5,7 @@ const {
   getLessonComments,
   deleteComment
 } = require("../controller/commentController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, authorize } = require("../middleware/auth.middleware");
 
 router.post("/", protect, createComment);
 router.get("/lesson/:lessonId", protect, getLessonComments);

@@ -6,7 +6,7 @@ const {
   getCourseRatingStats,
   replyToReview,
 } = require("../controller/reviewController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth.middleware");
 
 // Public routes
 router.get("/course/:courseId", getCourseReviews);

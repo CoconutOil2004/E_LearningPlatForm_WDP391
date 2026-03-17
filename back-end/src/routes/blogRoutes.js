@@ -19,8 +19,7 @@ const {
   getBlogById,
 } = require("../controller/blogController");
 
-const { protect } = require("../middleware/authMiddleware");
-const { authorize } = require("../middleware/authorize");
+const { protect, isAdmin, authorize } = require('../middleware/auth.middleware');
 
 // ─── PUBLIC (không cần auth) ──────────────────────────────────────────────────
 router.get("/public", getPublicBlogs);

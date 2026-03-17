@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 /* Middlewares */
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth.middleware");
 const checkEnrollment = require("../middleware/checkEnrollment");
 
 /* Controllers */

@@ -19,7 +19,7 @@ const {
   refreshToken,
 } = require("../controller/authController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth.middleware");
 
 router.post("/register", register);
 router.post("/login", login);

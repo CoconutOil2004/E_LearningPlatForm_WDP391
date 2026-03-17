@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { protect, requireAdmin } = require("../middleware/authMiddleware");
+const { protect, isAdmin } = require("../middleware/auth.middleware");
 
 const {
   createPayment,
@@ -19,12 +19,12 @@ router.get("/callback", paymentCallback);
 router.get("/my", protect, getMyPayments);
 
 // Admin revenue analytics
-router.get("/admin/revenue/summary", protect, requireAdmin, getRevenueSummary);
-router.get("/admin/revenue/daily", protect, requireAdmin, getRevenueByDate);
+router.get("/admin/revenue/summary", protect, isAdmin, getRevenueSummary);
+router.get("/admin/revenue/daily", protect, isAdmin, getRevenueByDate);
 router.get(
   "/admin/revenue/by-course",
   protect,
-  requireAdmin,
+  isAdmin,
   getRevenueByCourse,
 );
 

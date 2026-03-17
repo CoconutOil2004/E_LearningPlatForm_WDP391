@@ -16,8 +16,7 @@ const {
   rejectCourse,
 } = require("../controller/courseController");
 
-const { protect } = require("../middleware/authMiddleware");
-const { authorize } = require("../middleware/roleMiddleware");
+const { protect, authorize, isAdmin } = require("../middleware/auth.middleware");
 
 /* ========================= PUBLIC ========================= */
 router.get("/search", searchCourses);
