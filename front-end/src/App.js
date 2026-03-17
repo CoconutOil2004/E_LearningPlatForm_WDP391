@@ -1,8 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { ToastProvider } from "./contexts/ToastContext";
+// import "react-toastify/dist/ReactToastify.css";
 import router from "./routes";
 
 const queryClient = new QueryClient({
@@ -14,23 +12,9 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <div className="font-bodyFont">
-          <RouterProvider router={router} />
-        </div>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-        />
-      </ToastProvider>
+      <div className="font-bodyFont">
+        <RouterProvider router={router} />
+      </div>
     </QueryClientProvider>
   );
 }
