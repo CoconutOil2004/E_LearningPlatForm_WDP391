@@ -17,8 +17,8 @@ const BlogTinyEditor = (props) => {
     value,
     onEditorChange,
     height = "60vh",
-    onWordCount = () => {},
-    onLoaded = () => {},
+    onWordCount = () => { },
+    onLoaded = () => { },
     uploadImage,
     disabled = false,
     placeholder = "Start writing your blog post...",
@@ -26,6 +26,7 @@ const BlogTinyEditor = (props) => {
 
   const [loading, setLoading] = useState(true);
   const editorRef = useRef(null);
+  const initialLoadRef = useRef(true);
   const useDarkMode = false;
 
   // Upload image to Cloudinary via UserService
@@ -95,7 +96,12 @@ const BlogTinyEditor = (props) => {
         tinymceScriptSrc="/tinymce/tinymce.min.js"
         licenseKey="gpl"
         value={value}
-        onEditorChange={(content) => {
+        onEditorChange={(content, editor) => {
+          if (initialLoadRef.current) {
+            initialLoadRef.current = false;
+            // Prevent first internal load event from triggering validation if empty
+            if (!content || content === "<p><br data-mce-bogus=\"1\"></p>") return;
+          }
           onEditorChange && onEditorChange(content);
         }}
         disabled={disabled}

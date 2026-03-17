@@ -311,9 +311,7 @@ const EditBlogModal = ({ blog, open, onClose, onSaved, categories }) => {
       onSaved();
       onClose();
     } catch (err) {
-      if (!err?.errorFields) {
-        message.error(err?.response?.data?.message || "Update failed.");
-      }
+      // API interceptor handles the error message
     } finally {
       setSaving(false);
     }
@@ -590,7 +588,7 @@ const DeleteConfirmModal = ({ blog, open, onClose, onDeleted }) => {
       onDeleted();
       onClose();
     } catch (err) {
-      message.error(err?.response?.data?.message || "Delete failed.");
+      // API interceptor handles the error message
     } finally {
       setLoading(false);
     }
@@ -665,7 +663,7 @@ const InstructorBlogPage = () => {
   useEffect(() => {
     CourseService.getCategories()
       .then(setCategories)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   useEffect(() => {
     loadBlogs();
@@ -681,7 +679,7 @@ const InstructorBlogPage = () => {
       setBlogs(res.data || []);
       setPagination((p) => ({ ...p, total: res.pagination?.totalItems || 0 }));
     } catch {
-      message.error("Failed to load blogs.");
+      // API interceptor handles the error message
     } finally {
       setLoading(false);
     }
@@ -694,7 +692,7 @@ const InstructorBlogPage = () => {
       message.success("Blog submitted for review!");
       loadBlogs();
     } catch (err) {
-      message.error(err?.response?.data?.message || "Submit failed.");
+      // API interceptor handles the error message
     } finally {
       setSubmittingId(null);
     }

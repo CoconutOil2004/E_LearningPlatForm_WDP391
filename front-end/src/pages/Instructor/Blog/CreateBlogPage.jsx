@@ -176,7 +176,6 @@ const CreateBlogPage = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const thumbnailRef = useRef("");
-  const autoSaveTimer = useRef(null);
 
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
@@ -184,7 +183,6 @@ const CreateBlogPage = () => {
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [autoSaved, setAutoSaved] = useState(false);
   const [error, setError] = useState("");
   const [wordCount, setWordCount] = useState(0);
 
@@ -196,29 +194,8 @@ const CreateBlogPage = () => {
   useEffect(() => {
     CourseService.getCategories()
       .then(setCategories)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
-
-  const triggerAutoSave = () => {
-    clearTimeout(autoSaveTimer.current);
-    setAutoSaved(false);
-    autoSaveTimer.current = setTimeout(async () => {
-      const vals = form.getFieldsValue();
-      if (!vals.title?.trim()) return;
-      try {
-        await BlogService.createBlog({
-          title: vals.title,
-          summary: vals.summary || " ",
-          category: vals.category,
-          content: vals.content || " ",
-          status: "draft",
-          thumbnail: thumbnailRef.current,
-        });
-        setAutoSaved(true);
-        setTimeout(() => setAutoSaved(false), 3000);
-      } catch (_) {}
-    }, 4000);
-  };
 
   // Save draft — keeps it as "draft" so instructor can keep editing
   const handleSaveDraft = async () => {
@@ -239,7 +216,8 @@ const CreateBlogPage = () => {
       navigate(-1);
     } catch (err) {
       if (err?.errorFields) return;
-      setError(err?.response?.data?.message ?? "Failed to save draft.");
+      // Do not duplicate set Error if it is already handled globally
+      // setError(err?.response?.data?.message ?? "Failed to save draft.");
     } finally {
       setSaving(false);
     }
@@ -265,7 +243,8 @@ const CreateBlogPage = () => {
       navigate(-1);
     } catch (err) {
       if (err?.errorFields) return;
-      setError(err?.response?.data?.message ?? "Failed to submit blog.");
+      // Do not duplicate set Error if it is already handled globally
+      // setError(err?.response?.data?.message ?? "Failed to submit blog.");
     } finally {
       setSubmitting(false);
     }
@@ -344,20 +323,6 @@ const CreateBlogPage = () => {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {autoSaved && (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    fontSize: 12,
-                    color: C.mint,
-                    fontWeight: 700,
-                  }}
-                >
-                  <CheckCircleFilled style={{ fontSize: 13 }} /> Auto-saved
-                </span>
-              )}
               {wordCount > 0 && (
                 <Tag
                   style={{
@@ -422,7 +387,6 @@ const CreateBlogPage = () => {
           <Form
             form={form}
             layout="vertical"
-            onValuesChange={triggerAutoSave}
             scrollToFirstError={{ behavior: "smooth", block: "center" }}
           >
             <Row gutter={[20, 20]}>
@@ -848,7 +812,7 @@ const CreateBlogPage = () => {
                           size={8}
                           style={{ width: "100%" }}
                         >
-                          
+
                         </Space>
                       </Space>
                     </Card>
