@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { toastEmitter } from "../contexts/ToastContext";
 import UserService from "../services/api/UserService";
 
 const TABS = { INSTRUCTOR: "instructor", STUDENT: "student" };
@@ -95,6 +96,7 @@ const useAdminUsers = () => {
     } catch (err) {
       const msg = err?.response?.data?.message ?? "Failed to create instructor";
       setCreateError(msg);
+      // Removed manual toastEmitter here - handled globally
       return { success: false, message: msg };
     } finally {
       setIsCreating(false);

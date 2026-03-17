@@ -234,12 +234,13 @@ const createInstructor = async (req, res) => {
     const password = generateRandomPassword(10);
 
     const user = new User({
-      username: emailTrimmed, // Model yêu cầu username, dùng email vì login chỉ cần email + password
+      username: emailTrimmed, // Model requires username, use email as login only needs email + password
       fullname: fullname?.trim() || '',
       email: emailTrimmed,
       password,
       role: 'instructor',
       isVerified: true,
+      mustChangePassword: true, // Force password change on first login
     });
     await user.save();
 
@@ -253,11 +254,11 @@ Login Information:
 
 Please log in and change your password to secure your account.`;
 
-    await sendEmail(
-      emailTrimmed,
-      'Instructor account has been created',
-      emailContent,
-    );
+    await sendEmail({
+      to: emailTrimmed,
+      subject: 'Instructor account has been created',
+      text: emailContent,
+    });
 
     logger.info(`Instructor created: ${emailTrimmed} by admin`);
 

@@ -66,7 +66,7 @@ const ForcedPasswordChange = () => {
       });
 
       if (res.success) {
-        toast.success("Password updated successfully!");
+        // toast.success("Password updated successfully!"); // Handled globally
         updateUser({ mustChangePassword: false });
         
         // Short delay for the user to breathe
@@ -77,10 +77,10 @@ const ForcedPasswordChange = () => {
           else navigate("/");
         }, 1000);
       } else {
-        toast.error(res.message || "An error occurred");
+        // toast.error(res.message || "An error occurred"); // Handled globally
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "An error occurred");
+      // toast.error(err.response?.data?.message || "An error occurred"); // Handled globally
     } finally {
       setLoading(false);
     }
