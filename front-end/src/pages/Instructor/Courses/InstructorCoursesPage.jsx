@@ -354,18 +354,10 @@ const InstructorCoursesPage = () => {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="p-8"
+      // className="p-8"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <Title level={2} className="m-0 font-black text-gray-900">
-            My Courses
-          </Title>
-          <Text type="secondary" className="text-base">
-            Manage and track your content performance
-          </Text>
-        </div>
+      <div className="flex items-end justify-end mb-2">
         <Button
           type="primary"
           size="large"
