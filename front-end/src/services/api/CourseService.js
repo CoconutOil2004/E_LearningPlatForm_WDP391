@@ -166,21 +166,36 @@ class CourseService {
 
   // ─── GET /api/courses/instructor/mine ─────────────────────────────────────
   // Instructor only. Gets all instructor's courses (including draft/pending/rejected/published)
-  // Query: status? (draft|pending|published|rejected|archived)
+  // Query: status?  (draft|pending|published|rejected|archived)
+  //        keyword? (search by title)
+  //        sortBy?  (priceAsc|priceDesc|newest|oldest)  default: newest
   // → Course[]
-  getInstructorCourses({ status } = {}) {
+  getInstructorCourses({ status, keyword, sortBy } = {}) {
+    const params = {};
+    if (status) params.status = status;
+    if (keyword && keyword.trim()) params.keyword = keyword.trim();
+    if (sortBy) params.sortBy = sortBy;
     return api
-      .get("/courses/instructor/mine", { params: status ? { status } : {} })
+      .get("/courses/instructor/mine", { params })
       .then((r) => r.data?.data ?? []);
   }
 
   // ─── GET /api/courses/admin/all ───────────────────────────────────────────
-  // Admin only. Returns courses of ALL statuses with pagination + optional keyword/status filter.
+  // Admin only. Returns courses of ALL statuses with pagination + optional keyword/status/price filter.
   // → { data: Course[], total, page, pages }
-  getAdminAllCourses({ status, page = 1, limit = 20, keyword } = {}) {
+  getAdminAllCourses({
+    status,
+    page = 1,
+    limit = 20,
+    keyword,
+    minPrice,
+    maxPrice,
+  } = {}) {
     const params = { page, limit };
     if (status && status !== "all") params.status = status;
     if (keyword) params.keyword = keyword;
+    if (minPrice != null && minPrice !== "") params.minPrice = minPrice;
+    if (maxPrice != null && maxPrice !== "") params.maxPrice = maxPrice;
     return api.get("/courses/admin/all", { params }).then((r) => ({
       courses: r.data?.data ?? [],
       total: r.data?.total ?? 0,

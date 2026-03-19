@@ -795,11 +795,11 @@ exports.approveCourse = async (req, res) => {
 /* =====================================================
    ADMIN: GET ALL COURSES (all statuses)
    GET /api/courses/admin/all
-   Query: status? page? limit? keyword?
+   Query: status? page? limit? keyword? minPrice? maxPrice?
 ===================================================== */
 exports.getAdminAllCourses = async (req, res) => {
   try {
-    let { status, page, limit, keyword } = req.query;
+    let { status, page, limit, keyword, minPrice, maxPrice } = req.query;
     page = Math.max(1, parseInt(page, 10) || 1);
     limit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
 
@@ -812,6 +812,13 @@ exports.getAdminAllCourses = async (req, res) => {
     }
     if (keyword && keyword.trim()) {
       query.$or = [{ title: { $regex: keyword.trim(), $options: "i" } }];
+    }
+    if (minPrice != null || maxPrice != null) {
+      query.price = {};
+      if (minPrice != null && !isNaN(Number(minPrice)))
+        query.price.$gte = Number(minPrice);
+      if (maxPrice != null && !isNaN(Number(maxPrice)))
+        query.price.$lte = Number(maxPrice);
     }
 
     const [courses, total] = await Promise.all([
@@ -902,18 +909,20 @@ exports.rejectCourse = async (req, res) => {
     });
   }
 };
-
 /* =====================================================
    INSTRUCTOR: GET MY COURSES (all statuses)
    GET /api/courses/instructor/mine
-   Query: status? ("draft"|"pending"|"published"|"rejected"|"archived")
+   Query: status?  ("draft"|"pending"|"published"|"rejected"|"archived")
+          keyword? (search by title)
+          sortBy?  ("priceAsc"|"priceDesc"|"newest"|"oldest") – default: newest
 ===================================================== */
 exports.getInstructorCourses = async (req, res) => {
   try {
     const instructorId = req.user._id;
-    const { status } = req.query;
+    const { status, keyword, sortBy } = req.query;
 
     const query = { instructorId };
+
     if (
       status &&
       ["draft", "pending", "published", "rejected", "archived"].includes(status)
@@ -921,10 +930,22 @@ exports.getInstructorCourses = async (req, res) => {
       query.status = status;
     }
 
+    if (keyword && keyword.trim()) {
+      query.title = { $regex: keyword.trim(), $options: "i" };
+    }
+
+    const SORT_MAP = {
+      priceAsc: { price: 1 },
+      priceDesc: { price: -1 },
+      oldest: { createdAt: 1 },
+      newest: { updatedAt: -1 },
+    };
+    const sortOrder = SORT_MAP[sortBy] ?? SORT_MAP.newest;
+
     const courses = await Course.find(query)
       .populate("instructorId", "fullname email avatarURL")
       .populate("category", "name slug description")
-      .sort({ updatedAt: -1 })
+      .sort(sortOrder)
       .lean();
 
     res.json({

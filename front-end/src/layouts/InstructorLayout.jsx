@@ -76,11 +76,6 @@ const InstructorLayout = () => {
 
   const isActive = (path) => location.pathname.startsWith(path);
 
-  // Lấy label từ NAV_ITEMS dựa theo pathname hiện tại
-  const currentLabel =
-    NAV_ITEMS.find((item) => location.pathname.startsWith(item.path))?.label ||
-    "Dashboard";
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">
       <ScrollRestoration />
@@ -220,10 +215,7 @@ const InstructorLayout = () => {
       {/* ── Main Content Area ── */}
       <main className="flex flex-col flex-1 overflow-hidden bg-gray-50">
         {/* Top Header */}
-        <header className="h-[72px] bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{currentLabel}</h1>
-          </div>
+        <header className="h-[72px] bg-white border-b border-gray-100 flex items-center justify-end px-8 shrink-0">
           <div className="flex items-center gap-4">
             <NotificationBell />
             <div className="h-8 w-[1px] bg-gray-100 mx-2" />
