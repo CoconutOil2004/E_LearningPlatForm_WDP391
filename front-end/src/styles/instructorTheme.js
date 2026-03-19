@@ -147,12 +147,4 @@ export const INSTRUCTOR_STATUS_CONFIG = {
     icon: "x",
     antdColor: "error",
   },
-  archived: {
-    bg: "#E5E7EB",
-    text: "#6B7280",
-    border: "#D1D5DB",
-    label: "Archived",
-    icon: "archive",
-    antdColor: "default",
-  },
 };

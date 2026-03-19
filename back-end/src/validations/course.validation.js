@@ -1,61 +1,74 @@
-const { body } = require('express-validator');
-const mongoose = require('mongoose');
+const { body } = require("express-validator");
+const mongoose = require("mongoose");
 
 const createCourseValidation = [
-  body('title')
+  body("title")
     .trim()
-    .notEmpty().withMessage('Title is required')
-    .isLength({ max: 60 }).withMessage('Title must be at most 60 characters'),
-  body('categoryId')
-    .notEmpty().withMessage('Category ID is required')
+    .notEmpty()
+    .withMessage("Title is required")
+    .isLength({ max: 60 })
+    .withMessage("Title must be at most 60 characters"),
+  body("categoryId")
+    .notEmpty()
+    .withMessage("Category ID is required")
     .custom((value) => {
       if (!mongoose.Types.ObjectId.isValid(value)) {
-        throw new Error('Invalid Category ID');
+        throw new Error("Invalid Category ID");
       }
       return true;
     }),
-  body('level')
-    .notEmpty().withMessage('Level is required')
-    .isIn(['Beginner', 'Intermediate', 'Advanced']).withMessage('Invalid level'),
-  body('description')
+  body("level")
+    .notEmpty()
+    .withMessage("Level is required")
+    .isIn(["Beginner", "Intermediate", "Advanced"])
+    .withMessage("Invalid level"),
+  body("description")
     .trim()
     .optional()
-    .isLength({ min: 10 }).withMessage('Description should be at least 10 characters long'),
-  body('thumbnail')
+    .isLength({ min: 10 })
+    .withMessage("Description should be at least 10 characters long"),
+  body("thumbnail")
     .trim()
     .optional()
-    .isURL().withMessage('Thumbnail must be a valid URL')
+    .isURL()
+    .withMessage("Thumbnail must be a valid URL"),
 ];
 
 const updateCourseValidation = [
-  body('title')
+  body("title")
     .trim()
     .optional()
-    .isLength({ max: 60 }).withMessage('Title must be at most 60 characters'),
-  body('categoryId')
+    .isLength({ max: 60 })
+    .withMessage("Title must be at most 60 characters"),
+  body("categoryId")
     .optional()
     .custom((value) => {
       if (value && !mongoose.Types.ObjectId.isValid(value)) {
-        throw new Error('Invalid Category ID');
+        throw new Error("Invalid Category ID");
       }
       return true;
     }),
-  body('level')
+  body("level")
     .optional()
-    .isIn(['Beginner', 'Intermediate', 'Advanced']).withMessage('Invalid level'),
-  body('price')
+    .isIn(["Beginner", "Intermediate", "Advanced"])
+    .withMessage("Invalid level"),
+  body("price")
     .optional()
-    .isNumeric().withMessage('Price must be a number')
-    .custom(v => v >= 0).withMessage('Price must be >= 0'),
-  body('status')
+    .isNumeric()
+    .withMessage("Price must be a number")
+    .custom((v) => v >= 0)
+    .withMessage("Price must be >= 0"),
+  body("status")
     .optional()
-    .isIn(['draft', 'pending', 'published', 'rejected', 'archived']).withMessage('Invalid status'),
-  body('sections')
+    .isIn(["draft", "pending", "published", "rejected"])
+    .withMessage("Invalid status"),
+  body("sections")
     .optional()
-    .isArray().withMessage('Sections must be an array')
+    .isArray()
+    .withMessage("Sections must be an array"),
 ];
 
 module.exports = {
   createCourseValidation,
-  updateCourseValidation
+  updateCourseValidation,
 };

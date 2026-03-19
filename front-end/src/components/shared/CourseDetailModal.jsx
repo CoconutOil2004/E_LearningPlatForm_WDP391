@@ -44,12 +44,6 @@ const STATUS_STYLE = {
     border: "#FECACA",
     label: "Rejected",
   },
-  archived: {
-    bg: "#F3F4F6",
-    color: "#4B5563",
-    border: "#E5E7EB",
-    label: "Archived",
-  },
 };
 
 /* ─── VideoPlayer ─────────────────────────────────────────────────────────── */
