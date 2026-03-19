@@ -76,12 +76,8 @@ const OTPVerification = () => {
     setIsLoading(true);
     try {
       await AuthenService.verifyOTP(email, code);
-      toast.success("Verification successful! Please sign in.");
       navigate("/signin");
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || "OTP is invalid or has expired",
-      );
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +93,6 @@ const OTPVerification = () => {
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to resend OTP");
     } finally {
       setResending(false);
     }
@@ -220,8 +215,8 @@ const OTPVerification = () => {
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               Didn't receive a code?{" "}
               {countdown > 0 ? (
-                  <span style={{ color: "var(--text-disabled)" }}>
-                    Resend available in {countdown}s
+                <span style={{ color: "var(--text-disabled)" }}>
+                  Resend available in {countdown}s
                 </span>
               ) : (
                 <button
