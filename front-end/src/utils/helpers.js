@@ -58,8 +58,8 @@ export const getInitials = (name = "") =>
 
 export const formatThousands = (num) => {
   if (num == null || isNaN(num)) return "0";
-  // Sử dụng 'vi-VN' để đảm bảo đúng định dạng tiếng Việt
-  return Number(num).toLocaleString("vi-VN") + "₫";
+  // Use 'en-US' for English formatting
+  return "$" + Number(num).toLocaleString("en-US");
 };
 
 // ─── Duration formatting ──────────────────────────────────────────────────────
@@ -126,5 +126,5 @@ export const formatTimeAgo = (date) => {
   const diffInMonths = Math.floor(diffInDays / 30);
   if (diffInMonths < 12) return `${diffInMonths}mo ago`;
   
-  return past.toLocaleDateString("vi-VN");
+  return past.toLocaleDateString("en-US");
 };

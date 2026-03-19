@@ -32,10 +32,10 @@ const parseImages = (images) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PUBLIC (không cần auth)
+// PUBLIC (unauthenticated)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** GET /blogs/public  – Lấy danh sách blog đã approved */
+/** GET /blogs/public  – Retrieve list of approved blogs */
 const getPublicBlogs = async (req, res) => {
   try {
     const { page = 1, limit = 9, search = "", category } = req.query;
@@ -78,19 +78,19 @@ const getPublicBlogs = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy danh sách bài viết.",
+      message: "Error retrieving blog list.",
       error: error.message,
     });
   }
 };
 
-/** GET /blogs/public/:id  – Xem chi tiết blog public + related */
+/** GET /blogs/public/:id  – View public blog detail + related */
 const getPublicBlogById = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "ID không hợp lệ." });
+      return res.status(400).json({ success: false, message: "Invalid ID." });
     }
 
     const blog = await Blog.findOne({ _id: id, status: "approved", deleted: false })
@@ -98,10 +98,10 @@ const getPublicBlogById = async (req, res) => {
       .populate("author", "fullname email avatar");
 
     if (!blog) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy bài viết." });
+      return res.status(404).json({ success: false, message: "Blog not found." });
     }
 
-    // Related blogs cùng category
+    // Related blogs in the same category
     const related = await Blog.find({
       _id: { $ne: id },
       category: blog.category?._id,
@@ -114,7 +114,7 @@ const getPublicBlogById = async (req, res) => {
 
     return res.status(200).json({ success: true, data: blog, related });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi server.", error: error.message });
+    return res.status(500).json({ success: false, message: "Server error.", error: error.message });
   }
 };
 
@@ -127,20 +127,9 @@ const createBlog = async (req, res) => {
     const { title, summary, category, content, status, thumbnail, images } = req.body;
     const authorId = req.user.id;
 
-    if (!title || !summary || !category || !content) {
-      return res.status(400).json({
-        success: false,
-        message: "Tiêu đề, tóm tắt, danh mục và nội dung là bắt buộc.",
-      });
-    }
-
-    if (!isValidObjectId(category)) {
-      return res.status(400).json({ success: false, message: "Danh mục không hợp lệ." });
-    }
-
     const foundCategory = await Category.findById(category);
     if (!foundCategory) {
-      return res.status(404).json({ success: false, message: "Danh mục không tồn tại." });
+      return res.status(404).json({ success: false, message: "Category does not exist." });
     }
 
     const allowedInstructorStatus = ["draft", "pending"];
@@ -158,9 +147,9 @@ const createBlog = async (req, res) => {
       images: parsedImages || [],
     });
 
-    return res.status(201).json({ success: true, message: "Tạo bài viết thành công.", data: blog });
+    return res.status(201).json({ success: true, message: "Blog created successfully.", data: blog });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi tạo bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error creating blog.", error: error.message });
   }
 };
 
@@ -181,12 +170,9 @@ const updateOwnBlog = async (req, res) => {
     }
 
     if (category !== undefined) {
-      if (!isValidObjectId(category)) {
-        return res.status(400).json({ success: false, message: "Danh mục không hợp lệ." });
-      }
       const foundCategory = await Category.findById(category);
       if (!foundCategory) {
-        return res.status(404).json({ success: false, message: "Danh mục không tồn tại." });
+        return res.status(404).json({ success: false, message: "Category does not exist." });
       }
       blog.category = category;
     }
@@ -201,7 +187,7 @@ const updateOwnBlog = async (req, res) => {
       if (!["draft", "pending"].includes(status)) {
         return res.status(400).json({
           success: false,
-          message: "Instructor chỉ được cập nhật trạng thái draft hoặc pending.",
+          message: "Instructors can only update status to draft or pending.",
         });
       }
       blog.status = status;
@@ -214,9 +200,9 @@ const updateOwnBlog = async (req, res) => {
     }
 
     await blog.save();
-    return res.status(200).json({ success: true, message: "Cập nhật bài viết thành công.", data: blog });
+    return res.status(200).json({ success: true, message: "Blog updated successfully.", data: blog });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi cập nhật bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error updating blog.", error: error.message });
   }
 };
 
@@ -226,16 +212,16 @@ const submitBlogForReview = async (req, res) => {
     const instructorId = req.user.id;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "ID bài viết không hợp lệ." });
+      return res.status(400).json({ success: false, message: "Invalid blog ID." });
     }
 
     const blog = await Blog.findOne({ _id: id, author: instructorId, deleted: false });
     if (!blog) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy bài viết của bạn." });
+      return res.status(404).json({ success: false, message: "Blog not found." });
     }
 
     if (!blog.title || !blog.summary || !blog.category || !blog.content) {
-      return res.status(400).json({ success: false, message: "Bài viết chưa đủ thông tin để gửi duyệt." });
+      return res.status(400).json({ success: false, message: "Blog is missing information to be submitted for review." });
     }
 
     blog.status = "pending";
@@ -244,9 +230,9 @@ const submitBlogForReview = async (req, res) => {
     blog.approvedAt = null;
 
     await blog.save();
-    return res.status(200).json({ success: true, message: "Đã gửi bài viết chờ admin duyệt.", data: blog });
+    return res.status(200).json({ success: true, message: "Blog submitted for admin review.", data: blog });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi gửi bài viết duyệt.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error submitting blog for review.", error: error.message });
   }
 };
 
@@ -269,7 +255,7 @@ const deleteOwnBlog = async (req, res) => {
     if (!["draft", "rejected"].includes(blog.status)) {
       return res.status(400).json({
         success: false,
-        message: "Chỉ có thể xóa bài viết đang ở trạng thái draft hoặc rejected.",
+        message: "Can only delete blogs in draft or rejected status.",
       });
     }
 
@@ -278,9 +264,9 @@ const deleteOwnBlog = async (req, res) => {
     blog.deletedBy = instructorId;
     await blog.save();
 
-    return res.status(200).json({ success: true, message: "Xóa bài viết thành công." });
+    return res.status(200).json({ success: true, message: "Blog deleted successfully." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi xóa bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error deleting blog.", error: error.message });
   }
 };
 
@@ -326,12 +312,12 @@ const manageBlogs = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Lấy danh sách quản lý bài viết thành công.",
+      message: "Retrieved blog management list successfully.",
       data: blogs,
       pagination: { currentPage, totalPages: Math.ceil(total / pageSize), totalItems: total, pageSize },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi quản lý bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error managing blogs.", error: error.message });
   }
 };
 
@@ -341,13 +327,13 @@ const approveBlog = async (req, res) => {
     const adminId = req.user.id;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "ID bài viết không hợp lệ." });
+      return res.status(400).json({ success: false, message: "Invalid blog ID." });
     }
 
     const blog = await Blog.findOne({ _id: id, deleted: false });
-    if (!blog) return res.status(404).json({ success: false, message: "Không tìm thấy bài viết." });
+    if (!blog) return res.status(404).json({ success: false, message: "Blog not found." });
     if (blog.status !== "pending") {
-      return res.status(400).json({ success: false, message: "Chỉ bài viết đang chờ duyệt mới có thể được duyệt." });
+      return res.status(400).json({ success: false, message: "Only pending blogs can be approved." });
     }
 
     blog.status = "approved";
@@ -356,9 +342,9 @@ const approveBlog = async (req, res) => {
     blog.rejectedReason = "";
 
     await blog.save();
-    return res.status(200).json({ success: true, message: "Duyệt bài viết thành công.", data: blog });
+    return res.status(200).json({ success: true, message: "Blog approved successfully.", data: blog });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi duyệt bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error approving blog.", error: error.message });
   }
 };
 
@@ -368,24 +354,24 @@ const rejectBlog = async (req, res) => {
     const { reason } = req.body;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "ID bài viết không hợp lệ." });
+      return res.status(400).json({ success: false, message: "Invalid blog ID." });
     }
 
     const blog = await Blog.findOne({ _id: id, deleted: false });
-    if (!blog) return res.status(404).json({ success: false, message: "Không tìm thấy bài viết." });
+    if (!blog) return res.status(404).json({ success: false, message: "Blog not found." });
     if (blog.status !== "pending") {
-      return res.status(400).json({ success: false, message: "Chỉ bài viết đang chờ duyệt mới có thể bị từ chối." });
+      return res.status(400).json({ success: false, message: "Only pending blogs can be rejected." });
     }
 
     blog.status = "rejected";
-    blog.rejectedReason = reason?.trim() || "Bài viết chưa đạt yêu cầu.";
+    blog.rejectedReason = reason?.trim() || "Blog does not meet requirements.";
     blog.approvedBy = null;
     blog.approvedAt = null;
 
     await blog.save();
-    return res.status(200).json({ success: true, message: "Từ chối bài viết thành công.", data: blog });
+    return res.status(200).json({ success: true, message: "Blog rejected successfully.", data: blog });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi từ chối bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error rejecting blog.", error: error.message });
   }
 };
 
@@ -406,9 +392,9 @@ const softDeleteBlog = async (req, res) => {
     blog.deletedBy = adminId;
 
     await blog.save();
-    return res.status(200).json({ success: true, message: "Xóa mềm bài viết thành công." });
+    return res.status(200).json({ success: true, message: "Blog soft deleted successfully." });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi xóa mềm bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error soft deleting blog.", error: error.message });
   }
 };
 
@@ -417,18 +403,18 @@ const getBlogById = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
-      return res.status(400).json({ success: false, message: "ID bài viết không hợp lệ." });
+      return res.status(400).json({ success: false, message: "Invalid blog ID." });
     }
 
     const blog = await Blog.findOne({ _id: id, deleted: false })
       .populate("category", "name")
       .populate("author", "fullname email");
 
-    if (!blog) return res.status(404).json({ success: false, message: "Không tìm thấy bài viết." });
+    if (!blog) return res.status(404).json({ success: false, message: "Blog not found." });
 
     return res.status(200).json({ success: true, data: blog });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi lấy chi tiết bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error retrieving blog details.", error: error.message });
   }
 };
 
@@ -465,12 +451,12 @@ const getMyBlogs = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Lấy danh sách bài viết thành công.",
+      message: "Retrieved personal blogs successfully.",
       data: blogs,
       pagination: { currentPage, totalPages: Math.ceil(total / pageSize), totalItems: total, pageSize },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Lỗi khi lấy danh sách bài viết.", error: error.message });
+    return res.status(500).json({ success: false, message: "Error retrieving personal blogs.", error: error.message });
   }
 };
 

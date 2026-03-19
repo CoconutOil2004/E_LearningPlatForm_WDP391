@@ -126,7 +126,7 @@ const getAdminAnalytics = async (req, res) => {
     });
   } catch (error) {
     logger.error("Error fetching admin analytics:", error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -239,7 +239,7 @@ const getInstructorAnalytics = async (req, res) => {
     });
   } catch (error) {
     logger.error("Error fetching instructor analytics:", error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 

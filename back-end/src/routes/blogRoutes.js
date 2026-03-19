@@ -19,17 +19,18 @@ const {
   getBlogById,
 } = require("../controller/blogController");
 
-const { protect } = require("../middleware/authMiddleware");
-const { authorize } = require("../middleware/authorize");
+const { protect, isAdmin, authorize } = require('../middleware/auth.middleware');
+const { validate } = require("../middleware/validation.middleware");
+const { createBlogValidation, updateBlogValidation } = require("../validations/blog.validation");
 
 // ─── PUBLIC (không cần auth) ──────────────────────────────────────────────────
 router.get("/public", getPublicBlogs);
 router.get("/public/:id", getPublicBlogById);
 
 // ─── INSTRUCTOR ───────────────────────────────────────────────────────────────
-router.post("/", protect, authorize("instructor"), createBlog);
+router.post("/", protect, authorize("instructor"), createBlogValidation, validate, createBlog);
 router.get("/my", protect, authorize("instructor"), getMyBlogs);
-router.put("/:id", protect, authorize("instructor"), updateOwnBlog);
+router.put("/:id", protect, authorize("instructor"), updateBlogValidation, validate, updateOwnBlog);
 router.patch("/:id/submit", protect, authorize("instructor"), submitBlogForReview);
 router.delete("/:id", protect, authorize("instructor"), deleteOwnBlog);
 

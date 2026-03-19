@@ -4,8 +4,7 @@ const {
   getAdminAnalytics,
   getInstructorAnalytics
 } = require("../controller/analyticsController");
-const { protect } = require("../middleware/authMiddleware");
-const { authorize } = require("../middleware/roleMiddleware");
+const { protect, authorize } = require("../middleware/auth.middleware");
 
 // Admin analytics
 router.get("/admin", protect, authorize("admin"), getAdminAnalytics);

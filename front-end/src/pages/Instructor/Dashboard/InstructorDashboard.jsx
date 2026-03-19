@@ -50,7 +50,7 @@ import { formatThousands, pageVariants } from "../../../utils/helpers";
 
 const { Title, Text } = Typography;
 
-// ─── Design tokens — đồng nhất với InstructorLayout (indigo/purple) ───────────
+// ─── Design tokens — consistent with InstructorLayout (indigo/purple) ───────────
 const C = {
   primary: "#6366f1",
   primaryDark: "#4f46e5",

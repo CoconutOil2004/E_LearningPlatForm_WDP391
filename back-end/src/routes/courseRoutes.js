@@ -16,8 +16,9 @@ const {
   rejectCourse,
 } = require("../controller/courseController");
 
-const { protect } = require("../middleware/authMiddleware");
-const { authorize } = require("../middleware/roleMiddleware");
+const { protect, authorize, isAdmin } = require("../middleware/auth.middleware");
+const { validate } = require("../middleware/validation.middleware");
+const { createCourseValidation, updateCourseValidation } = require("../validations/course.validation");
 
 /* ========================= PUBLIC ========================= */
 router.get("/search", searchCourses);
@@ -34,8 +35,8 @@ router.get(
   authorize("instructor"),
   getInstructorCourses,
 );
-router.post("/", protect, authorize("instructor"), createCourse);
-router.put("/:courseId", protect, authorize("instructor"), updateCourse);
+router.post("/", protect, authorize("instructor"), createCourseValidation, validate, createCourse);
+router.put("/:courseId", protect, authorize("instructor"), updateCourseValidation, validate, updateCourse);
 router.put("/:courseId/submit", protect, authorize("instructor"), submitCourse);
 
 /* ========================= ADMIN (before /:id to avoid wrong match) ========================= */

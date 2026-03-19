@@ -261,7 +261,7 @@ const AdminBlogPage = () => {
       title: "Date",
       dataIndex: "createdAt",
       width: 120,
-      render: (date) => new Date(date).toLocaleDateString("vi-VN")
+      render: (date) => new Date(date).toLocaleDateString("en-US")
     },
     {
       title: "Actions",

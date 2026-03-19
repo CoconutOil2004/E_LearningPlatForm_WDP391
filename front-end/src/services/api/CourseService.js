@@ -34,7 +34,7 @@ class CourseService {
   // Query: keyword, category (ObjectId), level, minPrice, maxPrice,
   //        minRating, sortBy, page, limit, myCourses ("true")
   // → { data: Course[], total, page, pages }
-  // Course object có thêm isEnrolled: boolean khi gửi token
+  // Course object has isEnrolled: boolean when token is sent
   searchCourses({
     keyword,
     category,
@@ -65,17 +65,17 @@ class CourseService {
   }
 
   // ─── GET /api/courses/:id/preview ─────────────────────────────────────────
-  // Public, không cần auth. Chỉ khóa published.
-  // itemId trong sections chỉ có { _id, title, duration } — KHÔNG có videoUrl
+  // Public, no auth required. Only shows published status.
+  // itemId in sections only contains { _id, title, duration } — NO videoUrl
   // → Course (syllabus only)
   getCoursePreview(id) {
     return api.get(`/courses/${id}/preview`).then((r) => r.data?.data ?? null);
   }
 
   // ─── GET /api/courses/:id ──────────────────────────────────────────────────
-  // BE mới (optionalAuth): trả { data: course, isEnrolled: bool } cho mọi user
-  // BE cũ (protect):  enrolled/admin/instructor → { data: course }
-  //                   unenrolled → 403 (component tự catch và gọi getCoursePreview)
+  // New BE (optionalAuth): returns { data: course, isEnrolled: bool } for all users
+  // Old BE (protect):  enrolled/admin/instructor → { data: course }
+  //                   unenrolled → 403 (component automatically catches and calls getCoursePreview)
   getCourseDetail(id) {
     return api.get(`/courses/${id}`).then((r) => ({
       course: r.data?.data ?? null,
@@ -86,7 +86,7 @@ class CourseService {
   // ─── POST /api/courses ────────────────────────────────────────────────────
   // Instructor only. Body: { title (max 60, required), description,
   //                          categoryId (required), level (required), thumbnail?, language? }
-  // BE tự set: status="draft", price=0
+  // BE automatically sets: status="draft", price=0
   // → Course (populated category.name, instructorId.fullname/email)
   createCourse({ title, description, categoryId, level, language, thumbnail }) {
     return api
@@ -102,14 +102,14 @@ class CourseService {
   }
 
   // ─── PUT /api/courses/:courseId ───────────────────────────────────────────
-  // Instructor only, chỉ khi status = "draft" | "rejected"
+  // Instructor only, only when status = "draft" | "rejected"
   // Body: { title?, description?, categoryId?, level?, price?, status?, sections? }
   // sections shape: [{ title, items: [{ itemType, title, orderIndex,
-  //   itemId?,           ← có → BE dùng lại; không có → BE tạo mới Lesson/Quiz
-  //   videoUrl?,         ← từ uploadVideo
+  //   itemId?,           ← exists → BE reuses; missing → BE creates new Lesson/Quiz
+  //   videoUrl?,         ← from uploadVideo
   //   videoPublicId?,
   //   duration?,
-  //   questions?         ← cho quiz
+  //   questions?         ← for quiz
   // }] }]
   // → Course (full populated)
   updateCourse(courseId, payload) {
@@ -119,7 +119,7 @@ class CourseService {
   }
 
   // ─── POST /api/upload/video ───────────────────────────────────────────────
-  // multipart/form-data, field: "video" → { videoUrl, publicId, duration } (giây)
+  // multipart/form-data, field: "video" → { videoUrl, publicId, duration } (seconds)
   uploadVideo(file, onProgress) {
     const form = new FormData();
     form.append("video", file);
@@ -134,7 +134,7 @@ class CourseService {
   }
 
   // ─── POST /api/upload/images ──────────────────────────────────────────────
-  // multipart, field: "images" (nhiều file) → { data: [ { url, publicId }, ... ] }
+  // multipart, field: "images" (multiple files) → { data: [ { url, publicId }, ... ] }
   uploadImages(files, onProgress) {
     const form = new FormData();
     const list = Array.isArray(files) ? files : [files];
@@ -151,7 +151,7 @@ class CourseService {
   }
 
   // ─── PUT /api/courses/:courseId/submit ────────────────────────────────────
-  // Instructor only. Chỉ khi status = "draft" | "rejected"
+  // Instructor only. Only when status = "draft" | "rejected"
   // → { success, message, data: Course }
   submitCourse(courseId) {
     return api.put(`/courses/${courseId}/submit`).then((r) => r.data ?? null);
@@ -165,7 +165,7 @@ class CourseService {
   }
 
   // ─── GET /api/courses/instructor/mine ─────────────────────────────────────
-  // Instructor only. Lấy toàn bộ khóa học của instructor (kể cả draft/pending/rejected/published)
+  // Instructor only. Gets all instructor's courses (including draft/pending/rejected/published)
   // Query: status? (draft|pending|published|rejected|archived)
   // → Course[]
   getInstructorCourses({ status } = {}) {
@@ -190,14 +190,14 @@ class CourseService {
   }
 
   // ─── PUT /api/courses/:courseId/approve ───────────────────────────────────
-  // Admin only. Chỉ khi status = "pending" → "published"
+  // Admin only. Only when status = "pending" → "published"
   // → { success, message, data: Course }
   approveCourse(courseId) {
     return api.put(`/courses/${courseId}/approve`).then((r) => r.data ?? null);
   }
 
   // ─── PUT /api/courses/:courseId/reject ────────────────────────────────────
-  // Admin only. Chỉ khi status = "pending" → "rejected"
+  // Admin only. Only when status = "pending" → "rejected"
   // Body: { reason? }
   // → { success, message, data: Course }
   rejectCourse(courseId, reason) {
@@ -206,14 +206,14 @@ class CourseService {
       .then((r) => r.data ?? null);
   }
 
-  // ─── Helpers dùng trong FE ─────────────────────────────────────────────────
+  // ─── FE Helpers ─────────────────────────────────────────────────────────────
 
-  // Student: lấy courses đã mua (myCourses=true, cần token)
+  // Student: get purchased courses (myCourses=true, token required)
   getMyCourses({ page = 1, limit = 20 } = {}) {
     return this.searchCourses({ myCourses: true, page, limit });
   }
 
-  // Extract flat lesson list từ course detail (student đã enroll)
+  // Extract flat lesson list from course detail (student enrolled)
   getLessonsFromCourse(course) {
     const lessons = [];
     for (const section of course?.sections ?? []) {
@@ -230,7 +230,7 @@ class CourseService {
     return lessons;
   }
 
-  // Extract flat quiz list từ course detail (student đã enroll)
+  // Extract flat quiz list from course detail (student enrolled)
   getQuizzesFromCourse(course) {
     const quizzes = [];
     for (const section of course?.sections ?? []) {

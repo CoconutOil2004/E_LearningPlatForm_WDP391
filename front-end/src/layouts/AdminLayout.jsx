@@ -90,7 +90,7 @@ const AdminLayout = () => {
   const { user } = useAuthStore();
   const { logout } = useAuth();
 
-  // Highlight menu item khớp với path hiện tại
+  // Highlight menu item matching current path
   const selectedKey =
     NAV_ITEMS.find((item) => location.pathname.startsWith(item.key))?.key ??
     ROUTES.ADMIN_DASHBOARD;
@@ -138,7 +138,7 @@ const AdminLayout = () => {
             height: "100vh",
           }}
         >
-          {/* Wrapper Flexbox ĐỂ ĐẨY FOOTER XUỐNG DƯỚI CÙNG */}
+          {/* Flexbox wrapper TO PUSH FOOTER TO THE BOTTOM */}
           <div
             style={{
               display: "flex",

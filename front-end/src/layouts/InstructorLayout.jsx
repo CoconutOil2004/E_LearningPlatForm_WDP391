@@ -197,7 +197,7 @@ const InstructorLayout = () => {
             </button>
           </Tooltip>
 
-          <Tooltip title={collapsed ? "Mở rộng" : "Thu gọn"} placement="right">
+          <Tooltip title={collapsed ? "Expand" : "Collapse"} placement="right">
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="flex items-center justify-center w-full py-2.5 text-gray-400 transition-colors rounded-xl hover:bg-gray-50 hover:text-gray-900 mt-1"

@@ -1,14 +1,13 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const User = require('../models/User'); // Corrected import to use User model specifically
 const logger = require('../utils/logger');
 
-
+/**
+ * Main authentication middleware (Protect route)
+ */
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get token from header
     const authHeader = req.headers.authorization;
-
-    console.log('Auth header:', authHeader);
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
@@ -17,67 +16,71 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Verify token
     const token = authHeader.split(' ')[1];
-    console.log('Token received:', token ? `${token.substring(0, 15)}...` : 'none');
 
     try {
       if (!process.env.JWT_SECRET) {
-        console.error('JWT_SECRET is not defined in environment variables');
+        logger.error('JWT_SECRET is not defined in environment variables');
         return res.status(500).json({
           success: false,
           message: 'Server configuration error'
         });
       }
       
-      // Add extra error handling for JWT verification
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Decoded token:', decoded);
-
-        // Add user from payload
-        req.user = decoded;
-        
-        // Check if token is expired
-        const currentTime = Math.floor(Date.now() / 1000);
-        if (decoded.exp && decoded.exp < currentTime) {
-          return res.status(401).json({
-            success: false,
-            message: 'Token has expired'
-          });
-        }
-        
-        next();
-      } catch (jwtError) {
-        if (jwtError.name === 'JsonWebTokenError') {
-          return res.status(401).json({
-            success: false,
-            message: 'Invalid token format'
-          });
-        } else if (jwtError.name === 'TokenExpiredError') {
-          return res.status(401).json({
-            success: false,
-            message: 'Token has expired'
-          });
-        } else {
-          throw jwtError; // Let it be caught by the outer catch block
-        }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Fetch fresh user from DB to ensure they still exist and have correct role
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found or token invalid'
+        });
       }
-    } catch (error) {
-      console.error('Token verification error:', error.message);
-      logger.error('Token verification error:', error);
+
+      req.user = user;
+      next();
+    } catch (jwtError) {
+      if (jwtError.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          success: false,
+          message: 'Token has expired'
+        });
+      }
       return res.status(401).json({
         success: false,
         message: 'Token is not valid'
       });
     }
   } catch (error) {
-    console.error('Auth middleware error:', error.message);
     logger.error('Auth middleware error:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error'
     });
+  }
+};
+
+/**
+ * Optional Authentication - attaches user if token is valid, but doesn't block if missing
+ */
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      req.user = null;
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    req.user = user || null;
+    next();
+  } catch {
+    req.user = null;
+    next();
   }
 };
 
@@ -97,58 +100,20 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-// Middleware to check seller role
-const isInstructor = (req, res, next) => {
-  console.log('Checking seller role for user:', req.user);
-  if (req.user && req.user.role === 'instructor') {
-    next();
-  } else {
-    res.status(403).json({
-      success: false,
-      message: 'Access denied. Instructor role required.',
-    });
-  }
-};
-
-// Middleware to check admin role
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({
-      success: false,
-      message: 'Access denied. Admin role required.',
-    });
-  }
-};
-
-// Middleware to check buyer role
-const isStudent = (req, res, next) => {
-  if (req.user && req.user.role === 'student') {
-    next();
-  } else {
-    res.status(403).json({
-      success: false,
-      message: 'Access denied. Student role required.',
-    });
-  }
-};
-
-// Middleware to check if user is a seller or buyer (allows both roles)
-const isStudentOrInstructor = (req, res, next) => {
-  if (req.user && (req.user.role === 'student' || req.user.role === 'instructor')) {
-    next();
-  } else {
-    res.status(403).json({
-      success: false,
-      message: 'Access denied. Student or Instructor role required.',
-    });
-  }
-};
+// Compatibility aliases and specific role guards
+const protect = authMiddleware;
+const authorize = authorizeRoles;
+const isAdmin = authorizeRoles('admin');
+const isInstructor = authorizeRoles('instructor');
+const isStudent = authorizeRoles('student');
+const isStudentOrInstructor = authorizeRoles('student', 'instructor');
 
 module.exports = {
   authMiddleware,
+  protect,
+  optionalAuth,
   authorizeRoles,
+  authorize,
   isInstructor,
   isAdmin,
   isStudent,

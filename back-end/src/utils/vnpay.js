@@ -2,7 +2,7 @@ const qs = require("qs");
 const crypto = require("crypto");
 const moment = require("moment");
 
-// 1. HÀM SORT CHUẨN CỦA VNPAY: Vừa sắp xếp, vừa encodeURIComponent chuẩn xác
+// 1. VNPAY SORT FUNCTION: Sorts and encodes URI components accurately
 function sortObject(obj) {
   let sorted = {};
   let str = [];
@@ -14,7 +14,7 @@ function sortObject(obj) {
   }
   str.sort();
   for (key = 0; key < str.length; key++) {
-    // VNPay yêu cầu encode và đổi khoảng trắng (%20) thành dấu +
+    // VNPAY requires encoding and replacing spaces (%20) with plus signs (+)
     sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
   }
   return sorted;
@@ -39,8 +39,8 @@ exports.createPaymentUrl = ({ amount, orderId, ipAddr, orderInfo }) => {
   };
 
   vnp_Params = sortObject(vnp_Params);
-
-  // Vì hàm sortObject ở trên ĐÃ ENCODE rồi, nên ở đây ta set encode: false
+  
+  // Since sortObject above ALREADY ENCODED, we set encode: false here
   const signData = qs.stringify(vnp_Params, { encode: false });
 
   const secureHash = crypto
@@ -49,8 +49,8 @@ exports.createPaymentUrl = ({ amount, orderId, ipAddr, orderInfo }) => {
     .digest("hex");
 
   vnp_Params.vnp_SecureHash = secureHash;
-
-  // LƯU Ý QUAN TRỌNG: Sửa encode: true thành encode: false để tránh mã hóa 2 lần (double-encoding)
+  
+  // IMPORTANT NOTE: Change encode: true to encode: false to avoid double-encoding
   const finalUrl =
     process.env.VNP_URL + "?" + qs.stringify(vnp_Params, { encode: false });
     
@@ -64,7 +64,7 @@ exports.verifyReturnUrl = (query) => {
   delete params["vnp_SecureHash"];
   if (params["vnp_SecureHashType"]) delete params["vnp_SecureHashType"];
 
-  // req.query của Express đã tự động decode, nên ta phải ném nó vào sortObject để encode lại từ đầu
+  // Express req.query is automatically decoded, so we must use sortObject to re-encode from scratch
   const sorted = sortObject(params);
   const signData = qs.stringify(sorted, { encode: false });
 

@@ -15,17 +15,28 @@ const {
   changePasswordRequired,
   verifyResetPasswordToken,
   resetPassword,
+  logout,
+  refreshToken,
 } = require("../controller/authController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth.middleware");
+const { validate } = require("../middleware/validation.middleware");
+const { 
+  registerValidation, 
+  loginValidation, 
+  forgotPasswordValidation, 
+  resetPasswordValidation 
+} = require("../validations/auth.validation");
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", registerValidation, validate, register);
+router.post("/login", loginValidation, validate, login);
 router.post("/verify-otp", verifyOTP);
 router.post("/resend-otp", resendOTP);
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", forgotPasswordValidation, validate, forgotPassword);
 router.get("/verify-reset-password", verifyResetPasswordToken);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", resetPasswordValidation, validate, resetPassword);
+router.post("/logout", logout);
+router.post("/refresh-token", protect, refreshToken);
 router.put("/change-password-required", protect, changePasswordRequired);
 
 router.get(
@@ -45,13 +56,13 @@ router.get("/google/callback", (req, res, next) => {
 
     if (err) {
       return res.redirect(
-        `${process.env.CLIENT_URL}/signin?error=${encodeURIComponent(err.message || "google_failed")}`
+        `${process.env.CLIENT_URL}/signin?error=${encodeURIComponent(err.message || "google_failed")}`,
       );
     }
 
     if (!user) {
       return res.redirect(
-        `${process.env.CLIENT_URL}/signin?error=google_failed`
+        `${process.env.CLIENT_URL}/signin?error=google_failed`,
       );
     }
 

@@ -269,13 +269,12 @@ const CreateBlogPage = () => {
         {/* TOP BAR */}
         <div
           style={{
-            position: "sticky",
-            top: 0,
-            zIndex: 40,
-            background: "rgba(249,250,251,0.96)",
-            backdropFilter: "blur(12px)",
+            background: "white",
             borderBottom: "1px solid #f1f0fe",
-            padding: "12px 24px",
+            padding: "20px 24px",
+            marginBottom: 24,
+            borderRadius: "0 0 20px 20px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
           }}
         >
           <div
@@ -343,10 +342,14 @@ const CreateBlogPage = () => {
                 loading={saving}
                 disabled={submitting}
                 style={{
-                  borderRadius: 10,
+                  height: 40,
+                  borderRadius: 8,
                   fontWeight: 700,
-                  borderColor: C.border,
+                  borderColor: "#d9d9d9",
+                  color: "#4b5563",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                 }}
+                className="hover:!border-indigo-400 hover:!text-indigo-600"
               >
                 Save Draft
               </Button>
@@ -357,14 +360,16 @@ const CreateBlogPage = () => {
                 loading={submitting}
                 disabled={saving}
                 style={{
-                  borderRadius: 10,
+                  height: 40,
+                  borderRadius: 8,
                   fontWeight: 700,
                   background: C.gradient,
                   border: "none",
-                  boxShadow: "0 4px 16px rgba(99,102,241,0.28)",
+                  boxShadow: "0 4px 12px rgba(99,102,241,0.2)",
+                  padding: "0 24px",
                 }}
               >
-                Submit for Review
+                Submit
               </Button>
             </div>
           </div>
@@ -734,7 +739,7 @@ const CreateBlogPage = () => {
                 <Space
                   direction="vertical"
                   size={16}
-                  style={{ width: "100%", position: "sticky", top: 72 }}
+                  style={{ width: "100%" }}
                 >
                   {/* Publish Settings */}
                   <motion.div {...up(0.08)}>

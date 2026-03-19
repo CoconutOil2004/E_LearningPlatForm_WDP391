@@ -12,7 +12,7 @@ function countLessonItems(sections) {
   return n;
 }
 
-/** Cập nhật enrollment.progress và completed từ itemsProgress (chỉ đếm lesson done). */
+/** Update enrollment.progress and completed from itemsProgress (only counts done lessons). */
 function recalcProgressFromItemsProgress(enrollment, totalLessons) {
   if (totalLessons === 0) return;
   const doneCount = (enrollment.itemsProgress || []).filter(
@@ -27,14 +27,7 @@ exports.completeLesson = async (req, res) => {
     const { lessonId } = req.body;
     const enrollment = req.enrollment;
 
-    const lid = mongoose.Types.ObjectId.isValid(lessonId)
-      ? new mongoose.Types.ObjectId(lessonId)
-      : null;
-    if (!lid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid lesson id" });
-    }
+    const lid = new mongoose.Types.ObjectId(lessonId);
 
     const course = await Course.findById(enrollment.courseId).select(
       "sections",
@@ -102,14 +95,7 @@ exports.heartbeat = async (req, res) => {
     const { lessonId, watchedSecondsDelta } = req.body;
     const enrollment = req.enrollment;
 
-    const lid = mongoose.Types.ObjectId.isValid(lessonId)
-      ? new mongoose.Types.ObjectId(lessonId)
-      : null;
-    if (!lid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid lesson id" });
-    }
+    const lid = new mongoose.Types.ObjectId(lessonId);
     const delta = Math.max(0, Number(watchedSecondsDelta) || 0);
 
     let items = enrollment.itemsProgress || [];
@@ -217,7 +203,7 @@ exports.checkLessonAccess = async (req, res) => {
       return res.status(403).json({
         success: false,
         allowed: false,
-        message: "Hoàn thành bài trước để mở khóa.",
+        message: "Complete the previous lesson to unlock.",
       });
     }
     res.json({ success: true, allowed: true, status: entry.status });
@@ -235,14 +221,7 @@ exports.markQuizDone = async (req, res) => {
     const { quizId } = req.body;
     const enrollment = req.enrollment;
 
-    const qid = mongoose.Types.ObjectId.isValid(quizId)
-      ? new mongoose.Types.ObjectId(quizId)
-      : null;
-    if (!qid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid quiz id" });
-    }
+    const qid = new mongoose.Types.ObjectId(quizId);
 
     const items = enrollment.itemsProgress || [];
     const quizEntry = items.find(

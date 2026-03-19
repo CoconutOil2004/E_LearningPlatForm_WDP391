@@ -27,8 +27,8 @@ import { COLOR } from "../../../styles/adminTheme";
 
 const { Text, Title } = Typography;
 
-const formatVND = (value) => 
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+const formatUSD = (value) => 
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
 const InstructorRevenuePage = () => {
   const [data, setData] = useState(null);
@@ -41,7 +41,7 @@ const InstructorRevenuePage = () => {
         const res = await UserService.getInstructorRevenue();
         setData(res);
       } catch (err) {
-        message.error("Không thể tải thông tin doanh thu");
+        message.error("Failed to load revenue information");
       } finally {
         setLoading(false);
       }
@@ -80,7 +80,7 @@ const InstructorRevenuePage = () => {
       key: "amount",
       render: (amount) => (
         <Text strong style={{ color: COLOR.green }}>
-          {formatVND(amount)}
+          {formatUSD(amount)}
         </Text>
       ),
     },
@@ -99,21 +99,21 @@ const InstructorRevenuePage = () => {
   const statCards = [
     {
       title: "Total Revenue",
-      value: formatVND(data?.stats?.totalRevenue || 0),
+      value: formatUSD(data?.stats?.totalRevenue || 0),
       icon: <DollarOutlined className="text-2xl" />,
       color: "#4A90E2",
       bg: "rgba(74, 144, 226, 0.1)"
     },
     {
       title: "This Month",
-      value: formatVND(data?.stats?.monthRevenue || 0),
+      value: formatUSD(data?.stats?.monthRevenue || 0),
       icon: <RiseOutlined className="text-2xl" />,
       color: "#27AE60",
       bg: "rgba(39, 174, 96, 0.1)"
     },
     {
       title: "Today",
-      value: formatVND(data?.stats?.todayRevenue || 0),
+      value: formatUSD(data?.stats?.todayRevenue || 0),
       icon: <ShoppingOutlined className="text-2xl" />,
       color: "#F2994A",
       bg: "rgba(242, 153, 74, 0.1)"
@@ -136,7 +136,7 @@ const InstructorRevenuePage = () => {
             <Title level={2} style={{ margin: 0, fontWeight: 900 }}>Financial Overview</Title>
             <Text type="secondary">Monitor your earnings and course performance</Text>
           </div>
-          <Tooltip title="Doanh thu được cập nhật ngay khi học viên thanh toán thành công">
+          <Tooltip title="Revenue is updated immediately after successful student payment">
             <InfoCircleOutlined className="text-gray-400 cursor-help" />
           </Tooltip>
         </div>
@@ -206,7 +206,7 @@ const InstructorRevenuePage = () => {
                 emptyText: (
                   <Empty 
                     image={Empty.PRESENTED_IMAGE_SIMPLE} 
-                    description="Bạn chưa có doanh thu nào"
+                    description="You don't have any revenue yet"
                   />
                 )
               }}

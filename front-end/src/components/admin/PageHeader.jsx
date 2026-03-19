@@ -1,4 +1,4 @@
-// Shared header — dùng chung toàn bộ trang Admin
+// Shared header — used across all Admin pages
 import { Space, Typography } from "antd";
 import { COLOR } from "../../styles/adminTheme";
 

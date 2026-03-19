@@ -68,9 +68,9 @@ const requireAdmin = (req, res, next) => {
 };
 
 /* =====================================
-   OPTIONAL AUTH — không bắt buộc login
-   Nếu có token hợp lệ → gắn req.user
-   Nếu không có / hết hạn → req.user = null, next()
+   OPTIONAL AUTH — Login not required
+   If valid token exists → attach req.user
+   If absent / expired → req.user = null, next()
 ===================================== */
 const optionalAuth = async (req, res, next) => {
   try {

@@ -44,7 +44,7 @@ const InstructorStudentsPage = () => {
         total: res.pagination?.total ?? 0
       }));
     } catch (err) {
-      message.error(err?.response?.data?.message ?? "Không thể tải danh sách học viên");
+      message.error(err?.response?.data?.message ?? "Failed to load student list");
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,7 @@ const InstructorStudentsPage = () => {
           color={record.completed ? "success" : "processing"}
           className="rounded-full px-3 border-none font-medium text-[12px]"
         >
-          {record.completed ? "Hoàn thành" : "Đang học"}
+          {record.completed ? "Completed" : "Learning"}
         </Tag>
       ),
     },

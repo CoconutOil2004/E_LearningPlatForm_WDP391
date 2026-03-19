@@ -5,9 +5,11 @@ const {
   getLessonComments,
   deleteComment
 } = require("../controller/commentController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, authorize } = require("../middleware/auth.middleware");
+const { validate } = require("../middleware/validation.middleware");
+const { commentValidation } = require("../validations/comment.validation");
 
-router.post("/", protect, createComment);
+router.post("/", protect, commentValidation, validate, createComment);
 router.get("/lesson/:lessonId", protect, getLessonComments);
 router.delete("/:id", protect, deleteComment);
 

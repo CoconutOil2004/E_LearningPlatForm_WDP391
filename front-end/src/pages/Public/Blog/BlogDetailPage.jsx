@@ -104,7 +104,7 @@ const BlogDetailPage = () => {
         setBlog(res.data);
         setRelated(res.related || []);
       })
-      .catch(() => setError("Không tìm thấy bài viết."))
+      .catch(() => setError("Article not found."))
       .finally(() => setLoading(false));
 
     window.scrollTo(0, 0);
@@ -138,7 +138,7 @@ const BlogDetailPage = () => {
   const readMins = Math.max(1, Math.ceil(wordCount / 200));
   const date = blog.approvedAt || blog.createdAt;
   const dateStr = date
-    ? new Date(date).toLocaleDateString("vi-VN", { day: "2-digit", month: "long", year: "numeric" })
+    ? new Date(date).toLocaleDateString("en-US", { day: "2-digit", month: "long", year: "numeric" })
     : "";
 
   return (

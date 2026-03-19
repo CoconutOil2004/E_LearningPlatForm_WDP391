@@ -71,6 +71,11 @@ app.use("/api/analytics", require("./src/routes/analyticsRoutes"));
 /* ========================================== */
 
 const PORT = process.env.PORT || 9999;
+
+/* ================= ERROR HANDLING ================= */
+const errorMiddleware = require("./src/middleware/error.middleware");
+app.use(errorMiddleware);
+
 server.listen(PORT, () =>
   console.log(`✅ Server running on http://localhost:${PORT}`),
 );

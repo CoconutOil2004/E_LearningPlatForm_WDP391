@@ -31,7 +31,7 @@ import { COLOR } from "../../../styles/adminTheme";
 const { Text } = Typography;
 const { Option } = Select;
 
-// ─── Mock data (thay bằng API thực tế) ────────────────────────────────────────
+// ─── Mock data (replace with actual API) ────────────────────────────────────────
 const MOCK_LOGS = [
   {
     id: "1",

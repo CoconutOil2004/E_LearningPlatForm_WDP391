@@ -1,8 +1,9 @@
 /**
- * useAdminUsers — custom hook quản lý state cho trang Admin Users
+ * useAdminUsers — custom hook to manage state for Admin Users page
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { toastEmitter } from "../contexts/ToastContext";
 import UserService from "../services/api/UserService";
 
 const TABS = { INSTRUCTOR: "instructor", STUDENT: "student" };
@@ -19,7 +20,7 @@ const useAdminUsers = () => {
   const [instructorPagination, setInstructorPagination] = useState({ total: 0, totalPages: 1 });
   const [studentPagination,    setStudentPagination]    = useState({ total: 0, totalPages: 1 });
   
-  const [loading,      setLoading]      = useState(false);
+  const [loading, setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -36,7 +37,7 @@ const useAdminUsers = () => {
       setInstructors(res.instructors ?? []);
       setInstructorPagination(res.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
-      setError(err?.response?.data?.message ?? "Không thể tải danh sách instructor");
+      setError(err?.response?.data?.message ?? "Failed to load instructor list");
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,7 @@ const useAdminUsers = () => {
       setStudents(res.students ?? []);
       setStudentPagination(res.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
-      setError(err?.response?.data?.message ?? "Không thể tải danh sách student");
+      setError(err?.response?.data?.message ?? "Failed to load student list");
     } finally {
       setLoading(false);
     }
@@ -93,8 +94,9 @@ const useAdminUsers = () => {
       setPage(1);
       return { success: true };
     } catch (err) {
-      const msg = err?.response?.data?.message ?? "Tạo instructor thất bại";
+      const msg = err?.response?.data?.message ?? "Failed to create instructor";
       setCreateError(msg);
+      // Removed manual toastEmitter here - handled globally
       return { success: false, message: msg };
     } finally {
       setIsCreating(false);
@@ -102,9 +104,9 @@ const useAdminUsers = () => {
   };
 
   // BUG FIX 1 + 2 + 3:
-  // - Đọc user.action === "lock" thay vì user.isLocked (field không tồn tại)
-  // - Sửa logic nextAction cho đúng chiều
-  // - Tách instructor vs student (BE không có endpoint student)
+  // - Read user.action === "lock" instead of user.isLocked (non-existent field)
+  // - Fix nextAction logic direction
+  // - Separate instructor vs student (BE doesn't have student endpoint)
   const handleToggleLock = async (user) => {
     const isCurrentlyLocked = user.action === "lock";
     const nextAction = isCurrentlyLocked ? "unlock" : "lock";

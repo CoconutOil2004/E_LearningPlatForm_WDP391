@@ -4,13 +4,13 @@ import CourseService from "../services/api/CourseService";
 /**
  * useCategorySection
  * ──────────────────
- * Fetch categories từ BE, sau đó với mỗi category fetch N courses.
+ * Fetch categories from BE, then for each category fetch N courses.
  * Used for the HomePage "Courses by Topic" section.
  *
  * @param {{ limit?: number, sortBy?: string, maxCategories?: number }} options
- *   - limit:          số course mỗi category (default 4)
+ *   - limit:          number of courses per category (default 4)
  *   - sortBy:         popular | rating | priceAsc | priceDesc (default "popular")
- *   - maxCategories:  chỉ lấy N category đầu tiên (default 5, tránh quá nhiều request)
+ *   - maxCategories:  only fetch first N categories (default 5, avoid too many requests)
  *
  * @returns {{
  *   sections: Array<{
@@ -24,13 +24,13 @@ import CourseService from "../services/api/CourseService";
  * }}
  *
  * FLOW:
- *   1. Fetch /api/categories                     → danh sách categories
+ *   1. Fetch /api/categories                     → category list
  *   2. Promise.allSettled([...getCoursesByCategory])  → courses per category (parallel)
- *   3. Lọc bỏ category nào không có course nào
+ *   3. Filter out categories with no courses
  *
  * ERROR STRATEGY:
- *   - Nếu fetch categories lỗi → error state, sections = []
- *   - Nếu một vài category lỗi → bỏ qua category đó (allSettled), không crash toàn bộ
+ *   - If categories fetch fails → error state, sections = []
+ *   - If some categories fail → skip those categories (allSettled), don't crash whole process
  */
 const useCategorySection = ({
   limit         = 4,
@@ -58,7 +58,7 @@ const useCategorySection = ({
       setError(null);
 
       try {
-        // ── STEP 1: lấy danh sách categories ────────────────────────────
+        // ── STEP 1: get categories list ────────────────────────────
         const categories = await CourseService.getCategories();
         console.log("✅ Categories:", categories);  
         if (cancelled) return;
@@ -69,10 +69,10 @@ const useCategorySection = ({
           return;
         }
 
-        // Chỉ lấy maxCategories category đầu
+        // Take only first maxCategories
         const targetCategories = categories.slice(0, maxCategories);
 
-        // ── STEP 2: fetch courses song song (allSettled = không crash nếu 1 cái lỗi) ──
+        // ── STEP 2: fetch courses in parallel (allSettled = don't crash if one fails) ──
         const results = await Promise.allSettled(
           targetCategories.map((cat) =>
             CourseService.getCoursesByCategory(cat._id, { limit, sortBy })
@@ -82,7 +82,7 @@ const useCategorySection = ({
 
         if (cancelled) return;
 
-        // ── STEP 3: ghép category + courses, lọc category rỗng ──────────
+        // ── STEP 3: merge category + courses, filter empty categories ──────────
         const built = [];
         results.forEach((result, idx) => {
           if (result.status === "fulfilled") {
@@ -95,14 +95,14 @@ const useCategorySection = ({
               });
             }
           }
-          // nếu rejected → bỏ qua category đó (không throw)
+          // if rejected → skip that category (no throw)
         });
 
         setSections(built);
       } catch (err) {
         if (cancelled) return;
         console.error("[useCategorySection] fetch error:", err);
-        setError(err.message ?? "Không thể tải danh sách khóa học");
+        setError(err.message ?? "Failed to load courses");
         setSections([]);
       } finally {
         if (!cancelled) setLoading(false);

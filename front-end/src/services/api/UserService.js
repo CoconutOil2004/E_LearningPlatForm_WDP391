@@ -51,8 +51,8 @@ class UserService {
   // ─── Upload ────────────────────────────────────────────────────────────────
 
   /**
-   * Upload một ảnh lên Cloudinary qua BE
-   * @param {File} file - File ảnh cần upload
+   * Upload an image to Cloudinary via BE
+   * @param {File} file - Image file to upload
    * @returns {{ url: string, publicId: string }}
    */
   async uploadImage(file) {
@@ -61,7 +61,7 @@ class UserService {
     const { data } = await api.post("/upload/images", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    // BE trả về { success, data: [{ url, publicId }] }
+    // BE returns { success, data: [{ url, publicId }] }
     if (data?.success && data?.data?.length > 0) {
       return data.data[0]; // { url, publicId }
     }

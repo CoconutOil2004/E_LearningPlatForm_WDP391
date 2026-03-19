@@ -19,7 +19,7 @@ import { api } from "../index";
 class BlogService {
   // ─── PUBLIC ─────────────────────────────────────────────────────────────────
 
-  /** Lấy danh sách blog đã approved (public, no auth) */
+  /** Get list of approved blogs (public, no auth) */
   async getPublicBlogs({ page = 1, limit = 9, search, category } = {}) {
     const params = { page, limit };
     if (search) params.search = search;
@@ -28,7 +28,7 @@ class BlogService {
     return data; // { success, data: Blog[], pagination }
   }
 
-  /** Lấy chi tiết blog public + related */
+  /** Get public blog details + related blogs */
   async getPublicBlogById(id) {
     const { data } = await api.get(`/blogs/public/${id}`);
     return data; // { success, data: Blog, related: Blog[] }
@@ -36,13 +36,13 @@ class BlogService {
 
   // ─── INSTRUCTOR ──────────────────────────────────────────────────────────────
 
-  /** Instructor tạo blog mới */
+  /** Instructor creates new blog */
   async createBlog(payload) {
     const { data } = await api.post("/blogs", payload);
     return data;
   }
 
-  /** Instructor lấy blog của mình */
+  /** Instructor gets their own blogs */
   async getMyBlogs({ page = 1, limit = 10, status, search } = {}) {
     const params = { page, limit };
     if (status) params.status = status;
@@ -51,19 +51,19 @@ class BlogService {
     return data;
   }
 
-  /** Instructor cập nhật blog của mình */
+  /** Instructor updates their own blog */
   async updateBlog(id, payload) {
     const { data } = await api.put(`/blogs/${id}`, payload);
     return data;
   }
 
-  /** Instructor gửi blog chờ admin duyệt */
+  /** Instructor submits blog for admin review */
   async submitForReview(id) {
     const { data } = await api.patch(`/blogs/${id}/submit`);
     return data;
   }
 
-  /** Instructor xóa blog (chỉ draft/rejected) */
+  /** Instructor deletes blog (only draft/rejected) */
   async deleteOwnBlog(id) {
     const { data } = await api.delete(`/blogs/${id}`);
     return data;
@@ -71,7 +71,7 @@ class BlogService {
 
   // ─── AUTHENTICATED ───────────────────────────────────────────────────────────
 
-  /** Lấy chi tiết blog theo id (cần auth) */
+  /** Get blog details by id (auth required) */
   async getBlogById(id) {
     const { data } = await api.get(`/blogs/${id}`);
     return data;
@@ -79,25 +79,25 @@ class BlogService {
 
   // ─── ADMIN ───────────────────────────────────────────────────────────────────
 
-  /** Admin lấy danh sách tất cả blogs */
+  /** Admin gets list of all blogs */
   async manageBlogs(params = {}) {
     const { data } = await api.get("/blogs/admin/manage", { params });
     return data;
   }
 
-  /** Admin duyệt blog */
+  /** Admin approves blog */
   async approveBlog(id) {
     const { data } = await api.patch(`/blogs/admin/${id}/approve`);
     return data;
   }
 
-  /** Admin từ chối blog */
+  /** Admin rejects blog */
   async rejectBlog(id, reason) {
     const { data } = await api.patch(`/blogs/admin/${id}/reject`, { reason });
     return data;
   }
 
-  /** Admin xóa mềm blog */
+  /** Admin soft deletes blog */
   async adminDeleteBlog(id) {
     const { data } = await api.delete(`/blogs/admin/${id}`);
     return data;

@@ -389,11 +389,9 @@ const AdminApprovalPage = () => {
     setProcessing(courseId);
     try {
       await CourseService.approveCourse(courseId);
-      toast.success("Course approved and published!");
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
       if (selectedCourse?._id === courseId) setModalOpen(false);
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? "Approve failed");
     } finally {
       setProcessing(null);
     }
@@ -405,11 +403,9 @@ const AdminApprovalPage = () => {
     setProcessing(courseId);
     try {
       await CourseService.rejectCourse(courseId, reason);
-      toast.success("Course rejected. The instructor has been notified.");
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
       if (selectedCourse?._id === courseId) setModalOpen(false);
     } catch (err) {
-      toast.error(err?.response?.data?.message ?? "Reject failed");
     } finally {
       setProcessing(null);
     }

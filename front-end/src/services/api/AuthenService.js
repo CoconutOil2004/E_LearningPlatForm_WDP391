@@ -31,11 +31,12 @@ class AuthenService {
     }
   }
 
-  async resetPassword(token, password) {
+  async resetPassword(token, newPassword, confirmPassword) {
     try {
-      const response = await api.post(`auth/reset-password/${token}`, {
-        password,
+      const response = await api.post("auth/reset-password", {
         token,
+        newPassword,
+        confirmPassword,
       });
       return response.data;
     } catch (error) {

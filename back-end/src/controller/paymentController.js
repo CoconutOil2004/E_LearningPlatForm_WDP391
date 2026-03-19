@@ -13,13 +13,6 @@ exports.createPayment = async (req, res) => {
     const userId = req.user._id;
     const { courseId, paymentMethod } = req.body;
 
-    if (paymentMethod !== "vnpay") {
-      return res.status(400).json({
-        success: false,
-        message: "Chỉ hỗ trợ thanh toán VNPay. Gửi paymentMethod: 'vnpay'.",
-      });
-    }
-
     const course = await Course.findById(courseId);
     if (!course)
       return res
@@ -64,7 +57,7 @@ exports.createPayment = async (req, res) => {
       req.headers["x-forwarded-for"] ||
       req.connection?.remoteAddress ||
       "127.0.0.1";
-    const orderInfo = `Thanh toan khoa hoc ${courseId}`;
+    const orderInfo = `Course payment for ${courseId}`;
 
     const paymentUrl = createPaymentUrl({
       amount: course.price,
@@ -145,8 +138,8 @@ exports.paymentCallback = async (req, res) => {
         // Gửi thông báo cho học viên
         await sendNotification(req.app, {
           userId: enrollment.userId,
-          title: "Thanh toán thành công",
-          message: `Chúc mừng! Bạn đã đăng ký thành công khóa học "${payment.enrollmentId?.courseId?.title || "mới"}".`,
+          title: "Payment successful",
+          message: `Congratulations! You have successfully enrolled in "${payment.enrollmentId?.courseId?.title || "new course"}".`,
           type: "success",
           link: `/learning/${enrollment.courseId}`,
         });
@@ -156,8 +149,8 @@ exports.paymentCallback = async (req, res) => {
         if (course && course.instructorId) {
            await sendNotification(req.app, {
              userId: course.instructorId,
-             title: "Học viên mới (Đã thanh toán)",
-             message: `Học viên ${student?.fullname || student?.username || "mới"} đã mua khóa học "${course.title}" của bạn.`,
+             title: "New Student (Paid)",
+             message: `Student ${student?.fullname || student?.username || "new member"} has purchased your course "${course.title}".`,
              type: "success",
              link: `/instructor/courses/edit/${course._id}`,
            });
@@ -357,7 +350,7 @@ exports.getRevenueByCourse = async (req, res) => {
       success: true,
       data: result.map((r) => ({
         courseId: r._id,
-        title: r.course?.title || "Không xác định",
+        title: r.course?.title || "Unknown",
         totalRevenue: r.totalRevenue,
         totalOrders: r.totalOrders,
       })),
@@ -514,7 +507,7 @@ exports.getRevenueByCourse = async (req, res) => {
       success: true,
       data: result.map((r) => ({
         courseId: r._id,
-        title: r.course?.title || "Không xác định",
+        title: r.course?.title || "Unknown",
         totalRevenue: r.totalRevenue,
         totalOrders: r.totalOrders,
       })),
