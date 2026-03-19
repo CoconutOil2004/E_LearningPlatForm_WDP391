@@ -4,11 +4,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
-import useNotificationStore from "../../../store/slices/notificationStore";
 import { ROUTES } from "../../../utils/constants";
-import { cn, getInitials } from "../../../utils/helpers";
-import { Icon } from "../../ui";
+import { getInitials } from "../../../utils/helpers";
 import NotificationBell from "../../shared/NotificationBell";
+import { Icon } from "../../ui";
 
 // ─── Avatar Dropdown ──────────────────────────────────────────────────────────
 const AvatarDropdown = ({ user }) => {
@@ -79,9 +78,9 @@ const AvatarDropdown = ({ user }) => {
           style={{ background: "var(--gradient-brand)" }}
         >
           {user?.avatarURL ? (
-            <img 
-              src={user.avatarURL} 
-              alt="avatar" 
+            <img
+              src={user.avatarURL}
+              alt="avatar"
               className="object-cover w-full h-full"
             />
           ) : (
@@ -90,7 +89,7 @@ const AvatarDropdown = ({ user }) => {
         </div>
         <Icon name="chevronDown" size={16} color="var(--text-muted)" />
       </motion.button>
- 
+
       <AnimatePresence>
         {open && (
           <motion.div
@@ -102,7 +101,7 @@ const AvatarDropdown = ({ user }) => {
             style={{ boxShadow: "var(--shadow-lg)" }}
           >
             <div className="p-4 border-b border-border">
-              <p className="text-sm font-bold text-heading truncate">
+              <p className="text-sm font-bold truncate text-heading">
                 {user?.fullname || user?.username || "Student"}
               </p>
               <p className="text-xs truncate text-muted">{user?.email}</p>
@@ -179,16 +178,22 @@ const Header = () => {
         {/* Nav links */}
         <nav className="items-center justify-center flex-1 hidden gap-1 md:flex">
           <Link
-            to={ROUTES.COURSES}
-            className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
-          >
-            Browse
-          </Link>
-          <Link
             to={ROUTES.ROADMAP}
             className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
           >
             Roadmap
+          </Link>
+          <Link
+            to={ROUTES.COURSES}
+            className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
+          >
+            Courses
+          </Link>
+          <Link
+            to={ROUTES.BLOG_LIST}
+            className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
+          >
+            Blog
           </Link>
           {isAuthenticated && role === "student" && (
             <Link
