@@ -1,5 +1,6 @@
 const Enrollment = require("../models/Enrollment");
 const Course = require("../models/Course");
+const User = require("../models/User");
 const { buildItemsProgress } = require("../utils/buildItemsProgress");
 const { sendNotification } = require("../utils/notificationUtils");
 
@@ -114,9 +115,15 @@ exports.getMyCourses = async (req, res) => {
 ================================*/
 exports.enrollFreeCourse = async (req, res) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
     const userId = req.user._id;
     const { courseId } = req.body;
-
+    console.log("req.user:", req.user);
     // 1. Check course exists
     const course = await Course.findById(courseId).select(
       "title price enrollmentCount status instructorId",
@@ -228,7 +235,7 @@ exports.enrollFreeCourse = async (req, res) => {
     // Handle MongoDB duplicate key error gracefully
     if (err.code === 11000) {
       const existing = await Enrollment.findOne({
-        userId: req.user._id,
+        userId: req.user?._id,
         courseId: req.body.courseId,
       });
       if (existing && existing.paymentStatus === "paid") {
