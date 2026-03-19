@@ -12,19 +12,18 @@ import {
 } from "@ant-design/icons";
 import { Avatar, Tooltip } from "antd";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Outlet,
   ScrollRestoration,
   useLocation,
   useNavigate,
 } from "react-router-dom";
+import NotificationBell from "../components/shared/NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
-import useNotificationStore from "../store/slices/notificationStore";
 import { ROUTES } from "../utils/constants";
 import { cn } from "../utils/helpers";
-import NotificationBell from "../components/shared/NotificationBell";
 
 const NAV_ITEMS = [
   {
@@ -59,6 +58,7 @@ const NAV_ITEMS = [
   },
   { icon: <UserOutlined />, label: "Profile", path: ROUTES.INSTRUCTOR_PROFILE },
 ];
+
 const getInitials = (name = "") =>
   name
     .split(" ")
@@ -75,7 +75,6 @@ const InstructorLayout = () => {
   const { logout } = useAuth();
 
   const isActive = (path) => location.pathname.startsWith(path);
-
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-['Inter',system-ui,sans-serif]">
@@ -171,7 +170,8 @@ const InstructorLayout = () => {
                 src={user?.avatarURL}
                 className="font-bold border-2 border-indigo-100 shadow-sm shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600"
               >
-                {!user?.avatarURL && getInitials(user?.fullname || user?.username || "Instructor")}
+                {!user?.avatarURL &&
+                  getInitials(user?.fullname || user?.username || "Instructor")}
               </Avatar>
               <div className="min-w-0">
                 <p className="text-[13px] font-bold text-gray-900 truncate leading-tight">
@@ -213,27 +213,22 @@ const InstructorLayout = () => {
       </motion.aside>
 
       {/* ── Main Content Area ── */}
-      <main className="flex-1 overflow-hidden flex flex-col bg-gray-50">
+      <main className="flex flex-col flex-1 overflow-hidden bg-gray-50">
         {/* Top Header */}
-        <header className="h-[72px] bg-white border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
-          <div>
-             <h1 className="text-xl font-bold text-gray-900 capitalize">
-                {location.pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard'}
-             </h1>
-          </div>
+        <header className="h-[72px] bg-white border-b border-gray-100 flex items-center justify-end px-8 shrink-0">
           <div className="flex items-center gap-4">
-             <NotificationBell />
-             <div className="h-8 w-[1px] bg-gray-100 mx-2" />
-             <button 
-                onClick={() => navigate(ROUTES.HOME)}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
-             >
-                View as Student
-             </button>
+            <NotificationBell />
+            <div className="h-8 w-[1px] bg-gray-100 mx-2" />
+            <button
+              onClick={() => navigate(ROUTES.HOME)}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              View as Student
+            </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 p-8 overflow-y-auto">
           <ScrollRestoration />
           <Outlet />
         </div>

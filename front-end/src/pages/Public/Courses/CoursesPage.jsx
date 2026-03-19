@@ -244,7 +244,6 @@ const CoursesPage = () => {
       return;
     }
     enroll(course._id);
-    toast.success(`Enrolled in "${course.title}"!`);
     navigate(`/student/learning/${course._id}`);
   };
 
@@ -254,11 +253,6 @@ const CoursesPage = () => {
       return;
     }
     toggleWishlist(courseId);
-    toast.success(
-      wishlistIds.includes(courseId)
-        ? "Removed from wishlist"
-        : "Added to wishlist",
-    );
   };
 
   const handleFilter = (setter, value) => {

@@ -31,9 +31,9 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import CourseReview from "../../../components/shared/CourseReview";
 import CourseService from "../../../services/api/CourseService";
 import PaymentService from "../../../services/api/PaymentService";
-import CourseReview from "../../../components/shared/CourseReview";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
@@ -357,9 +357,6 @@ const CourseDetailPage = () => {
       return;
     }
     toggleWishlist(courseId);
-    message.success(
-      isWishlisted ? "Removed from wishlist" : "Added to wishlist",
-    );
   };
 
   // Curriculum collapse items
@@ -533,7 +530,7 @@ const CourseDetailPage = () => {
                             ? "2px solid var(--color-primary,#667eea)"
                             : "2px solid transparent",
                         borderRadius: 0,
-                        textTransform: 'capitalize'
+                        textTransform: "capitalize",
                       }}
                     >
                       {t}
@@ -564,7 +561,10 @@ const CourseDetailPage = () => {
                 )}
 
                 {tab === "reviews" && (
-                  <CourseReview courseId={courseId} isInstructor={isOwner || isAdmin} />
+                  <CourseReview
+                    courseId={courseId}
+                    isInstructor={isOwner || isAdmin}
+                  />
                 )}
               </div>
             </Space>

@@ -16,20 +16,20 @@ import {
   Row,
   Space,
   Table,
-  Tabs,
   Tag,
   Tooltip,
   Typography,
   message,
 } from "antd";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
   INSTRUCTOR_COLORS,
   INSTRUCTOR_STATUS_CONFIG,
 } from "../../../../src/styles/instructorTheme";
+import { FilterBar } from "../../../components/shared";
 import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import CourseService from "../../../services/api/CourseService";
 import useAuthStore from "../../../store/slices/authStore";
@@ -40,19 +40,48 @@ import {
   pageVariants,
 } from "../../../utils/helpers";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-const FILTER_TABS = [
-  { key: "all", label: "All" },
-  { key: "draft", label: "Draft" },
-  { key: "pending", label: "In Review" },
-  { key: "published", label: "Published" },
-  { key: "rejected", label: "Rejected" },
+// ─── Filter config ─────────────────────────────────────────────────────────────
+const FILTER_CONFIG = [
+  {
+    key: "keyword",
+    type: "search",
+    placeholder: "Search by course name...",
+    btnText: "Search",
+    width: 280,
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    width: 150,
+    defaultValue: "",
+    options: [
+      { value: "", label: "All Status" },
+      { value: "draft", label: "Draft" },
+      { value: "pending", label: "In Review" },
+      { value: "published", label: "Published" },
+      { value: "rejected", label: "Rejected" },
+    ],
+  },
+  {
+    key: "priceSort",
+    type: "sort",
+    label: "Price",
+    width: 185,
+    defaultValue: "",
+    options: [
+      { value: "", label: "Default order" },
+      { value: "priceAsc", label: "Price: Low → High" },
+      { value: "priceDesc", label: "Price: High → Low" },
+    ],
+  },
 ];
 
-/* ─── StatCards ───────────────────────────────────────────────────────────── */
+// ─── StatCards ─────────────────────────────────────────────────────────────────
 const StatCards = ({ stats }) => (
-  <Row gutter={[16, 16]} className="mb-8">
+  <Row gutter={[16, 16]} className="mb-6">
     {stats.map((stat, idx) => (
       <Col xs={24} sm={12} lg={6} key={idx}>
         <Card
@@ -81,7 +110,7 @@ const StatCards = ({ stats }) => (
   </Row>
 );
 
-/* ─── CourseRow (table cell renderer) ────────────────────────────────────── */
+// ─── CourseRow ─────────────────────────────────────────────────────────────────
 const CourseRow = ({ record }) => (
   <div className="flex items-center gap-4">
     <div className="w-20 overflow-hidden bg-gray-100 border border-gray-200 rounded-lg h-14 shrink-0">
@@ -127,34 +156,94 @@ const CourseRow = ({ record }) => (
   </div>
 );
 
-/* ─── InstructorCoursesPage ───────────────────────────────────────────────── */
+// ─── InstructorCoursesPage ─────────────────────────────────────────────────────
 const InstructorCoursesPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
   const [submittingId, setSubmittingId] = useState(null);
+
+  const [filterValues, setFilterValues] = useState({
+    keyword: "",
+    status: "",
+    priceSort: "",
+  });
+
+  const [globalStats, setGlobalStats] = useState({
+    total: 0,
+    published: 0,
+    pending: 0,
+    students: 0,
+  });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  useEffect(() => {
-    loadCourses();
-  }, [user]);
-
-  const loadCourses = async () => {
-    setLoading(true);
+  // Load global stats once (no filter)
+  const loadStats = async () => {
     try {
       const list = await CourseService.getInstructorCourses();
-      setCourses(list ?? []);
+      setGlobalStats({
+        total: list.length,
+        published: list.filter((c) => c.status === "published").length,
+        pending: list.filter((c) => c.status === "pending").length,
+        students: list.reduce((s, c) => s + (c.enrollmentCount || 0), 0),
+      });
     } catch {
-      message.error("Error loading course list");
-    } finally {
-      setLoading(false);
+      /* silent */
     }
+  };
+
+  // Load courses – tất cả sort/filter đều do BE xử lý
+  const loadCourses = useCallback(
+    async (overrides = {}) => {
+      setLoading(true);
+      try {
+        const vals = { ...filterValues, ...overrides };
+        const list = await CourseService.getInstructorCourses({
+          status: vals.status,
+          keyword: vals.keyword,
+          sortBy: vals.priceSort || undefined,
+        });
+        setCourses(list ?? []);
+      } catch {
+        message.error("Error loading course list");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filterValues],
+  );
+
+  useEffect(() => {
+    loadStats();
+    loadCourses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // FilterBar: onChange fires for select/sort immediately
+  const handleFilterChange = (key, value) => {
+    const next = { ...filterValues, [key]: value };
+    setFilterValues(next);
+    if (key !== "keyword") {
+      loadCourses(next);
+    }
+  };
+
+  // FilterBar: onSearch fires only on button/Enter for type:"search"
+  const handleSearch = (val) => {
+    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    setFilterValues(next);
+    loadCourses(next);
+  };
+
+  const handleReset = () => {
+    const reset = { keyword: "", status: "", priceSort: "" };
+    setFilterValues(reset);
+    loadCourses(reset);
   };
 
   const handleViewDetail = async (record) => {
@@ -179,52 +268,40 @@ const InstructorCoursesPage = () => {
         prev.map((c) => (c._id === courseId ? { ...c, status: "pending" } : c)),
       );
       if (selectedCourse?._id === courseId)
-        setSelectedCourse((prev) =>
-          prev ? { ...prev, status: "pending" } : prev,
-        );
-    } catch (err) {
+        setSelectedCourse((p) => (p ? { ...p, status: "pending" } : p));
+      loadStats();
+    } catch {
+      /* silent */
     } finally {
       setSubmittingId(null);
     }
   };
 
-  const filteredCourses =
-    activeTab === "all"
-      ? courses
-      : courses.filter((c) => c.status === activeTab);
-
-  const stats = {
-    total: courses.length,
-    published: courses.filter((c) => c.status === "published").length,
-    pending: courses.filter((c) => c.status === "pending").length,
-    students: courses.reduce((s, c) => s + (c.enrollmentCount || 0), 0),
-  };
-
   const statCards = [
     {
       label: "Total Courses",
-      value: stats.total,
+      value: globalStats.total,
       icon: <BookOutlined />,
       color: INSTRUCTOR_COLORS.primary,
       bg: `${INSTRUCTOR_COLORS.primary}15`,
     },
     {
       label: "Published",
-      value: stats.published,
+      value: globalStats.published,
       icon: <CheckCircleOutlined />,
       color: INSTRUCTOR_COLORS.success,
       bg: `${INSTRUCTOR_COLORS.success}15`,
     },
     {
       label: "Pending Review",
-      value: stats.pending,
+      value: globalStats.pending,
       icon: <ClockCircleOutlined />,
       color: INSTRUCTOR_COLORS.warning,
       bg: `${INSTRUCTOR_COLORS.warning}15`,
     },
     {
       label: "Total Students",
-      value: stats.students,
+      value: globalStats.students,
       icon: <TeamOutlined />,
       color: INSTRUCTOR_COLORS.accent,
       bg: `${INSTRUCTOR_COLORS.accent}15`,
@@ -242,9 +319,9 @@ const InstructorCoursesPage = () => {
       dataIndex: "status",
       key: "status",
       width: 130,
-      render: (status) => {
+      render: (s) => {
         const cfg =
-          INSTRUCTOR_STATUS_CONFIG[status] || INSTRUCTOR_STATUS_CONFIG.draft;
+          INSTRUCTOR_STATUS_CONFIG[s] || INSTRUCTOR_STATUS_CONFIG.draft;
         return (
           <Tag
             className="px-3 py-1 font-semibold border-none rounded-md"
@@ -259,7 +336,7 @@ const InstructorCoursesPage = () => {
       title: "Price",
       dataIndex: "price",
       key: "price",
-      width: 90,
+      width: 100,
       render: (price) => (
         <span className="font-bold text-gray-900">
           {price === 0 ? (
@@ -354,18 +431,23 @@ const InstructorCoursesPage = () => {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="p-8"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+
+      <div className="flex items-center justify-between pb-8">
         <div>
-          <Title level={2} className="m-0 font-black text-gray-900">
-            My Courses
-          </Title>
-          <Text type="secondary" className="text-base">
-            Manage and track your content performance
-          </Text>
+          <h2
+            style={{
+              margin: "0 0 4px",
+              fontSize: 26,
+              fontWeight: 900,
+              color: "#8B5CF6",
+            }}
+          >
+            My Blog Posts
+          </h2>
         </div>
+
         <Button
           type="primary"
           size="large"
@@ -380,38 +462,42 @@ const InstructorCoursesPage = () => {
         </Button>
       </div>
 
+      {/* Stat cards */}
       <StatCards stats={statCards} />
 
+      {/* Filter bar – giữa StatCards và Table */}
+      <FilterBar
+        filters={FILTER_CONFIG}
+        values={filterValues}
+        onChange={handleFilterChange}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        resultCount={courses.length}
+        loading={loading}
+        theme="purple"
+        style={{ marginBottom: 16 }}
+      />
+
       {/* Table */}
-      <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={FILTER_TABS.map((tab) => ({
-            key: tab.key,
-            label: (
-              <span className="text-sm font-semibold">
-                {tab.label}
-                <Tag className="ml-2 text-gray-600 bg-gray-100 border-none rounded-full">
-                  {tab.key === "all"
-                    ? courses.length
-                    : courses.filter((c) => c.status === tab.key).length}
-                </Tag>
-              </span>
-            ),
-          }))}
-          className="mb-4 instructor-tabs"
-        />
+      <Card
+        bordered={false}
+        className="rounded-2xl"
+        style={{
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          border: "1px solid #f0f0f0",
+        }}
+        bodyStyle={{ padding: "0 0 8px" }}
+      >
         <Table
           columns={columns}
-          dataSource={filteredCourses}
+          dataSource={courses}
           rowKey="_id"
           loading={loading}
-          pagination={{ pageSize: 10, className: "mt-6" }}
+          pagination={{ pageSize: 10, className: "px-6 mt-2" }}
           className="instructor-table"
-          locale={{ emptyText: "You have no courses in this status." }}
+          locale={{ emptyText: "No courses found." }}
         />
-      </div>
+      </Card>
 
       <CourseDetailModal
         course={selectedCourse}
