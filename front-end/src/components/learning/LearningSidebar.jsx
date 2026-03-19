@@ -6,13 +6,11 @@ import {
   PlayCircleOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
-  StarOutlined,
 } from "@ant-design/icons";
-import { Space, Tag, Tooltip, Typography, Tabs } from "antd";
+import { Space, Tabs, Tag, Tooltip, Typography } from "antd";
 import { useState } from "react";
 
 import { formatDurationClock } from "../../utils/helpers";
-import CourseReview from "../../components/shared/CourseReview";
 import LessonDiscussion from "./LessonDiscussion";
 
 const { Text } = Typography;
@@ -158,9 +156,27 @@ const LearningSidebar = ({
                               {formatDurationClock(lessonDuration)}
                             </Text>
                           )}
-                          {isQuiz && <Tag color="purple" style={{ margin: 0, fontSize: 10, border: 'none' }}>Quiz</Tag>}
+                          {isQuiz && (
+                            <Tag
+                              color="purple"
+                              style={{
+                                margin: 0,
+                                fontSize: 10,
+                                border: "none",
+                              }}
+                            >
+                              Quiz
+                            </Tag>
+                          )}
                           {isInProgress && !isDone && watchedPct > 0 && (
-                            <Tag color="blue" style={{ margin: 0, fontSize: 10, border: 'none' }}>
+                            <Tag
+                              color="blue"
+                              style={{
+                                margin: 0,
+                                fontSize: 10,
+                                border: "none",
+                              }}
+                            >
                               {Math.round(watchedPct * 100)}% watched
                             </Tag>
                           )}
@@ -192,19 +208,19 @@ const LearningSidebar = ({
         </div>
       ),
     },
-    {
-      key: "reviews",
-      label: (
-        <span>
-          <StarOutlined /> Reviews
-        </span>
-      ),
-      children: (
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-          <CourseReview courseId={courseId} dark isInstructor={isInstructor} />
-        </div>
-      ),
-    },
+    // {
+    //   key: "reviews",
+    //   label: (
+    //     <span>
+    //       <StarOutlined /> Reviews
+    //     </span>
+    //   ),
+    //   children: (
+    //     <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
+    //       <CourseReview courseId={courseId} dark isInstructor={isInstructor} />
+    //     </div>
+    //   ),
+    // },
   ];
 
   return (
@@ -229,7 +245,14 @@ const LearningSidebar = ({
         </Text>
       </div>
 
-      <div style={{ flex: 1, overflowY: "hidden", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
@@ -237,7 +260,7 @@ const LearningSidebar = ({
           centered
           animated={false}
           className="learning-tabs"
-          style={{ height: '100%' }}
+          style={{ height: "100%" }}
         />
       </div>
 
