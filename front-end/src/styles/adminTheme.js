@@ -125,11 +125,7 @@ export const STATUS_CONFIG = {
     label: "Rejected",
     antdColor: "error",
   },
-  archived: {
-    color: "default",
-    label: "Archived",
-    antdColor: "default",
-  },
+
   active: {
     color: "success",
     label: "Active",

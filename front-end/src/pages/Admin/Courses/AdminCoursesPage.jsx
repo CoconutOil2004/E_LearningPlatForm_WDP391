@@ -44,7 +44,6 @@ const FILTER_CONFIG = [
       { value: "pending", label: "In Review" },
       { value: "published", label: "Published" },
       { value: "rejected", label: "Rejected" },
-      { value: "archived", label: "Archived" },
     ],
   },
   {

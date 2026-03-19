@@ -166,7 +166,7 @@ class CourseService {
 
   // ─── GET /api/courses/instructor/mine ─────────────────────────────────────
   // Instructor only. Gets all instructor's courses (including draft/pending/rejected/published)
-  // Query: status?  (draft|pending|published|rejected|archived)
+  // Query: status?  (draft|pending|published|rejected)
   //        keyword? (search by title)
   //        sortBy?  (priceAsc|priceDesc|newest|oldest)  default: newest
   // → Course[]

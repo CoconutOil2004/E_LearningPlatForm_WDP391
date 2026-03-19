@@ -503,7 +503,7 @@ exports.updateCourse = async (req, res) => {
     }
     if (
       status !== undefined &&
-      ["draft", "pending", "published", "rejected", "archived"].includes(status)
+      ["draft", "pending", "published", "rejected"].includes(status)
     ) {
       course.status = status;
     }
@@ -806,7 +806,7 @@ exports.getAdminAllCourses = async (req, res) => {
     const query = {};
     if (
       status &&
-      ["draft", "pending", "published", "rejected", "archived"].includes(status)
+      ["draft", "pending", "published", "rejected"].includes(status)
     ) {
       query.status = status;
     }
@@ -912,7 +912,7 @@ exports.rejectCourse = async (req, res) => {
 /* =====================================================
    INSTRUCTOR: GET MY COURSES (all statuses)
    GET /api/courses/instructor/mine
-   Query: status?  ("draft"|"pending"|"published"|"rejected"|"archived")
+   Query: status?  ("draft"|"pending"|"published"|"rejected")
           keyword? (search by title)
           sortBy?  ("priceAsc"|"priceDesc"|"newest"|"oldest") – default: newest
 ===================================================== */
@@ -925,7 +925,7 @@ exports.getInstructorCourses = async (req, res) => {
 
     if (
       status &&
-      ["draft", "pending", "published", "rejected", "archived"].includes(status)
+      ["draft", "pending", "published", "rejected"].includes(status)
     ) {
       query.status = status;
     }
