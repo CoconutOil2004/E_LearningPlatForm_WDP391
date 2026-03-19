@@ -1,16 +1,9 @@
-import {
-  BookOutlined,
-  EyeOutlined,
-  SearchOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
+import { BookOutlined, EyeOutlined, TeamOutlined } from "@ant-design/icons";
 import {
   Avatar,
   Button,
   Card,
   Image,
-  Input,
-  Select,
   Space,
   Table,
   Tag,
@@ -21,6 +14,7 @@ import { useEffect, useState } from "react";
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
 import StatsRow from "../../../components/admin/StatsRow";
+import { FilterBar } from "../../../components/shared";
 import CourseDetailModal from "../../../components/shared/CourseDetailModal";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
@@ -28,49 +22,90 @@ import { COLOR, STATUS_CONFIG } from "../../../styles/adminTheme";
 import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 
 const { Text } = Typography;
-const { Option } = Select;
 
-const STATUS_TABS = [
-  "all",
-  "draft",
-  "pending",
-  "published",
-  "rejected",
-  "archived",
+// ─── Filter config ─────────────────────────────────────────────────────────────
+const FILTER_CONFIG = [
+  {
+    key: "keyword",
+    type: "search",
+    placeholder: "Search by course name...",
+    btnText: "Search",
+    width: 290,
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    width: 155,
+    defaultValue: "all",
+    options: [
+      { value: "all", label: "All Status" },
+      { value: "draft", label: "Draft" },
+      { value: "pending", label: "In Review" },
+      { value: "published", label: "Published" },
+      { value: "rejected", label: "Rejected" },
+      { value: "archived", label: "Archived" },
+    ],
+  },
+  {
+    key: "priceSort",
+    type: "sort",
+    label: "Price",
+    width: 185,
+    defaultValue: "",
+    options: [
+      { value: "", label: "Default order" },
+      { value: "asc", label: "Price: Low → High" },
+      { value: "desc", label: "Price: High → Low" },
+    ],
+  },
 ];
 
+// ─── AdminCoursesPage ──────────────────────────────────────────────────────────
 const AdminCoursesPage = () => {
   const toast = useToast();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
 
+  // Single filter values object
+  const [filterValues, setFilterValues] = useState({
+    keyword: "",
+    status: "all",
+    priceSort: "",
+  });
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const fetchCourses = async (
+  const fetchCourses = async ({
     page = 1,
-    pageSize = 10,
-    status = "all",
-    keyword = "",
-  ) => {
+    pageSize = pagination.pageSize,
+    vals = filterValues,
+  } = {}) => {
     setLoading(true);
     try {
       const res = await CourseService.getAdminAllCourses({
         page,
         limit: pageSize,
-        status: status !== "all" ? status : undefined,
-        keyword: keyword.trim() || undefined,
+        status: vals.status !== "all" ? vals.status : undefined,
+        keyword: vals.keyword.trim() || undefined,
       });
-      setCourses(res.courses ?? []);
+      const list = res.courses ?? [];
+      const sort = vals.priceSort;
+      const sorted =
+        sort === "asc"
+          ? [...list].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+          : sort === "desc"
+            ? [...list].sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+            : list;
+      setCourses(sorted);
       setPagination((prev) => ({
         ...prev,
         current: page,
@@ -85,19 +120,33 @@ const AdminCoursesPage = () => {
   };
 
   useEffect(() => {
-    fetchCourses(1, pagination.pageSize, filterStatus, search);
+    fetchCourses();
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(
-      () => fetchCourses(1, pagination.pageSize, filterStatus, search),
-      300,
-    );
-    return () => clearTimeout(t);
-  }, [filterStatus, search]);
+  // FilterBar: onChange for select/sort fires immediately
+  const handleFilterChange = (key, value) => {
+    const next = { ...filterValues, [key]: value };
+    setFilterValues(next);
+    if (key !== "keyword") {
+      fetchCourses({ page: 1, vals: next });
+    }
+  };
+
+  // FilterBar: onSearch fires only on button/Enter
+  const handleSearch = (val) => {
+    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    setFilterValues(next);
+    fetchCourses({ page: 1, vals: next });
+  };
+
+  const handleReset = () => {
+    const reset = { keyword: "", status: "all", priceSort: "" };
+    setFilterValues(reset);
+    fetchCourses({ page: 1, vals: reset });
+  };
 
   const handleTableChange = (pag) =>
-    fetchCourses(pag.current, pag.pageSize, filterStatus, search);
+    fetchCourses({ page: pag.current, pageSize: pag.pageSize });
 
   const handleViewDetail = async (record) => {
     setSelectedCourse(record);
@@ -231,9 +280,9 @@ const AdminCoursesPage = () => {
       title: "Price",
       dataIndex: "price",
       key: "price",
-      width: 90,
+      width: 100,
       render: (p) => (
-        <Text strong style={{ color: COLOR.ocean }}>
+        <Text strong style={{ color: p === 0 ? COLOR.green : COLOR.ocean }}>
           {p === 0 ? "Free" : formatThousands(p)}
         </Text>
       ),
@@ -284,40 +333,28 @@ const AdminCoursesPage = () => {
         title="Course Management"
         subtitle="View and manage all courses across the platform"
       />
+
+      {/* Stat cards */}
       <StatsRow items={stats} />
+
+      {/* Filter bar – giữa StatsRow và Table */}
+      <FilterBar
+        filters={FILTER_CONFIG}
+        values={filterValues}
+        onChange={handleFilterChange}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        resultCount={pagination.total}
+        loading={loading}
+        theme="blue"
+        style={{ marginBottom: 16 }}
+      />
+
+      {/* Table */}
       <Card
         bordered={false}
         style={{ borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
       >
-        <Space
-          style={{
-            marginBottom: 16,
-            width: "100%",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
-          <Input
-            placeholder="Search courses..."
-            prefix={<SearchOutlined />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 260, borderRadius: 8 }}
-            allowClear
-          />
-          <Select
-            value={filterStatus}
-            onChange={setFilterStatus}
-            style={{ width: 160 }}
-          >
-            {STATUS_TABS.map((s) => (
-              <Option key={s} value={s}>
-                {s === "all" ? "All Status" : (STATUS_CONFIG[s]?.label ?? s)}
-              </Option>
-            ))}
-          </Select>
-        </Space>
         <Table
           columns={columns}
           dataSource={courses}
