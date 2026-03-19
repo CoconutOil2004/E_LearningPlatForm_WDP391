@@ -199,10 +199,10 @@ const MyCoursesPage = () => {
       animate="animate"
       exit="exit"
     >
-      <div className="max-w-6xl px-6 py-10 mx-auto">
+      <div className="px-6 pt-10 pb-20 mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-black tracking-tight text-heading">
-            My Courses
+          <h1 className="mb-4 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
+            My <span className="gradient-text">Courses</span>
           </h1>
           <p className="text-muted">
             {enrollments.length > 0
