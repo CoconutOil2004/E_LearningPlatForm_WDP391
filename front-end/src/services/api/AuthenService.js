@@ -76,7 +76,10 @@ class AuthenService {
 
   async changePassword(data) {
     try {
-      const response = await api.put("auth/change-password", data);
+      const token = localStorage.getItem("token");
+      const response = await api.put("auth/password", data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error) {
       throw error;

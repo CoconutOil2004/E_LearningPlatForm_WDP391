@@ -73,63 +73,7 @@ const getUserById = async (req, res) => {
   }
 };
 
-// Get user profile from token
-const getProfile = async (req, res) => {
-    try {
-      const userId = req.user.id; // req.user is assigned from auth token middleware
-  
-      const user = await User.findById(userId).select("-password"); // exclude password field
-      if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      res.json({ success: true, user });
-    } catch (error) {
-      logger.error("Error fetching profile info:", error);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  };
-  
-  const updateProfile = async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { avatarURL, password, fullname } = req.body;
-  
-      const updateData = {};
-  
-      // If fullname is provided
-      if (fullname) {
-        updateData.fullname = fullname;
-      }
-  
-      // If avatarURL is provided
-      if (avatarURL) {
-        updateData.avatarURL = avatarURL;
-      }
-  
-      // If new password is provided → hash before saving
-      if (password) {
-        const salt = await bcrypt.genSalt(10);
-        updateData.password = await bcrypt.hash(password, salt);
-      }
-  
-      // Update user
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      ).select("-password");
-  
-      if (!updatedUser) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      res.json({ success: true, message: "Profile updated successfully", user: updatedUser });
-    } catch (error) {
-      logger.error("Error updating profile:", error);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  };
+// Remove duplicate profile functions. Consolidation in authController.js
 
 /**
  * Get student list
@@ -669,8 +613,6 @@ const getInstructorRevenue = async (req, res) => {
 module.exports = {
   searchUsers,
   getUserById,
-  getProfile,
-  updateProfile,
   getStudents,
   getInstructors,
   createInstructor,
