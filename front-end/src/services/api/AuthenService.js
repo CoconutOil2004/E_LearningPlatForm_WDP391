@@ -1,186 +1,95 @@
-import { api } from "../index"; // Ensure api is properly configured to handle requests
+/**
+ * AuthenService — dịch vụ xác thực
+ *
+ * Tối ưu:
+ * - Bỏ try/catch thừa bọc ngoài (chỉ re-throw — không làm gì khác).
+ *   Errors được xử lý tập trung qua axios interceptor / caller.
+ * - Bỏ header Authorization thủ công vì api interceptor đã tự gắn.
+ * - forgotPassword: fix bug swallow lỗi (trả data thay vì throw).
+ */
+import { api } from "../index";
+
 class AuthenService {
-  async register(data) {
-    try {
-      const response = await api.post("auth/register", data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  register(data) {
+    return api.post("auth/register", data).then((r) => r.data);
   }
 
   async login(data) {
-    try {
-      const response = await api.post("auth/login", data);
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("accessToken", response.data.token);
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
+    const { data: res } = await api.post("auth/login", data);
+    if (res.token) {
+      localStorage.setItem("token", res.token);
+      localStorage.setItem("accessToken", res.token);
     }
+    return res;
   }
 
-  async forgotPassword(email) {
-    try {
-      const response = await api.post("auth/forgot-password", { email });
-      return response.data;
-    } catch (error) {
-      return error.response.data;
-    }
+  // Fix: throw error thay vì swallow (để caller hiển thị toast lỗi đúng)
+  forgotPassword(email) {
+    return api.post("auth/forgot-password", { email }).then((r) => r.data);
   }
 
-  async resetPassword(token, newPassword, confirmPassword) {
-    try {
-      const response = await api.post("auth/reset-password", {
-        token,
-        newPassword,
-        confirmPassword,
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  resetPassword(token, newPassword, confirmPassword) {
+    return api
+      .post("auth/reset-password", { token, newPassword, confirmPassword })
+      .then((r) => r.data);
   }
 
-  async verifyOTP(email, otp) {
-    try {
-      const response = await api.post("auth/verify-otp", { email, otp });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  verifyOTP(email, otp) {
+    return api.post("auth/verify-otp", { email, otp }).then((r) => r.data);
   }
 
-  async resendOTP(email) {
-    try {
-      const response = await api.post("auth/resend-otp", { email });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  resendOTP(email) {
+    return api.post("auth/resend-otp", { email }).then((r) => r.data);
   }
 
-  async updateProfile(data) {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await api.put("auth/profile", data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  // Auth header được api interceptor tự gắn — không cần getItem thủ công
+  updateProfile(data) {
+    return api.put("auth/profile", data).then((r) => r.data);
   }
 
-  async changePassword(data) {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await api.put("auth/password", data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  changePassword(data) {
+    return api.put("auth/password", data).then((r) => r.data);
   }
 
-  async changePasswordRequired(data) {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await api.put("auth/change-password-required", data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  changePasswordRequired(data) {
+    return api.put("auth/change-password-required", data).then((r) => r.data);
   }
 
-  async getProfile() {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await api.get(`auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  getProfile() {
+    return api.get("auth/profile").then((r) => r.data);
   }
 
-  async toggleWishlist(courseId) {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await api.post(
-        "users/wishlist/toggle",
-        { courseId },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  toggleWishlist(courseId) {
+    return api.post("users/wishlist/toggle", { courseId }).then((r) => r.data);
   }
 
   async logout() {
     try {
-      const token = localStorage.getItem("token");
-      // Try to notify the backend about logout
-      try {
-        await api.post(
-          "auth/logout",
-          {},
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true,
-          },
-        );
-      } catch (e) {
-        console.log(
-          "Error during server logout, continuing with local logout",
-          e,
-        );
-      }
-
-      // Clear all auth-related data from localStorage
+      await api.post("auth/logout", {}, { withCredentials: true });
+    } catch {
+      // Server logout thất bại vẫn tiếp tục clear local data
+    } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-
-      // Clear any session/cookie data if needed
-      document.cookie.split(";").forEach(function (c) {
+      // Clear cookies
+      document.cookie.split(";").forEach((c) => {
         document.cookie = c
           .replace(/^ +/, "")
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
-
-      return { success: true, message: "Logged out successfully" };
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Even if there's an error, try to clear tokens
-      localStorage.removeItem("token");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      throw error;
     }
+    return { success: true };
   }
 
-  async refreshToken() {
-    try {
-      const response = await api.post(
-        "auth/refresh-token",
-        {},
-        { withCredentials: true },
-      );
-      if (response.data.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  refreshToken() {
+    return api
+      .post("auth/refresh-token", {}, { withCredentials: true })
+      .then((r) => {
+        if (r.data.accessToken)
+          localStorage.setItem("accessToken", r.data.accessToken);
+        return r.data;
+      });
   }
 }
 

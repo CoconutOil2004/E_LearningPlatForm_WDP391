@@ -9,7 +9,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
@@ -83,40 +83,47 @@ const AdminCoursesPage = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const fetchCourses = async ({
-    page = 1,
-    pageSize = pagination.pageSize,
-    vals = filterValues,
-  } = {}) => {
-    setLoading(true);
-    try {
-      const res = await CourseService.getAdminAllCourses({
-        page,
-        limit: pageSize,
-        status: vals.status !== "all" ? vals.status : undefined,
-        keyword: vals.keyword.trim() || undefined,
-      });
-      const list = res.courses ?? [];
-      const sort = vals.priceSort;
-      const sorted =
-        sort === "asc"
-          ? [...list].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
-          : sort === "desc"
-            ? [...list].sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
-            : list;
-      setCourses(sorted);
-      setPagination((prev) => ({
-        ...prev,
-        current: page,
-        pageSize,
-        total: res.total ?? 0,
-      }));
-    } catch {
-      toast.error("Failed to load courses");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Tối ưu: gộp sort vào params truyền lên BE (nếu BE hỗ trợ),
+  // fallback client-side sort nếu chưa có. Dùng useCallback để memo hoá.
+  const fetchCourses = useCallback(
+    async ({
+      page = 1,
+      pageSize = pagination.pageSize,
+      vals = filterValues,
+    } = {}) => {
+      setLoading(true);
+      try {
+        const res = await CourseService.getAdminAllCourses({
+          page,
+          limit: pageSize,
+          status: vals.status !== "all" ? vals.status : undefined,
+          keyword: vals.keyword?.trim() || undefined,
+          sortBy: vals.priceSort || undefined, // truyền lên BE nếu hỗ trợ
+        });
+        const list = res.courses ?? [];
+        // Client-side sort fallback khi BE chưa hỗ trợ sortBy
+        const sort = vals.priceSort;
+        const sorted =
+          sort === "asc"
+            ? [...list].sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+            : sort === "desc"
+              ? [...list].sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+              : list;
+        setCourses(sorted);
+        setPagination((prev) => ({
+          ...prev,
+          current: page,
+          pageSize,
+          total: res.total ?? 0,
+        }));
+      } catch {
+        toast.error("Failed to load courses");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchCourses();

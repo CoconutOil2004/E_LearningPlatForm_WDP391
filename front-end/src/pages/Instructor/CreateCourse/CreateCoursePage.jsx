@@ -589,7 +589,7 @@ const CreateCoursePage = () => {
   const handleSaveDraft = async () => {
     if (uploadingCount > 0) {
       message.warning(
-        `Vui lòng đợi ${uploadingCount} video upload xong trước khi lưu!`,
+        `Please wait for ${uploadingCount} video(s) to finish uploading before saving.`,
       );
       return;
     }
@@ -608,9 +608,26 @@ const CreateCoursePage = () => {
   const handleSubmitForReview = async () => {
     if (uploadingCount > 0) {
       message.warning(
-        `Vui lòng đợi ${uploadingCount} video upload xong trước khi nộp!`,
+        `Please wait for ${uploadingCount} video(s) to finish uploading.`,
       );
       return;
+    }
+    // Validate: phải có ít nhất 1 section với 1 lesson
+    const hasLesson = sections.some((sec) => sec.lessons?.length > 0);
+    if (!hasLesson) {
+      message.error(
+        "Please add at least one section with one lesson before submitting.",
+      );
+      return;
+    }
+    // Validate: mỗi lesson phải có title
+    for (const sec of sections) {
+      for (const lesson of sec.lessons ?? []) {
+        if (!lesson.title?.trim()) {
+          message.error("All lessons must have a title.");
+          return;
+        }
+      }
     }
     try {
       const values = await form.validateFields();
@@ -639,7 +656,7 @@ const CreateCoursePage = () => {
       >
         <div className="max-w-5xl px-6 py-10 mx-auto">
           {/* ── Header ── */}
-          <div className="flex items-center justify-between mb-10 py-6 border-b border-gray-100 px-6 bg-white rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between px-6 py-6 mb-10 bg-white border-b border-gray-100 shadow-sm rounded-2xl">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(ROUTES.INSTRUCTOR_COURSES)}
@@ -648,10 +665,15 @@ const CreateCoursePage = () => {
                 <ArrowLeftOutlined />
               </button>
               <div>
-                <Title level={2} className="m-0 font-black text-gray-900 !text-2xl">
+                <Title
+                  level={2}
+                  className="m-0 font-black text-gray-900 !text-2xl"
+                >
                   {isEdit ? "Edit Course" : "Create New Course"}
                 </Title>
-                <Text type="secondary" className="text-xs">Build your course curriculum</Text>
+                <Text type="secondary" className="text-xs">
+                  Build your course curriculum
+                </Text>
               </div>
             </div>
 
@@ -690,7 +712,7 @@ const CreateCoursePage = () => {
                       loading={saving}
                       disabled={uploadingCount > 0}
                       onClick={handleSaveDraft}
-                      className="px-4 font-semibold text-gray-700 border-gray-300 rounded-lg hover:text-purple-600 hover:border-purple-300 h-10"
+                      className="h-10 px-4 font-semibold text-gray-700 border-gray-300 rounded-lg hover:text-purple-600 hover:border-purple-300"
                     >
                       {uploadingCount > 0
                         ? `Uploading (${uploadingCount})`
@@ -756,8 +778,19 @@ const CreateCoursePage = () => {
                       </span>
                     }
                     rules={[
-                      { required: true, message: "Please enter a title" },
+                      {
+                        required: true,
+                        message: "Please enter a course title",
+                      },
+                      {
+                        min: 10,
+                        message: "Title must be at least 10 characters",
+                      },
                       { max: 60, message: "Maximum 60 characters" },
+                      {
+                        whitespace: true,
+                        message: "Title cannot be empty spaces",
+                      },
                     ]}
                   >
                     <Input
@@ -778,11 +811,23 @@ const CreateCoursePage = () => {
                         Course Description
                       </span>
                     }
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please describe your course",
+                      },
+                      {
+                        min: 20,
+                        message: "Description must be at least 20 characters",
+                      },
+                    ]}
                   >
                     <TextArea
                       rows={4}
                       className="rounded-lg"
-                      placeholder="What will students learn?"
+                      placeholder="What will students learn? (min 20 characters)"
+                      showCount
+                      maxLength={2000}
                     />
                   </Form.Item>
                 </Col>
@@ -834,13 +879,28 @@ const CreateCoursePage = () => {
                       </span>
                     }
                     initialValue={0}
+                    rules={[
+                      { required: true, message: "Please enter a price" },
+                      {
+                        validator: (_, val) =>
+                          val === undefined || val === null
+                            ? Promise.reject("Price is required")
+                            : val < 0
+                              ? Promise.reject("Price cannot be negative")
+                              : val > 9999
+                                ? Promise.reject("Price cannot exceed $9,999")
+                                : Promise.resolve(),
+                      },
+                    ]}
                   >
                     <InputNumber
                       min={0}
+                      max={9999}
                       step={0.01}
                       size="large"
                       className="w-full rounded-lg"
                       addonBefore="$"
+                      placeholder="0.00"
                     />
                   </Form.Item>
                   <Text type="secondary" className="text-xs italic">
@@ -850,7 +910,16 @@ const CreateCoursePage = () => {
 
                 {/* Upload Thumbnail */}
                 <Col xs={24} sm={12}>
-                  <Form.Item name="thumbnail" className="hidden">
+                  <Form.Item
+                    name="thumbnail"
+                    className="hidden"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please upload a course thumbnail",
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                   <div className="mb-2 font-semibold text-gray-700">
@@ -1010,7 +1079,6 @@ const CreateCoursePage = () => {
               )}
             </div>
           </Form>
-
         </div>
       </motion.div>
     </UploadingContext.Provider>
