@@ -193,36 +193,6 @@ const LearningSidebar = ({
         </div>
       ),
     },
-    {
-      key: "discussions",
-      label: (
-        <span>
-          <MessageOutlined /> Discuss
-        </span>
-      ),
-      children: (
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-          <LessonDiscussion
-            courseId={courseId}
-            lessonId={activeLessonId}
-            dark
-          />
-        </div>
-      ),
-    },
-    {
-      key: "reviews",
-      label: (
-        <span>
-          <StarOutlined /> Reviews
-        </span>
-      ),
-      children: (
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-          <CourseReview courseId={courseId} dark isInstructor={isInstructor} />
-        </div>
-      ),
-    },
   ];
 
   return (
