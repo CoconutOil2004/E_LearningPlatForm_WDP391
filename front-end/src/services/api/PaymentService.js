@@ -91,6 +91,11 @@ class PaymentService {
       .get("/payments/admin/revenue/by-course", { params })
       .then((r) => r.data?.data ?? []);
   }
+
+  // GET /api/enrollments/:courseId
+  getEnrollmentByCourseId(courseId) {
+    return api.get(`/enrollments/${courseId}`).then((r) => r.data?.data);
+  }
 }
 
 export default new PaymentService();

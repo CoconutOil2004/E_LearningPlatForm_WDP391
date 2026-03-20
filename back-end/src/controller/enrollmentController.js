@@ -253,3 +253,43 @@ exports.enrollFreeCourse = async (req, res) => {
     });
   }
 };
+
+/**
+ * GET /api/enrollments/:courseId
+ * Retrieve single enrollment progress/completion for detail page
+ */
+exports.getEnrollmentByCourseId = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { courseId } = req.params;
+
+    const enrollment = await Enrollment.findOne({
+      userId,
+      courseId,
+      paymentStatus: "paid",
+    }).lean();
+
+    if (!enrollment) {
+      return res.json({
+        success: true,
+        data: null,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        enrollmentId: enrollment._id,
+        progress: enrollment.progress,
+        completed: enrollment.completed,
+        updatedAt: enrollment.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("getEnrollmentByCourseId error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};

@@ -39,6 +39,7 @@ const MyCourseCard = ({ enrollment }) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       className="overflow-hidden cursor-pointer glass-card rounded-2xl group"
+      onClick={() => course?._id && navigate(ROUTES.COURSE_DETAIL.replace(":id", course._id))}
     >
       <div
         className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/20"
@@ -132,27 +133,37 @@ const MyCourseCard = ({ enrollment }) => {
             />
           </div>
         </div>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            if (progressPct === 100 && course?._id) {
-              navigate(`/student/certificate/${course._id}`);
-            } else if (course?._id) {
-              navigate(`/student/learning/${course._id}`);
-            }
-          }}
-          className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
-            progressPct === 100 ? "bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/30" : "btn-aurora"
-          }`}
-        >
-          {progressPct === 0
-            ? "Start Learning"
-            : progressPct === 100
-              ? "View Certificate"
-              : continueLesson?.title
-                ? `Continue: ${continueLesson.title.slice(0, 28)}${continueLesson.title.length > 28 ? "…" : ""}`
-                : "Continue"}
-        </button>
+        <div className="flex flex-col gap-2 mt-4">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (course?._id) {
+                navigate(`/student/learning/${course._id}`);
+              }
+            }}
+            className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all btn-aurora`}
+          >
+            {progressPct === 0
+              ? "Start Learning"
+              : progressPct === 100
+                ? "Review Course"
+                : continueLesson?.title
+                  ? `Continue: ${continueLesson.title.slice(0, 24)}${continueLesson.title.length > 24 ? "…" : ""}`
+                  : "Continue"}
+          </button>
+
+          {progressPct === 100 && course?._id && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/student/certificate/${course._id}`);
+              }}
+              className="w-full py-2.5 rounded-xl text-xs font-bold transition-all bg-white/50 border border-primary/20 text-primary hover:bg-white/80"
+            >
+              🎓 View Certificate
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   );

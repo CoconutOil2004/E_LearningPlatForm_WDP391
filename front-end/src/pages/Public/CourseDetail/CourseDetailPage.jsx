@@ -139,8 +139,9 @@ const CourseInfoSidebar = ({ totalLessons, totalQuizzes, duration }) => {
 };
 
 /* ─── PriceBlock ──────────────────────────────────────────────────────────── */
-const PriceBlock = ({ isEnrolled, isFree, course }) => {
+const PriceBlock = ({ isEnrolled, isFree, course, progress, completed }) => {
   if (isEnrolled) {
+    const isDone = completed || (progress ?? 0) >= 100;
     return (
       <div
         style={{
@@ -148,14 +149,20 @@ const PriceBlock = ({ isEnrolled, isFree, course }) => {
           alignItems: "center",
           gap: 8,
           padding: "10px 14px",
-          background: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
+          background: isDone
+            ? "linear-gradient(135deg,#d1fae5,#a7f3d0)" // light green
+            : "linear-gradient(135deg,#e0f2fe,#bae6fd)", // light blue
           borderRadius: 12,
           marginBottom: 4,
         }}
       >
-        <CheckCircleOutlined style={{ color: "#059669", fontSize: 18 }} />
-        <Text strong style={{ color: "#065f46" }}>
-          You are enrolled in this course
+        {isDone ? (
+          <TrophyOutlined style={{ color: "#059669", fontSize: 18 }} />
+        ) : (
+          <CheckCircleOutlined style={{ color: "#0284c7", fontSize: 18 }} />
+        )}
+        <Text strong style={{ color: isDone ? "#065f46" : "#0369a1" }}>
+          {isDone ? "You have completed this course!" : "You are enrolled in this course"}
         </Text>
       </div>
     );
@@ -203,6 +210,7 @@ const CourseDetailPage = () => {
   } = useCourseStore();
 
   const [course, setCourse] = useState(null);
+  const [enrollment, setEnrollment] = useState(null); // { progress, completed }
   const [loading, setLoading] = useState(true);
   const [enrollChecked, setEnrollChecked] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -217,7 +225,7 @@ const CourseDetailPage = () => {
       enroll(courseId);
       PaymentService.getEnrolledCourseIds()
         .then(setEnrolledCourseIds)
-        .catch(() => {});
+        .catch(() => { });
       navigate(`/courses/${courseId}`, { replace: true });
     } else if (payment === "failed") {
       message.error("Payment failed. Please try again.");
@@ -235,8 +243,15 @@ const CourseDetailPage = () => {
       return;
     }
     PaymentService.getEnrolledCourseIds()
-      .then(setEnrolledCourseIds)
-      .catch(() => {})
+      .then((ids) => {
+        setEnrolledCourseIds(ids);
+        if (ids.includes(id)) {
+          PaymentService.getEnrollmentByCourseId(id)
+            .then(setEnrollment)
+            .catch(() => { });
+        }
+      })
+      .catch(() => { })
       .finally(() => setEnrollChecked(true));
   }, [isAuthenticated, id]);
 
@@ -277,6 +292,7 @@ const CourseDetailPage = () => {
   const categoryName = course.category?.name ?? "";
   const isFree = course.price === 0;
   const isEnrolled = enrolledCourseIds.includes(courseId);
+  const isCompleted = enrollment?.completed || (enrollment?.progress ?? 0) >= 100;
   const isOwner =
     !!user?._id &&
     (course.instructorId?._id?.toString() === user._id?.toString() ||
@@ -312,7 +328,7 @@ const CourseDetailPage = () => {
           try {
             const ids = await PaymentService.getEnrolledCourseIds();
             setEnrolledCourseIds(ids);
-          } catch (_) {}
+          } catch (_) { }
           message.success("Enrolled in free course successfully!");
           navigate(`/student/learning/${course._id}`);
         } else {
@@ -349,7 +365,13 @@ const CourseDetailPage = () => {
     }
   };
 
-  const handleLearn = () => navigate(`/student/learning/${course._id}`);
+  const handleLearn = () => {
+    if (isCompleted) {
+      navigate(`/student/certificate/${course._id}`);
+    } else {
+      navigate(`/student/learning/${course._id}`);
+    }
+  };
 
   const handleWishlist = () => {
     if (!isAuthenticated) {
@@ -478,8 +500,8 @@ const CourseDetailPage = () => {
                   {categoryName && <Tag color="blue">{categoryName}</Tag>}
                   <Tag>{course.level}</Tag>
                   {isEnrolled && (
-                    <Tag icon={<UnlockOutlined />} color="success">
-                      Enrolled
+                    <Tag icon={isCompleted ? <TrophyOutlined /> : <UnlockOutlined />} color="success">
+                      {isCompleted ? "Completed" : "Enrolled"}
                     </Tag>
                   )}
                   {!isEnrolled && !isOwner && !isAdmin && (
@@ -585,28 +607,52 @@ const CourseDetailPage = () => {
                     isEnrolled={isEnrolled}
                     isFree={isFree}
                     course={course}
+                    progress={enrollment?.progress}
+                    completed={enrollment?.completed}
                   />
                 </div>
 
                 {/* CTA */}
                 {isEnrolled ? (
-                  <Button
-                    type="primary"
-                    size="large"
-                    block
-                    icon={<PlayCircleOutlined />}
-                    onClick={handleLearn}
-                    style={{
-                      borderRadius: 12,
-                      height: 48,
-                      fontSize: 16,
-                      fontWeight: 700,
-                      background: "linear-gradient(135deg,#10b981,#059669)",
-                      border: "none",
-                    }}
-                  >
-                    Start Learning
-                  </Button>
+                  <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                    <Button
+                      type="primary"
+                      size="large"
+                      block
+                      icon={<PlayCircleOutlined />}
+                      onClick={() => navigate(`/student/learning/${course._id}`)}
+                      style={{
+                        borderRadius: 12,
+                        height: 48,
+                        fontSize: 16,
+                        fontWeight: 700,
+                        background: "linear-gradient(135deg,#10b981,#059669)",
+                        border: "none",
+                      }}
+                    >
+                      {isCompleted ? "Review Course" : "Start Learning"}
+                    </Button>
+                    {isCompleted && (
+                      <Button
+                        block
+                        size="large"
+                        icon={<TrophyOutlined />}
+                        onClick={() => navigate(`/student/certificate/${course._id}`)}
+                        style={{
+                          borderRadius: 12,
+                          height: 48,
+                          fontSize: 16,
+                          fontWeight: 700,
+                          // background: "linear-gradient(135deg,#8B5CF6,#6D28D9)",
+                          border: "none",
+                          color: "#8B5CF6",
+                          background: "#8B5CF612"
+                        }}
+                      >
+                        View Certificate
+                      </Button>
+                    )}
+                  </Space>
                 ) : (
                   <Button
                     type="primary"
