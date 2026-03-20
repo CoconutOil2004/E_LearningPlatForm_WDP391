@@ -11,24 +11,27 @@ import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
-import { AuroraBg } from "./homeConstants";
-import HeroSection from "./HeroSection";
-import LearningPathSection from "./LearningPathSection";
-import ToolsSection from "./ToolsSection";
-import FeaturedCoursesSection from "./FeaturedCoursesSection";
 import BlogSection from "./BlogSection";
+import FeaturedCoursesSection from "./FeaturedCoursesSection";
+import HeroSection from "./HeroSection";
+import { AuroraBg } from "./homeConstants";
+import LearningPathSection from "./LearningPathSection";
 import StatsSection from "./StatsSection";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } = useCourseStore();
+  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } =
+    useCourseStore();
   const toast = useToast();
 
-  const { sections: categorySections, loading: sectionsLoading, error: sectionsError } =
-    useCategorySection({ limit: 4, sortBy: "popular", maxCategories: 5 });
+  const {
+    sections: categorySections,
+    loading: sectionsLoading,
+    error: sectionsError,
+  } = useCategorySection({ limit: 4, sortBy: "popular", maxCategories: 5 });
 
-  const [upNext,      setUpNext]      = useState([]);
+  const [upNext, setUpNext] = useState([]);
   const [latestBlogs, setLatestBlogs] = useState([]);
   const [blogsLoading, setBlogsLoading] = useState(true);
 
@@ -47,22 +50,33 @@ const HomePage = () => {
   }, []);
 
   const handleEnroll = (course) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     enroll(course._id);
     toast.success(`Enrolled in "${course.title}"!`);
     navigate(`/student/learning/${course._id}`);
   };
 
   const handleWishlist = (courseId) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     toggleWishlist(courseId);
     toast.success(
-      wishlistIds.includes(courseId) ? "Removed from wishlist" : "Added to wishlist",
+      wishlistIds.includes(courseId)
+        ? "Removed from wishlist"
+        : "Added to wishlist",
     );
   };
 
   const handleAuthRoute = (route) => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     navigate(route);
   };
 
@@ -90,7 +104,7 @@ const HomePage = () => {
 
         <LearningPathSection />
 
-        <ToolsSection />
+        {/* <ToolsSection /> */}
 
         <FeaturedCoursesSection
           categorySections={categorySections}

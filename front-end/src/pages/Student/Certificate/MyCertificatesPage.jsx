@@ -37,19 +37,22 @@ const MyCertificatesPage = () => {
     >
       <div className="max-w-6xl px-6 py-10 mx-auto">
         {/* Header Section */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-black tracking-tight text-heading">
-              My Certificates
+        <div className="flex flex-col justify-between gap-6 mb-10 md:flex-row md:items-end">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <h1 className="mb-4 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
+              My <span className="gradient-text">Certificates</span>
             </h1>
-          </div>
-          <p className="pl-1 text-muted ml-15">
-            {certificates.length > 0
-              ? `You have earned ${certificates.length} certificate${certificates.length > 1 ? "s" : ""}!`
-              : "Complete courses to earn your certificates."}
-          </p>
+            <p className="text-muted">
+              {certificates.length > 0
+                ? `You have earned ${certificates.length} certificate${certificates.length > 1 ? "s" : ""}!`
+                : "Complete courses to earn your certificates."}
+            </p>
+          </motion.div>
         </div>
-
         {/* Loading State */}
         {loading ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -2,7 +2,6 @@ import { Skeleton } from "antd";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../../utils/constants";
 import { FALLBACK_IMG } from "./homeConstants";
 
 /* ── HomeBlogCard ── */
@@ -370,78 +369,6 @@ const BlogSection = ({ latestBlogs, blogsLoading }) => {
             View All Articles
           </button>
         </div>
-      )}
-
-      {/* Desktop CTA strip */}
-      {latestBlogs.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-          style={{
-            marginTop: 40,
-            padding: "28px 40px",
-            borderRadius: 24,
-            background: "var(--gradient-brand)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 16,
-            boxShadow: "0 8px 32px rgba(2,132,199,0.2)",
-          }}
-          className="hidden sm:flex"
-        >
-          <div>
-            <h4
-              style={{
-                color: "white",
-                fontWeight: 800,
-                fontSize: 18,
-                margin: 0,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Want to share your knowledge?
-            </h4>
-            <p
-              style={{
-                color: "rgba(255,255,255,0.8)",
-                fontSize: 13,
-                margin: "4px 0 0",
-                fontWeight: 500,
-              }}
-            >
-              Become an instructor and publish your own articles to the
-              community.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate(ROUTES.REGISTER)}
-            style={{
-              background: "white",
-              color: "var(--color-primary)",
-              border: "none",
-              borderRadius: 14,
-              padding: "12px 28px",
-              fontWeight: 800,
-              fontSize: 14,
-              cursor: "pointer",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-              transition: "all 0.2s",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = "translateY(-1px)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.transform = "translateY(0)")
-            }
-          >
-            Start Writing →
-          </button>
-        </motion.div>
       )}
     </section>
   );

@@ -9,9 +9,7 @@ import {
   FileTextOutlined,
   LoadingOutlined,
   PlusOutlined,
-
   SaveOutlined,
-
   SendOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
@@ -37,10 +35,11 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BlogTinyEditor from "../../../components/blog/BlogTinyEditor";
+import { FilterBar } from "../../../components/shared";
 import BlogService from "../../../services/api/BlogService";
 import CourseService from "../../../services/api/CourseService";
 import UserService from "../../../services/api/UserService";
-import { FilterBar } from "../../../components/shared";
+import { INSTRUCTOR_COLORS } from "../../../styles/instructorTheme";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
@@ -654,11 +653,20 @@ const InstructorBlogPage = () => {
   const [editBlog, setEditBlog] = useState(null);
   const [deleteBlog, setDeleteBlog] = useState(null);
   const [submittingId, setSubmittingId] = useState(null);
-  const [filterValues, setFilterValues] = useState({ keyword: "", category: "" });
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [filterValues, setFilterValues] = useState({
+    keyword: "",
+    category: "",
+  });
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
   useEffect(() => {
-    CourseService.getCategories().then(setCategories).catch(() => {});
+    CourseService.getCategories()
+      .then(setCategories)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -902,11 +910,10 @@ const InstructorBlogPage = () => {
         style={{
           minHeight: "100vh",
           background: "#f9fafb",
-          padding: "28px 28px 40px",
         }}
       >
         {/* Header */}
-        <motion.div
+        {/* <motion.div
           {...up(0)}
           style={{
             display: "flex",
@@ -917,23 +924,6 @@ const InstructorBlogPage = () => {
           }}
         >
           <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: C.primaryBg,
-                border: `1px solid ${C.border}`,
-                borderRadius: 999,
-                padding: "4px 14px",
-                marginBottom: 8,
-              }}
-            >
-              <FileTextOutlined style={{ color: C.primary, fontSize: 12 }} />
-              <Text style={{ color: C.primary, fontWeight: 700, fontSize: 12 }}>
-                Instructor Portal
-              </Text>
-            </div>
             <h2
               style={{
                 margin: "0 0 4px",
@@ -968,7 +958,36 @@ const InstructorBlogPage = () => {
           >
             New Blog Post
           </Button>
-        </motion.div>
+        </motion.div> */}
+        <div className="flex items-center justify-between pb-3">
+          <div>
+            <Title
+              level={2}
+              style={{
+                margin: "0 0 4px",
+                fontWeight: 900,
+                color: INSTRUCTOR_COLORS.primary,
+              }}
+            >
+              My Blog Posts
+            </Title>
+            <Text style={{ color: C.textSub, fontSize: 13 }}>
+              Manage, edit, and publish your articles
+            </Text>
+          </div>
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => navigate(ROUTES.INSTRUCTOR_BLOG_CREATE)}
+            className="font-bold transition-all border-none shadow-md rounded-xl hover:shadow-lg"
+            style={{
+              background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
+            }}
+          >
+            New Blog Post
+          </Button>
+        </div>
 
         {/* Stats */}
         <Row gutter={[14, 14]} style={{ marginBottom: 22 }}>
@@ -1014,16 +1033,33 @@ const InstructorBlogPage = () => {
         <motion.div {...up(0.15)}>
           <Card bordered={false} style={card} bodyStyle={{ padding: 0 }}>
             {/* FilterBar — dùng component dùng chung */}
-            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
+            <div
+              style={{
+                padding: "12px 20px",
+                borderBottom: `1px solid ${C.border}`,
+              }}
+            >
               <FilterBar
                 filters={[
-                  { key: "keyword", type: "search", placeholder: "Search posts...", width: 260 },
                   {
-                    key: "category", type: "select", label: "Category", width: 180,
-                    defaultValue: "", allowClear: true,
+                    key: "keyword",
+                    type: "search",
+                    placeholder: "Search posts...",
+                    width: 260,
+                  },
+                  {
+                    key: "category",
+                    type: "select",
+                    label: "Category",
+                    width: 180,
+                    defaultValue: "",
+                    allowClear: true,
                     options: [
                       { value: "", label: "All Categories" },
-                      ...categories.map((c) => ({ value: c._id, label: c.name })),
+                      ...categories.map((c) => ({
+                        value: c._id,
+                        label: c.name,
+                      })),
                     ],
                   },
                 ]}
@@ -1036,17 +1072,34 @@ const InstructorBlogPage = () => {
             </div>
 
             {/* Status tabs */}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 20px", borderBottom: `1px solid ${C.border}` }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                padding: "10px 20px",
+                borderBottom: `1px solid ${C.border}`,
+              }}
+            >
               {TABS.map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => { setActiveTab(t.key); setPagination((p) => ({ ...p, current: 1 })); }}
+                  onClick={() => {
+                    setActiveTab(t.key);
+                    setPagination((p) => ({ ...p, current: 1 }));
+                  }}
                   style={{
-                    padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-                    border: "none", cursor: "pointer",
-                    background: activeTab === t.key ? C.primaryBg : "transparent",
+                    padding: "5px 14px",
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                    background:
+                      activeTab === t.key ? C.primaryBg : "transparent",
                     color: activeTab === t.key ? C.primary : C.textSub,
-                    outline: activeTab === t.key ? `1px solid ${C.primary}30` : "none",
+                    outline:
+                      activeTab === t.key ? `1px solid ${C.primary}30` : "none",
                     transition: "all 0.2s",
                   }}
                 >

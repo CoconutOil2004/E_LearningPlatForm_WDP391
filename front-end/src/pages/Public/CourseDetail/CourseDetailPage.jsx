@@ -64,7 +64,6 @@ const CourseDetailPage = () => {
     }
   }, [searchParams]);
 
-  /* ── Sync enrolled IDs from server ── */
   useEffect(() => {
     if (!isAuthenticated) {
       setEnrollChecked(true);

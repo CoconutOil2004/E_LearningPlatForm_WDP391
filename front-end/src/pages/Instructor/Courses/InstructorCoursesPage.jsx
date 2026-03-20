@@ -40,7 +40,7 @@ import {
   pageVariants,
 } from "../../../utils/helpers";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 // ─── Filter config ─────────────────────────────────────────────────────────────
 const FILTER_CONFIG = [
@@ -434,21 +434,20 @@ const InstructorCoursesPage = () => {
       exit="exit"
     >
       {/* Header */}
-
-      <div className="flex items-center justify-between pb-8">
+      <div className="flex items-center justify-between pb-3">
         <div>
-          <h2
+          <Title
+            level={2}
             style={{
               margin: "0 0 4px",
-              fontSize: 26,
               fontWeight: 900,
-              color: "#8B5CF6",
+              color: INSTRUCTOR_COLORS.primary,
             }}
           >
             My Courses
-          </h2>
+          </Title>
+          <Text type="secondary">Manage your courses</Text>
         </div>
-
         <Button
           type="primary"
           size="large"
