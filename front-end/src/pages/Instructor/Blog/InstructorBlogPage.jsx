@@ -654,6 +654,7 @@ const InstructorBlogPage = () => {
   const [editBlog, setEditBlog] = useState(null);
   const [deleteBlog, setDeleteBlog] = useState(null);
   const [submittingId, setSubmittingId] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(undefined);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -667,7 +668,7 @@ const InstructorBlogPage = () => {
   }, []);
   useEffect(() => {
     loadBlogs();
-  }, [activeTab, pagination.current]);
+  }, [activeTab, pagination.current, selectedCategory]);
 
   const loadBlogs = async () => {
     setLoading(true);
@@ -675,6 +676,7 @@ const InstructorBlogPage = () => {
       const params = { page: pagination.current, limit: pagination.pageSize };
       if (activeTab !== "all") params.status = activeTab;
       if (search.trim()) params.search = search.trim();
+      if (selectedCategory) params.category = selectedCategory;
       const res = await BlogService.getMyBlogs(params);
       setBlogs(res.data || []);
       setPagination((p) => ({ ...p, total: res.pagination?.totalItems || 0 }));
@@ -1031,13 +1033,40 @@ const InstructorBlogPage = () => {
                   </button>
                 ))}
               </div>
-              <Input
-                prefix={<SearchOutlined style={{ color: C.textMuted }} />}
+              <Select
+                placeholder="All Categories"
+                allowClear
+                value={selectedCategory}
+                onChange={(val) => {
+                  setSelectedCategory(val);
+                  setPagination((p) => ({ ...p, current: 1 }));
+                }}
+                style={{ width: 180, borderRadius: 10 }}
+                options={categories.map((c) => ({
+                  value: c._id,
+                  label: c.name,
+                }))}
+              />
+              <Input.Search
                 placeholder="Search posts..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onPressEnter={loadBlogs}
-                style={{ width: 220, borderRadius: 10 }}
+                onSearch={loadBlogs}
+                enterButton={
+                  <Button
+                    type="primary"
+                    icon={<SearchOutlined />}
+                    style={{
+                      background: C.gradient,
+                      border: "none",
+                      borderTopLeftRadius: 0,
+                      borderBottomLeftRadius: 0,
+                      height: 32, // Match the height of the search input precisely
+                    }}
+                  />
+                }
+                style={{ width: 280 }}
+                allowClear
               />
               <Tooltip title="Refresh">
                 <Button
