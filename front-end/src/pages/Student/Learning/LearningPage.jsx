@@ -19,10 +19,8 @@ import { ROUTES } from "../../../utils/constants";
 
 const { Text, Title } = Typography;
 
-/** Heartbeat interval (ms) — gửi mỗi 10 giây */
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
-/** Threshold hoàn thành video = 30% duration (khớp BE LESSON_COMPLETE_THRESHOLD) */
 const COMPLETION_THRESHOLD = 0.3;
 
 /* ─── LoadingScreen ────────────────────────────────────────────────────────── */

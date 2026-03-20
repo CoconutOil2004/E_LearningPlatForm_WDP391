@@ -6,11 +6,13 @@ import {
   PlayCircleOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
+  StarOutlined,
 } from "@ant-design/icons";
 import { Space, Tabs, Tag, Tooltip, Typography } from "antd";
 import { useState } from "react";
 
 import { formatDurationClock } from "../../utils/helpers";
+import CourseReview from "../shared/CourseReview";
 import LessonDiscussion from "./LessonDiscussion";
 
 const { Text } = Typography;
@@ -208,19 +210,19 @@ const LearningSidebar = ({
         </div>
       ),
     },
-    // {
-    //   key: "reviews",
-    //   label: (
-    //     <span>
-    //       <StarOutlined /> Reviews
-    //     </span>
-    //   ),
-    //   children: (
-    //     <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-    //       <CourseReview courseId={courseId} dark isInstructor={isInstructor} />
-    //     </div>
-    //   ),
-    // },
+    {
+      key: "reviews",
+      label: (
+        <span>
+          <StarOutlined /> Reviews
+        </span>
+      ),
+      children: (
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
+          <CourseReview courseId={courseId} dark isInstructor={isInstructor} />
+        </div>
+      ),
+    },
   ];
 
   return (
