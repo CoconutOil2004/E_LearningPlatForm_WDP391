@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { Comment, Enrollment, Course } = require("../models");
 const logger = require("../utils/logger");
 
@@ -116,10 +117,16 @@ exports.deleteComment = async (req, res) => {
  */
 exports.getAllComments = async (req, res) => {
   try {
-    const { page = 1, limit = 50, search } = req.query;
+    const { page = 1, limit = 50, search, courseId } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.max(1, parseInt(limit));
     const skip = (p - 1) * l;
+
+    // Pre-filter by courseId before lookup (cheap index hit)
+    const preMatch = {};
+    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
+      preMatch.courseId = new mongoose.Types.ObjectId(courseId);
+    }
 
     const searchMatch = [];
     if (search) {
@@ -131,6 +138,8 @@ exports.getAllComments = async (req, res) => {
     }
 
     const pipeline = [
+      // preMatch dùng index trên courseId, chạy trước lookup cho nhanh
+      ...(Object.keys(preMatch).length > 0 ? [{ $match: preMatch }] : []),
       {
         $lookup: {
           from: "users",

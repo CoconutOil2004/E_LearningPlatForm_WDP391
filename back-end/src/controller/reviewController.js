@@ -227,14 +227,15 @@ const replyToReview = async (req, res) => {
  */
 const getAllReviews = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search, rating } = req.query;
+    const { page = 1, limit = 20, search, rating, courseId } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
     const matchQuery = {};
-    if (rating) {
-      matchQuery.rating = parseInt(rating);
+    if (rating) matchQuery.rating = parseInt(rating);
+    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
+      matchQuery.courseId = new mongoose.Types.ObjectId(courseId);
     }
 
     const searchMatch = [];
@@ -247,6 +248,8 @@ const getAllReviews = async (req, res) => {
     }
 
     const pipeline = [
+      // preMatch trước lookup — dùng index courseId/rating
+      ...(Object.keys(matchQuery).length > 0 ? [{ $match: matchQuery }] : []),
       {
         $lookup: {
           from: "users",
@@ -266,10 +269,6 @@ const getAllReviews = async (req, res) => {
       },
       { $unwind: "$course" },
     ];
-
-    if (matchQuery.rating !== undefined) {
-      pipeline.push({ $match: { rating: matchQuery.rating } });
-    }
 
     if (searchMatch.length > 0) {
       pipeline.push({ $match: { $or: searchMatch } });
