@@ -444,7 +444,7 @@ const InstructorCoursesPage = () => {
               color: "#8B5CF6",
             }}
           >
-            My Blog Posts
+            My Courses
           </h2>
         </div>
 
