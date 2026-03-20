@@ -7,6 +7,7 @@ import CourseCard from "../../../components/common/CourseCard";
 import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
 import CourseService from "../../../services/api/CourseService";
+import PaymentService from "../../../services/api/PaymentService";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
@@ -39,7 +40,7 @@ const CoursesPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist } = useCourseStore();
+  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist, setEnrolledCourseIds } = useCourseStore();
   const toast = useToast();
 
   const [keyword,        setKeyword]        = useState(searchParams.get("q") ?? "");
@@ -58,6 +59,14 @@ const CoursesPage = () => {
   useEffect(() => {
     CourseService.getCategories().then(setCategories).catch(() => {});
   }, []);
+
+  // Sync enrolled course IDs từ server khi user đã đăng nhập
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    PaymentService.getEnrolledCourseIds()
+      .then(setEnrolledCourseIds)
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   const fetchCourses = useCallback(
     (p = 1, append = false) => {

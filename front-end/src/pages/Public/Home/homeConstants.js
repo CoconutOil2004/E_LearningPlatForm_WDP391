@@ -44,31 +44,31 @@ export const TOOLS = [
 
 export const MILESTONES = [
   {
-    icon: "compass",
-    title: "Discover",
-    sub: "Tech Discovery",
-    desc: "Find your career direction and passion",
+    icon: "user",
+    title: "Register",
+    sub: "Create Account",
+    desc: "Sign up and join the learning community",
+    route: ROUTES.REGISTER,
+  },
+  {
+    icon: "dollar",
+    title: "Payment",
+    sub: "Unlock Access",
+    desc: "Securely enroll in your chosen course",
     route: ROUTES.COURSES,
   },
   {
-    icon: "book-open",
+    icon: "book",
     title: "Learn",
-    sub: "Digital Wisdom",
+    sub: "Master Skills",
     desc: "Expert-led, deeply structured curriculum",
     route: ROUTES.COURSES,
   },
   {
-    icon: "code",
-    title: "Build",
-    sub: "Cyber Forge",
-    desc: "Ship real projects inside the Lab",
-    route: ROUTES.COURSES,
-  },
-  {
     icon: "award",
-    title: "Certify",
-    sub: "Neon Credential",
-    desc: "Prove your skills internationally",
+    title: "Certificate",
+    sub: "Get Certified",
+    desc: "Earn a globally recognized credential",
     route: ROUTES.ABOUT,
   },
 ];
