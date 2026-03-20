@@ -141,7 +141,7 @@ exports.paymentCallback = async (req, res) => {
           title: "Payment successful",
           message: `Congratulations! You have successfully enrolled in "${payment.enrollmentId?.courseId?.title || "new course"}".`,
           type: "success",
-          link: `/learning/${enrollment.courseId}`,
+          link: `/student/learning/${enrollment.courseId}`,
         });
 
         // Gửi thông báo cho Giảng viên

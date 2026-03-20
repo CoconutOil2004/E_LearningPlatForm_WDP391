@@ -206,7 +206,7 @@ exports.enrollFreeCourse = async (req, res) => {
       title: "Course Enrollment",
       message: `Congratulations! You have successfully enrolled in "${course.title || "new course"}".`,
       type: "success",
-      link: `/learning/${courseId}`,
+      link: `/student/learning/${courseId}`,
     });
 
     // 9. Gửi thông báo cho Giảng viên

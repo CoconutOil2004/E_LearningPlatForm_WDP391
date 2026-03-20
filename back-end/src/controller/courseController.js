@@ -779,7 +779,7 @@ exports.approveCourse = async (req, res) => {
       title: "Course approved",
       message: `Congratulations! Your course "${course.title}" has been approved and published.`,
       type: "success",
-      link: `/learning/${course._id}`,
+      link: `/student/learning/${course._id}`,
     });
 
     res.json({
