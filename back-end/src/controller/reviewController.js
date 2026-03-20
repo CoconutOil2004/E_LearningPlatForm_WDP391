@@ -151,6 +151,30 @@ const getCourseRatingStats = async (req, res) => {
 };
 
 /**
+ * Get current user's review for a course
+ */
+const getMyReview = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.id;
+
+    const review = await Review.findOne({ userId, courseId })
+      .populate("userId", "fullname avatarURL");
+
+    return res.status(200).json({
+      success: true,
+      data: review
+    });
+  } catch (error) {
+    logger.error("Error fetching user review:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching your review"
+    });
+  }
+};
+
+/**
  * Reply to a review (Instructor only)
  */
 const replyToReview = async (req, res) => {
@@ -358,6 +382,7 @@ module.exports = {
   createReview,
   getCourseReviews,
   getCourseRatingStats,
+  getMyReview,
   replyToReview,
   getAllReviews,
   deleteReview,

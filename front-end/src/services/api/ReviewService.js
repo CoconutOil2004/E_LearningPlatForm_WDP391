@@ -10,6 +10,11 @@ class ReviewService {
     return res.data;
   }
 
+  async getMyReview(courseId) {
+    const res = await api.get(`/reviews/my-review/${courseId}`);
+    return res.data;
+  }
+
   /**
    * Get reviews for a specific course
    * @param {string} courseId 

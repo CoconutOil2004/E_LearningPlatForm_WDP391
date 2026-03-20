@@ -154,7 +154,7 @@ const WriteReviewBox = ({ courseId, onSubmitted }) => {
     }
     setSubmitting(true);
     try {
-      await ReviewService.createReview(courseId, { rating, comment });
+      await ReviewService.createReview({ courseId, rating, comment });
       message.success("Review submitted!");
       setRating(0);
       setComment("");
@@ -516,8 +516,8 @@ const CourseReview = ({
 
       // Check if current user already reviewed (by checking ReviewService or a flag from API)
       try {
-        const myReview = await ReviewService.getMyReview?.(courseId);
-        setHasUserReviewed(!!myReview);
+        const myReviewResponse = await ReviewService.getMyReview?.(courseId);
+        setHasUserReviewed(!!myReviewResponse?.data);
       } catch {
         setHasUserReviewed(false);
       }
