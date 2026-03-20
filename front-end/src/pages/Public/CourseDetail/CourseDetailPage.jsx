@@ -9,14 +9,11 @@ import PaymentService from "../../../services/api/PaymentService";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
-import {
-  formatDurationClock,
-  pageVariants,
-} from "../../../utils/helpers";
+import { formatDurationClock, pageVariants } from "../../../utils/helpers";
 
 import CourseBreadcrumb from "./CourseBreadcrumb";
-import CourseSidebar from "./CourseSidebar";
 import CourseHero from "./CourseHero";
+import CourseSidebar from "./CourseSidebar";
 import CurriculumAccordion from "./CurriculumAccordion";
 
 const { Title } = Typography;
@@ -34,8 +31,13 @@ const CourseDetailPage = () => {
   const navigate = useNavigate();
 
   const { user, isAuthenticated } = useAuthStore();
-  const { enrolledCourseIds, wishlistIds, enroll, toggleWishlist, setEnrolledCourseIds } =
-    useCourseStore();
+  const {
+    enrolledCourseIds,
+    wishlistIds,
+    enroll,
+    toggleWishlist,
+    setEnrolledCourseIds,
+  } = useCourseStore();
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,24 +108,24 @@ const CourseDetailPage = () => {
 
   /* ── Derived state ── */
   const courseId = course._id?.toString();
-  const isFree      = course.price === 0;
+  const isFree = course.price === 0;
 
   // ✅ FIX: dùng enrolledCourseIds từ store (đã sync từ server trước khi render)
-  const isEnrolled  = enrolledCourseIds.includes(courseId);
-  const isOwner     =
+  const isEnrolled = enrolledCourseIds.includes(courseId);
+  const isOwner =
     !!user?._id &&
     (course.instructorId?._id?.toString() === user._id?.toString() ||
       course.instructorId?.toString() === user._id?.toString());
-  const isAdmin     = user?.role === "admin";
-  const isUnlocked  = isEnrolled || isOwner || isAdmin;
+  const isAdmin = user?.role === "admin";
+  const isUnlocked = isEnrolled || isOwner || isAdmin;
   const isWishlisted = wishlistIds.includes(courseId);
 
-  const categoryName  = course.category?.name ?? "";
-  const totalLessons  = (course.sections ?? []).reduce(
+  const categoryName = course.category?.name ?? "";
+  const totalLessons = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
     0,
   );
-  const totalQuizzes  = (course.sections ?? []).reduce(
+  const totalQuizzes = (course.sections ?? []).reduce(
     (a, s) => a + (s.items?.filter((i) => i.itemType === "quiz").length ?? 0),
     0,
   );
@@ -145,17 +147,15 @@ const CourseDetailPage = () => {
           PaymentService.getEnrolledCourseIds()
             .then(setEnrolledCourseIds)
             .catch(() => {});
-          message.success("Enrolled successfully!");
           navigate(`/student/learning/${course._id}`);
         } else {
-          message.error(res?.message || "Enrollment failed. Please try again.");
         }
       } catch (err) {
         const msg = err?.response?.data?.message || err?.message;
         const status = err?.response?.status;
-        if (status === 400) message.warning(msg || "Cannot enroll in this course");
+        if (status === 400)
+          message.warning(msg || "Cannot enroll in this course");
         else if (status === 404) message.error("Course not found");
-        else message.error(msg || "An error occurred while enrolling");
       } finally {
         setPaying(false);
       }
@@ -167,37 +167,41 @@ const CourseDetailPage = () => {
       if (res?.paymentUrl) {
         window.location.href = res.paymentUrl;
       } else {
-        message.error("Could not create payment. Please try again.");
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message;
-      if (err?.response?.status === 400) message.warning(msg || "Cannot create payment");
-      else message.error(msg || "An error occurred while creating payment");
     } finally {
       setPaying(false);
     }
   };
 
-  const handleLearn    = () => navigate(`/student/learning/${course._id}`);
+  const handleLearn = () => navigate(`/student/learning/${course._id}`);
   const handleWishlist = () => {
-    if (!isAuthenticated) { navigate(ROUTES.LOGIN); return; }
+    if (!isAuthenticated) {
+      navigate(ROUTES.LOGIN);
+      return;
+    }
     toggleWishlist(courseId);
   };
-  const handleEdit = () =>
-    navigate(`/instructor/courses/edit/${course._id}`);
+  const handleEdit = () => navigate(`/instructor/courses/edit/${course._id}`);
 
   /* ── Render ── */
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
       <div style={{ maxWidth: 1160, margin: "0 auto", padding: "32px 24px" }}>
-
-        <CourseBreadcrumb categoryName={categoryName} courseTitle={course.title} />
+        <CourseBreadcrumb
+          categoryName={categoryName}
+          courseTitle={course.title}
+        />
 
         <Row gutter={[40, 32]} align="top">
           {/* ── LEFT ── */}
           <Col xs={24} lg={16}>
             <Space direction="vertical" size={36} style={{ width: "100%" }}>
-
               {/* ① Hero */}
               <CourseHero
                 course={course}
@@ -238,7 +242,6 @@ const CourseDetailPage = () => {
                   isInstructor={isOwner || isAdmin}
                 />
               </div>
-
             </Space>
           </Col>
 
