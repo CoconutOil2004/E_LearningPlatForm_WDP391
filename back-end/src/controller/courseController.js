@@ -305,7 +305,7 @@ exports.createCourse = async (req, res) => {
     }
 
     const course = await Course.create({
-      title: trimmedTitle,
+      title: title,
       description: (description || "").trim(),
       category: categoryValidation.category._id,
       level,
