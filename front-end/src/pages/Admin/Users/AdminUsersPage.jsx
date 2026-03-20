@@ -13,6 +13,7 @@ import {
   Form,
   Input,
   Modal,
+  Select,
   Space,
   Table,
   Tabs,
@@ -236,6 +237,11 @@ const AdminUsersPage = () => {
     handleCreate,
     handleToggleLock,
     actionLoading,
+    search,
+    setSearch,
+    status,
+    setStatus,
+    refetch,
   } = useAdminUsers();
 
   const stats = [
@@ -325,6 +331,33 @@ const AdminUsersPage = () => {
       />
 
       <StatsRow items={stats} />
+
+      <Card
+        bordered={false}
+        style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", marginBottom: 24 }}
+      >
+        <div style={{ padding: "16px 24px", display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <Input.Search
+            placeholder="Search by name, email or username..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={refetch}
+            style={{ width: 350 }}
+            allowClear
+          />
+          <Select
+            placeholder="Filter by Status"
+            style={{ width: 180 }}
+            value={status}
+            onChange={setStatus}
+            allowClear
+            options={[
+              { label: "Active", value: "unlock" },
+              { label: "Locked", value: "lock" },
+            ]}
+          />
+        </div>
+      </Card>
 
       <Card
         bordered={false}

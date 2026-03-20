@@ -13,6 +13,7 @@ import {
   Avatar,
   Button,
   Card,
+  DatePicker,
   Empty,
   Form,
   Input,
@@ -25,6 +26,7 @@ import {
   message,
 } from "antd";
 import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 import BlogService from "../../../services/api/BlogService";
 import { COLOR } from "../../../styles/adminTheme";
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
@@ -144,13 +146,14 @@ const AdminBlogPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
+  const [dateRange, setDateRange] = useState(null);
   const [previewBlog, setPreviewBlog] = useState(null);
   const [rejectBlog, setRejectBlog] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   useEffect(() => {
     fetchBlogs();
-  }, [activeTab, pagination.current]);
+  }, [activeTab, pagination.current, dateRange]);
 
   const fetchBlogs = async () => {
     setLoading(true);
@@ -158,7 +161,9 @@ const AdminBlogPage = () => {
       const params = {
         page: pagination.current,
         limit: pagination.pageSize,
-        search: search || undefined
+        search: search.trim() || undefined,
+        startDate: dateRange?.[0] ? dayjs(dateRange[0]).startOf("day").toISOString() : undefined,
+        endDate: dateRange?.[1] ? dayjs(dateRange[1]).endOf("day").toISOString() : undefined,
       };
       if (activeTab !== "all") params.status = activeTab;
 
@@ -261,7 +266,11 @@ const AdminBlogPage = () => {
       title: "Date",
       dataIndex: "createdAt",
       width: 120,
-      render: (date) => new Date(date).toLocaleDateString("en-US")
+      render: (date) => (
+        <Text type="secondary" style={{ fontSize: 13 }}>
+          {dayjs(date).format("DD/MM/YYYY")}
+        </Text>
+      )
     },
     {
       title: "Actions",
@@ -298,15 +307,39 @@ const AdminBlogPage = () => {
         title="Blog Management"
         subtitle="Review and manage platform articles"
         extra={
-          <Space>
-            <Input
-              placeholder="Search by title..."
-              prefix={<SearchOutlined />}
-              style={{ width: 250, borderRadius: 8 }}
-              onChange={(e) => setSearch(e.target.value)}
-              onPressEnter={() => { setPagination(p => ({ ...p, current: 1 })); fetchBlogs(); }}
+          <Space wrap>
+            <DatePicker.RangePicker
+              style={{ borderRadius: 8 }}
+              value={dateRange}
+              onChange={(dates) => {
+                setDateRange(dates);
+                setPagination((p) => ({ ...p, current: 1 }));
+              }}
             />
-            <Button icon={<ReloadOutlined />} onClick={fetchBlogs} />
+            <Input.Search
+              placeholder="Search by title..."
+              style={{ width: 250 }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onSearch={() => {
+                setPagination((p) => ({ ...p, current: 1 }));
+                fetchBlogs();
+              }}
+              enterButton={
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  style={{
+                    background: COLOR.ocean,
+                    border: "none",
+                    borderTopLeftRadius: 0,
+                    borderBottomLeftRadius: 0,
+                  }}
+                />
+              }
+              allowClear
+            />
+            <Button icon={<ReloadOutlined />} onClick={fetchBlogs} shape="circle" />
           </Space>
         }
       />

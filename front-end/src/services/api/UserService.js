@@ -3,9 +3,9 @@ import { api } from "../index";
 class UserService {
   // ─── Instructors ────────────────────────────────────────────────────────────
 
-  async getInstructors({ page = 1, limit = 20 } = {}) {
+  async getInstructors({ page = 1, limit = 20, search, status } = {}) {
     const { data } = await api.get("/users/instructors", {
-      params: { page, limit },
+      params: { page, limit, search, status },
     });
     return data;
   }
@@ -27,9 +27,9 @@ class UserService {
 
   // ─── Students ───────────────────────────────────────────────────────────────
 
-  async getStudents({ page = 1, limit = 20 } = {}) {
+  async getStudents({ page = 1, limit = 20, search, status } = {}) {
     const { data } = await api.get("/users/students", {
-      params: { page, limit },
+      params: { page, limit, search, status },
     });
     return data;
   }

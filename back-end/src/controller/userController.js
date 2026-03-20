@@ -140,14 +140,26 @@ const getProfile = async (req, res) => {
  */
 const getStudents = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, status } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
+    const matchQuery = { role: 'student' };
+    if (search) {
+      matchQuery.$or = [
+        { fullname: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (status) {
+      matchQuery.action = status;
+    }
+
     const [students, total] = await Promise.all([
       User.aggregate([
-        { $match: { role: 'student' } },
+        { $match: matchQuery },
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: l },
@@ -176,7 +188,7 @@ const getStudents = async (req, res) => {
         },
         { $project: { password: 0, otp: 0, otpExpires: 0, enrollments: 0 } }
       ]),
-      User.countDocuments({ role: 'student' }),
+      User.countDocuments(matchQuery),
     ]);
 
     logger.info(`Fetched ${students.length} students with stats (total: ${total})`);
@@ -291,14 +303,26 @@ Please log in and change your password to secure your account.`;
  */
 const getInstructors = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, status } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
+    const matchQuery = { role: 'instructor' };
+    if (search) {
+      matchQuery.$or = [
+        { fullname: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (status) {
+      matchQuery.action = status;
+    }
+
     const [instructors, total] = await Promise.all([
       User.aggregate([
-        { $match: { role: 'instructor' } },
+        { $match: matchQuery },
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: l },
@@ -341,7 +365,7 @@ const getInstructors = async (req, res) => {
         },
         { $project: { password: 0, otp: 0, otpExpires: 0, courses: 0, allEnrollments: 0, paidOrders: 0 } }
       ]),
-      User.countDocuments({ role: 'instructor' }),
+      User.countDocuments(matchQuery),
     ]);
 
     logger.info(`Fetched ${instructors.length} instructors with stats (total: ${total})`);
