@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { User, Enrollment, Course, Order } = require('../models');
 const logger = require('../utils/logger');
 const bcrypt = require("bcryptjs");
@@ -487,56 +488,88 @@ const updateStudentAction = async (req, res) => {
 const getInstructorStudents = async (req, res) => {
   try {
     const instructorId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search = '', courseId, completed } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
     // 1. Tìm các khóa học của instructor này
-    const instructorCourses = await Course.find({ instructorId }).select('_id');
+    const courseQuery = { instructorId };
+    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
+      courseQuery._id = courseId;
+    }
+    const instructorCourses = await Course.find(courseQuery).select('_id');
     const courseIds = instructorCourses.map(c => c._id);
 
-    // 2. Aggregate Enrollments của các khóa học đó
-    const [enrollments, total] = await Promise.all([
-      Enrollment.aggregate([
-        { $match: { courseId: { $in: courseIds } } },
-        { $sort: { createdAt: -1 } },
-        { $skip: skip },
-        { $limit: l },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'userId',
-            foreignField: '_id',
-            as: 'student'
-          }
-        },
-        { $unwind: '$student' },
-        {
-          $lookup: {
-            from: 'courses',
-            localField: 'courseId',
-            foreignField: '_id',
-            as: 'course'
-          }
-        },
-        { $unwind: '$course' },
-        {
-          $project: {
-            _id: 1,
-            enrollmentDate: 1,
-            progress: 1,
-            completed: 1,
-            'student.fullname': 1,
-            'student.email': 1,
-            'student.avatarURL': 1,
-            'course.title': 1,
-            'course.thumbnail': 1
-          }
+    // 2. Build enrollment match — hỗ trợ filter completed
+    const enrollmentMatch = { courseId: { $in: courseIds } };
+    if (completed === 'true')  enrollmentMatch.completed = true;
+    if (completed === 'false') enrollmentMatch.completed = false;
+
+    // 3. Aggregate Enrollments — hỗ trợ search theo tên/email student
+    const pipeline = [
+      { $match: enrollmentMatch },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'student'
         }
-      ]),
-      Enrollment.countDocuments({ courseId: { $in: courseIds } })
+      },
+      { $unwind: '$student' },
+      {
+        $lookup: {
+          from: 'courses',
+          localField: 'courseId',
+          foreignField: '_id',
+          as: 'course'
+        }
+      },
+      { $unwind: '$course' },
+    ];
+
+    // Search filter sau khi đã lookup student/course
+    if (search.trim()) {
+      const regex = new RegExp(search.trim(), 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'student.fullname': regex },
+            { 'student.email': regex },
+            { 'course.title': regex },
+          ]
+        }
+      });
+    }
+
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const dataPipeline = [
+      ...pipeline,
+      { $skip: skip },
+      { $limit: l },
+      {
+        $project: {
+          _id: 1,
+          enrollmentDate: 1,
+          progress: 1,
+          completed: 1,
+          'student.fullname': 1,
+          'student.email': 1,
+          'student.avatarURL': 1,
+          'course._id': 1,
+          'course.title': 1,
+          'course.thumbnail': 1,
+        }
+      }
+    ];
+
+    const [enrollments, countResult] = await Promise.all([
+      Enrollment.aggregate(dataPipeline),
+      Enrollment.aggregate(countPipeline),
     ]);
+    const total = countResult[0]?.total ?? 0;
 
     res.json({
       success: true,

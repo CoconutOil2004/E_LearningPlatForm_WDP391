@@ -9,9 +9,9 @@ import {
   FileTextOutlined,
   LoadingOutlined,
   PlusOutlined,
-  ReloadOutlined,
+
   SaveOutlined,
-  SearchOutlined,
+
   SendOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
@@ -40,6 +40,7 @@ import BlogTinyEditor from "../../../components/blog/BlogTinyEditor";
 import BlogService from "../../../services/api/BlogService";
 import CourseService from "../../../services/api/CourseService";
 import UserService from "../../../services/api/UserService";
+import { FilterBar } from "../../../components/shared";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
@@ -648,35 +649,30 @@ const InstructorBlogPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [search, setSearch] = useState("");
   const [categories, setCategories] = useState([]);
   const [previewBlog, setPreviewBlog] = useState(null);
   const [editBlog, setEditBlog] = useState(null);
   const [deleteBlog, setDeleteBlog] = useState(null);
   const [submittingId, setSubmittingId] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(undefined);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
+  const [filterValues, setFilterValues] = useState({ keyword: "", category: "" });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   useEffect(() => {
-    CourseService.getCategories()
-      .then(setCategories)
-      .catch(() => { });
+    CourseService.getCategories().then(setCategories).catch(() => {});
   }, []);
+
   useEffect(() => {
     loadBlogs();
-  }, [activeTab, pagination.current, selectedCategory]);
+  }, [activeTab, pagination.current, filterValues.category]);
 
-  const loadBlogs = async () => {
+  const loadBlogs = async (overrides = {}) => {
     setLoading(true);
     try {
+      const vals = { ...filterValues, ...overrides };
       const params = { page: pagination.current, limit: pagination.pageSize };
       if (activeTab !== "all") params.status = activeTab;
-      if (search.trim()) params.search = search.trim();
-      if (selectedCategory) params.category = selectedCategory;
+      if (vals.keyword.trim()) params.search = vals.keyword.trim();
+      if (vals.category) params.category = vals.category;
       const res = await BlogService.getMyBlogs(params);
       setBlogs(res.data || []);
       setPagination((p) => ({ ...p, total: res.pagination?.totalItems || 0 }));
@@ -685,6 +681,31 @@ const InstructorBlogPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // FilterBar handlers
+  const handleFilterChange = (key, value) => {
+    const next = { ...filterValues, [key]: value ?? "" };
+    setFilterValues(next);
+    if (key !== "keyword") {
+      setPagination((p) => ({ ...p, current: 1 }));
+      loadBlogs(next);
+    }
+  };
+
+  const handleSearch = (val) => {
+    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    setFilterValues(next);
+    setPagination((p) => ({ ...p, current: 1 }));
+    loadBlogs(next);
+  };
+
+  const handleReset = () => {
+    const reset = { keyword: "", category: "" };
+    setFilterValues(reset);
+    setActiveTab("all");
+    setPagination((p) => ({ ...p, current: 1 }));
+    loadBlogs(reset);
   };
 
   const handleSubmitForReview = async (blog) => {
@@ -785,28 +806,6 @@ const InstructorBlogPage = () => {
       ),
     },
     {
-      title: "Status",
-      key: "status",
-      width: 120,
-      render: (_, r) => {
-        const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
-        return (
-          <Tag
-            style={{
-              borderRadius: 20,
-              border: "none",
-              background: st.bg,
-              color: st.color,
-              fontWeight: 700,
-              fontSize: 11,
-            }}
-          >
-            {st.icon} {st.label}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Created",
       key: "date",
       width: 110,
@@ -867,6 +866,28 @@ const InstructorBlogPage = () => {
           )}
         </Space>
       ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      width: 120,
+      render: (_, r) => {
+        const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
+        return (
+          <Tag
+            style={{
+              borderRadius: 20,
+              border: "none",
+              background: st.bg,
+              color: st.color,
+              fontWeight: 700,
+              fontSize: 11,
+            }}
+          >
+            {st.icon} {st.label}
+          </Tag>
+        );
+      },
     },
   ];
 
@@ -992,89 +1013,46 @@ const InstructorBlogPage = () => {
         {/* Table */}
         <motion.div {...up(0.15)}>
           <Card bordered={false} style={card} bodyStyle={{ padding: 0 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                padding: "16px 20px",
-                borderBottom: `1px solid ${C.border}`,
-              }}
-            >
-              <div
-                style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap" }}
-              >
-                {TABS.map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => {
-                      setActiveTab(t.key);
-                      setPagination((p) => ({ ...p, current: 1 }));
-                    }}
-                    style={{
-                      padding: "5px 14px",
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      border: "none",
-                      cursor: "pointer",
-                      background:
-                        activeTab === t.key ? C.primaryBg : "transparent",
-                      color: activeTab === t.key ? C.primary : C.textSub,
-                      outline:
-                        activeTab === t.key
-                          ? `1px solid ${C.primary}30`
-                          : "none",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <Select
-                placeholder="All Categories"
-                allowClear
-                value={selectedCategory}
-                onChange={(val) => {
-                  setSelectedCategory(val);
-                  setPagination((p) => ({ ...p, current: 1 }));
-                }}
-                style={{ width: 180, borderRadius: 10 }}
-                options={categories.map((c) => ({
-                  value: c._id,
-                  label: c.name,
-                }))}
+            {/* FilterBar — dùng component dùng chung */}
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
+              <FilterBar
+                filters={[
+                  { key: "keyword", type: "search", placeholder: "Search posts...", width: 260 },
+                  {
+                    key: "category", type: "select", label: "Category", width: 180,
+                    defaultValue: "", allowClear: true,
+                    options: [
+                      { value: "", label: "All Categories" },
+                      ...categories.map((c) => ({ value: c._id, label: c.name })),
+                    ],
+                  },
+                ]}
+                values={filterValues}
+                onChange={handleFilterChange}
+                onSearch={handleSearch}
+                onReset={handleReset}
+                theme="purple"
               />
-              <Input.Search
-                placeholder="Search posts..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onSearch={loadBlogs}
-                enterButton={
-                  <Button
-                    type="primary"
-                    icon={<SearchOutlined />}
-                    style={{
-                      background: C.gradient,
-                      border: "none",
-                      borderTopLeftRadius: 0,
-                      borderBottomLeftRadius: 0,
-                      height: 32, // Match the height of the search input precisely
-                    }}
-                  />
-                }
-                style={{ width: 280 }}
-                allowClear
-              />
-              <Tooltip title="Refresh">
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={loadBlogs}
-                  style={{ borderRadius: 10, borderColor: C.border }}
-                />
-              </Tooltip>
+            </div>
+
+            {/* Status tabs */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 20px", borderBottom: `1px solid ${C.border}` }}>
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => { setActiveTab(t.key); setPagination((p) => ({ ...p, current: 1 })); }}
+                  style={{
+                    padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    border: "none", cursor: "pointer",
+                    background: activeTab === t.key ? C.primaryBg : "transparent",
+                    color: activeTab === t.key ? C.primary : C.textSub,
+                    outline: activeTab === t.key ? `1px solid ${C.primary}30` : "none",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
 
             <Table

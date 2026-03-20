@@ -315,24 +315,6 @@ const InstructorCoursesPage = () => {
       render: (_, record) => <CourseRow record={record} />,
     },
     {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 130,
-      render: (s) => {
-        const cfg =
-          INSTRUCTOR_STATUS_CONFIG[s] || INSTRUCTOR_STATUS_CONFIG.draft;
-        return (
-          <Tag
-            className="px-3 py-1 font-semibold border-none rounded-md"
-            style={{ backgroundColor: cfg.bg, color: cfg.text }}
-          >
-            {cfg.label}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Price",
       dataIndex: "price",
       key: "price",
@@ -370,10 +352,10 @@ const InstructorCoursesPage = () => {
         </Text>
       ),
     },
+    // Actions trước Status
     {
       title: "Actions",
       key: "actions",
-      align: "right",
       width: 160,
       render: (_, record) => {
         const canEdit = ["draft", "rejected"].includes(record.status);
@@ -420,6 +402,25 @@ const InstructorCoursesPage = () => {
               </Button>
             )}
           </Space>
+        );
+      },
+    },
+    // Status sau Actions
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 130,
+      render: (s) => {
+        const cfg =
+          INSTRUCTOR_STATUS_CONFIG[s] || INSTRUCTOR_STATUS_CONFIG.draft;
+        return (
+          <Tag
+            className="px-3 py-1 font-semibold border-none rounded-md"
+            style={{ backgroundColor: cfg.bg, color: cfg.text }}
+          >
+            {cfg.label}
+          </Tag>
         );
       },
     },

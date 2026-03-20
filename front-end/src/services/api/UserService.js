@@ -36,10 +36,12 @@ class UserService {
 
   // ─── Instructor Specific ───────────────────────────────────────────────────
 
-  async getInstructorStudents({ page = 1, limit = 20 } = {}) {
-    const { data } = await api.get("/users/instructor/students", {
-      params: { page, limit },
-    });
+  async getInstructorStudents({ page = 1, limit = 20, search, courseId, completed } = {}) {
+    const params = { page, limit };
+    if (search?.trim()) params.search = search.trim();
+    if (courseId)       params.courseId = courseId;
+    if (completed !== undefined && completed !== '') params.completed = completed;
+    const { data } = await api.get("/users/instructor/students", { params });
     return data;
   }
 
