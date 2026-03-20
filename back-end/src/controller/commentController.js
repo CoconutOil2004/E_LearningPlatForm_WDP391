@@ -116,34 +116,86 @@ exports.deleteComment = async (req, res) => {
  */
 exports.getAllComments = async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
-    const skip = (page - 1) * limit;
+    const { page = 1, limit = 50, search } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.max(1, parseInt(limit));
+    const skip = (p - 1) * l;
 
-    const [comments, total] = await Promise.all([
-      Comment.find()
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate("userId", "fullname avatarURL")
-        .populate("courseId", "title"),
-      Comment.countDocuments(),
+    const searchMatch = [];
+    if (search) {
+      searchMatch.push(
+        { "user.fullname": { $regex: search, $options: "i" } },
+        { "course.title": { $regex: search, $options: "i" } },
+        { content: { $regex: search, $options: "i" } }
+      );
+    }
+
+    const pipeline = [
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "courseId",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      { $unwind: "$course" },
+    ];
+
+    if (searchMatch.length > 0) {
+      pipeline.push({ $match: { $or: searchMatch } });
+    }
+
+    const [comments, countResult] = await Promise.all([
+      Comment.aggregate([
+        ...pipeline,
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: l },
+        {
+          $project: {
+            _id: 1,
+            content: 1,
+            createdAt: 1,
+            lessonId: 1,
+            parentCommentId: 1,
+            "userId._id": "$user._id",
+            "userId.fullname": "$user.fullname",
+            "userId.avatarURL": "$user.avatarURL",
+            "courseId._id": "$course._id",
+            "courseId.title": "$course.title",
+          },
+        },
+      ]),
+      Comment.aggregate([...pipeline, { $count: "total" }]),
     ]);
+
+    const total = countResult[0]?.total || 0;
 
     return res.status(200).json({
       success: true,
       data: comments,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit),
-      }
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(total / l),
+      },
     });
   } catch (error) {
     logger.error("Error fetching all comments:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching comments"
+      message: "Server error while fetching comments",
     });
   }
 };

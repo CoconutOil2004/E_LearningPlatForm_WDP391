@@ -30,10 +30,14 @@ const AdminCommentPage = () => {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [searchText, setSearchText] = useState("");
 
-  const fetchComments = async (page = 1) => {
+  const fetchComments = async (page = 1, search = searchText) => {
     setLoading(true);
     try {
-      const res = await CommentService.getAllComments(page, pagination.pageSize);
+      const res = await CommentService.getAllComments({
+        page,
+        limit: pagination.pageSize,
+        search: search.trim() || undefined,
+      });
       if (res.success) {
         setData(res.data);
         setPagination({
@@ -81,7 +85,7 @@ const AdminCommentPage = () => {
         <Space>
           <Avatar src={record.userId?.avatarURL} size="small" />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <Text strong fontSize={13}>{record.userId?.fullname || "Unknown"}</Text>
+            <Text strong style={{ fontSize: 13 }}>{record.userId?.fullname || "Unknown"}</Text>
             <Text type="secondary" style={{ fontSize: 11 }}>{record.userId?._id}</Text>
           </div>
         </Space>
@@ -127,23 +131,20 @@ const AdminCommentPage = () => {
     },
   ];
 
-  const filteredData = data.filter(item =>
-    item.content?.toLowerCase().includes(searchText.toLowerCase()) ||
-    item.userId?.fullname?.toLowerCase().includes(searchText.toLowerCase()) ||
-    item.courseId?.title?.toLowerCase().includes(searchText.toLowerCase())
-  );
-
   return (
     <AdminPageLayout>
       <PageHeader
         title="Comment Management"
         subtitle="Review and moderate user discussions across all courses"
         extra={
-          <Input
+          <Input.Search
             placeholder="Search comments, users or courses..."
-            prefix={<SearchOutlined />}
-            style={{ width: 300, borderRadius: 8 }}
-            onChange={e => setSearchText(e.target.value)}
+            style={{ width: 300 }}
+            enterButton
+            onSearch={() => fetchComments(1)}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            allowClear
           />
         }
       />
@@ -151,7 +152,7 @@ const AdminCommentPage = () => {
       <Card bordered={false} style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", overflow: 'hidden' }}>
         <Table
           columns={columns}
-          dataSource={filteredData}
+          dataSource={data}
           loading={loading}
           rowKey="_id"
           pagination={{

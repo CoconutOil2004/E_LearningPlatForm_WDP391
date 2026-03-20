@@ -26,12 +26,11 @@ class CommentService {
 
   /**
    * Get all comments (Admin only)
-   * @param {number} page 
-   * @param {number} limit 
+   * @param {Object} params { page, limit, search }
    */
-  async getAllComments(page = 1, limit = 20) {
+  async getAllComments({ page = 1, limit = 20, search } = {}) {
     const res = await api.get("/comments/admin/all", {
-      params: { page, limit }
+      params: { page, limit, search }
     });
     return res.data;
   }

@@ -12,6 +12,7 @@ import {
   message,
   Modal,
   Rate,
+  Select,
   Space,
   Table,
   Tag,
@@ -31,11 +32,17 @@ const AdminReviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [searchText, setSearchText] = useState("");
+  const [rating, setRating] = useState(undefined);
 
-  const fetchReviews = async (page = 1) => {
+  const fetchReviews = async (page = 1, search = searchText, rat = rating) => {
     setLoading(true);
     try {
-      const res = await ReviewService.getAllReviews(page, pagination.pageSize);
+      const res = await ReviewService.getAllReviews({
+        page,
+        limit: pagination.pageSize,
+        search: search.trim() || undefined,
+        rating: rat,
+      });
       if (res.success) {
         setData(res.reviews);
         setPagination({
@@ -53,8 +60,8 @@ const AdminReviewPage = () => {
   };
 
   useEffect(() => {
-    fetchReviews();
-  }, []);
+    fetchReviews(1);
+  }, [rating]);
 
   const handleDelete = (id) => {
     Modal.confirm({
@@ -82,7 +89,7 @@ const AdminReviewPage = () => {
       render: (_, record) => (
         <Space>
           <Avatar src={record.userId?.avatarURL} size="small" />
-          <Text strong fontSize={13}>{record.userId?.fullname || "Unknown"}</Text>
+          <Text strong style={{ fontSize: 13 }}>{record.userId?.fullname || "Unknown"}</Text>
         </Space>
       ),
     },
@@ -142,31 +149,46 @@ const AdminReviewPage = () => {
     },
   ];
 
-  const filteredData = data.filter(item =>
-    item.comment?.toLowerCase().includes(searchText.toLowerCase()) ||
-    item.userId?.fullname?.toLowerCase().includes(searchText.toLowerCase()) ||
-    item.courseId?.title?.toLowerCase().includes(searchText.toLowerCase())
-  );
-
   return (
     <AdminPageLayout>
       <PageHeader
         title="Review Management"
         subtitle="Monitor platform quality and student feedback"
         extra={
-          <Input
-            placeholder="Search reviews, users or courses..."
-            prefix={<SearchOutlined />}
-            style={{ width: 300, borderRadius: 8 }}
-            onChange={e => setSearchText(e.target.value)}
-          />
+          <Space wrap>
+            <Select
+              placeholder="Filter by Rating"
+              style={{ width: 150 }}
+              allowClear
+              onChange={(val) => setRating(val)}
+              options={[
+                { value: 5, label: "5 Stars" },
+                { value: 4, label: "4 Stars" },
+                { value: 3, label: "3 Stars" },
+                { value: 2, label: "2 Stars" },
+                { value: 1, label: "1 Star" },
+              ]}
+            />
+            <Input.Search
+              placeholder="Search reviews, users or courses..."
+              style={{ width: 300 }}
+              enterButton
+              onSearch={() => fetchReviews(1)}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+          </Space>
         }
       />
 
-      <Card bordered={false} style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", overflow: 'hidden' }}>
+      <Card
+        bordered={false}
+        style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", overflow: "hidden" }}
+      >
         <Table
           columns={columns}
-          dataSource={filteredData}
+          dataSource={data}
           loading={loading}
           rowKey="_id"
           pagination={{

@@ -39,12 +39,11 @@ class ReviewService {
 
   /**
    * Get all reviews (Admin only)
-   * @param {number} page 
-   * @param {number} limit 
+   * @param {Object} params { page, limit, search, rating }
    */
-  async getAllReviews(page = 1, limit = 20) {
+  async getAllReviews({ page = 1, limit = 20, search, rating } = {}) {
     const res = await api.get("/reviews/admin/all", {
-      params: { page, limit }
+      params: { page, limit, search, rating }
     });
     return res.data;
   }
