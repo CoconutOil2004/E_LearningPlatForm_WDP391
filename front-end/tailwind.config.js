@@ -11,12 +11,10 @@ module.exports = {
     extend: {
       /* ── Fonts ── */
       fontFamily: {
-        body:      ["Montserrat", "sans-serif"],
-        heading:   ["Playfair Display", "serif"],
-        bodyFont:  ["Montserrat", "sans-serif"],   // legacy alias
-        titleFont: ["Playfair Display", "serif"],  // legacy alias
-        sans:      ["Montserrat", "sans-serif"],
-        serif:     ["Playfair Display", "serif"],
+        body: ["var(--font-body)", "sans-serif"],
+        heading: ["var(--font-heading)", "sans-serif"],
+        sans: ["var(--font-body)", "sans-serif"],
+        serif: ["var(--font-heading)", "serif"],
       },
 
       /* ── Colors — tất cả đều trỏ vào CSS variables ở index.css ──
