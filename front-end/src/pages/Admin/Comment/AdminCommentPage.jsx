@@ -16,7 +16,7 @@ import {
   Typography,
   message,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CommentService from "../../../services/api/CommentService";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR } from "../../../styles/adminTheme";
@@ -51,13 +51,12 @@ const AdminCommentPage = () => {
       .catch(() => {});
   }, []);
 
-  const fetchComments = async (page = 1, overrides = {}) => {
+  const fetchComments = useCallback(async (page = 1, vals = {}) => {
     setLoading(true);
     try {
-      const vals = { ...filterValues, ...overrides };
       const res = await CommentService.getAllComments({
         page,
-        limit: pagination.pageSize,
+        limit: 20,
         search:   vals.keyword  || undefined,
         courseId: vals.courseId || undefined,
       });
@@ -70,9 +69,9 @@ const AdminCommentPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // stable — không đọc state, nhận vals qua param
 
-  useEffect(() => { fetchComments(1); }, []);
+  useEffect(() => { fetchComments(1, {}); }, [fetchComments]);
 
   // FilterBar handlers
   const handleFilterChange = (key, value) => {
@@ -82,7 +81,7 @@ const AdminCommentPage = () => {
   };
 
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     fetchComments(1, next);
   };
@@ -104,7 +103,7 @@ const AdminCommentPage = () => {
         try {
           await CommentService.deleteComment(id);
           message.success("Comment deleted");
-          fetchComments(pagination.current);
+          fetchComments(pagination.current, filterValues);
         } catch {
           message.error("Failed to delete comment");
         }

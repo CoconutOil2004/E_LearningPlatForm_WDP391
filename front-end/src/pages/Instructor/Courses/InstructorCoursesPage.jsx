@@ -40,7 +40,7 @@ import {
   pageVariants,
 } from "../../../utils/helpers";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 // ─── Filter config ─────────────────────────────────────────────────────────────
 const FILTER_CONFIG = [
@@ -235,7 +235,7 @@ const InstructorCoursesPage = () => {
 
   // FilterBar: onSearch fires only on button/Enter for type:"search"
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     loadCourses(next);
   };
@@ -434,20 +434,21 @@ const InstructorCoursesPage = () => {
       exit="exit"
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3">
+
+      <div className="flex items-center justify-between pb-8">
         <div>
-          <Title
-            level={2}
+          <h2
             style={{
               margin: "0 0 4px",
+              fontSize: 26,
               fontWeight: 900,
-              color: INSTRUCTOR_COLORS.primary,
+              color: "#8B5CF6",
             }}
           >
             My Courses
-          </Title>
-          <Text type="secondary">Manage your courses</Text>
+          </h2>
         </div>
+
         <Button
           type="primary"
           size="large"

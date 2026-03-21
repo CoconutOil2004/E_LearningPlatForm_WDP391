@@ -17,7 +17,7 @@ import {
   Typography,
   message,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ReviewService from "../../../services/api/ReviewService";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR } from "../../../styles/adminTheme";
@@ -84,7 +84,7 @@ const AdminReviewPage = () => {
   };
 
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     fetchReviews(1, next);
   };

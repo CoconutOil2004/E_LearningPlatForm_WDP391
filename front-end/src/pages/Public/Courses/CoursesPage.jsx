@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Input, Select, Spin } from "antd";
+import { Spin } from "antd";
 
 import CourseCard from "../../../components/common/CourseCard";
 import { Icon } from "../../../components/ui";
@@ -14,13 +14,18 @@ import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
 const SORT_OPTIONS = [
-  { value: "popular", label: "Most Popular" },
-  { value: "rating",  label: "Highest Rated" },
-  { value: "priceAsc",  label: "Price: Low → High" },
-  { value: "priceDesc", label: "Price: High → Low" },
+  { value: "popular",   label: "Most Popular",       icon: "trending" },
+  { value: "rating",    label: "Highest Rated",       icon: "star"     },
+  { value: "priceAsc",  label: "Price: Low → High",   icon: "dollar"   },
+  { value: "priceDesc", label: "Price: High → Low",   icon: "dollar"   },
 ];
 
-const LEVEL_OPTIONS = ["All", "Beginner", "Intermediate", "Advanced"];
+const LEVEL_OPTIONS = [
+  { value: "All",          label: "All Levels" },
+  { value: "Beginner",     label: "Beginner"   },
+  { value: "Intermediate", label: "Intermediate" },
+  { value: "Advanced",     label: "Advanced"   },
+];
 
 /* ── Skeleton card ── */
 const SkeletonCard = () => (
@@ -44,6 +49,7 @@ const CoursesPage = () => {
   const toast = useToast();
 
   const [keyword,        setKeyword]        = useState(searchParams.get("q") ?? "");
+  const [inputVal,       setInputVal]       = useState(searchParams.get("q") ?? "");
   const [activeCategory, setActiveCategory] = useState(searchParams.get("category") ?? "");
   const [activeLevel,    setActiveLevel]    = useState(searchParams.get("level") ?? "All");
   const [sortBy,         setSortBy]         = useState(searchParams.get("sort") ?? "popular");
@@ -60,12 +66,9 @@ const CoursesPage = () => {
     CourseService.getCategories().then(setCategories).catch(() => {});
   }, []);
 
-  // Sync enrolled course IDs từ server khi user đã đăng nhập
   useEffect(() => {
     if (!isAuthenticated) return;
-    PaymentService.getEnrolledCourseIds()
-      .then(setEnrolledCourseIds)
-      .catch(() => {});
+    PaymentService.getEnrolledCourseIds().then(setEnrolledCourseIds).catch(() => {});
   }, [isAuthenticated]);
 
   const fetchCourses = useCallback(
@@ -76,9 +79,9 @@ const CoursesPage = () => {
         sortBy,
         page: p,
         limit: 9,
-        ...(keyword.trim()         && { keyword: keyword.trim() }),
-        ...(activeCategory         && { category: activeCategory }),
-        ...(activeLevel !== "All"  && { level: activeLevel }),
+        ...(keyword.trim()        && { keyword: keyword.trim() }),
+        ...(activeCategory        && { category: activeCategory }),
+        ...(activeLevel !== "All" && { level: activeLevel }),
       })
         .then((res) => {
           setCourses((prev) => append ? [...prev, ...res.courses] : res.courses);
@@ -93,7 +96,7 @@ const CoursesPage = () => {
   );
 
   useEffect(() => {
-    const t = setTimeout(() => { fetchCourses(1); setPage(1); }, 400);
+    const t = setTimeout(() => { fetchCourses(1); }, 400);
     return () => clearTimeout(t);
   }, [fetchCourses]);
 
@@ -107,10 +110,13 @@ const CoursesPage = () => {
     setSearchParams(p, { replace: true });
   }, [keyword, activeCategory, activeLevel, sortBy]);
 
-  const handleFilter = (setter, value) => { setter(value); setPage(1); };
+  const handleSearch = () => { setKeyword(inputVal); };
+  const handleClearSearch = () => { setInputVal(""); setKeyword(""); };
+
   const clearFilters = () => {
-    setKeyword(""); setActiveCategory(""); setActiveLevel("All"); setSortBy("popular");
+    setInputVal(""); setKeyword(""); setActiveCategory(""); setActiveLevel("All"); setSortBy("popular");
   };
+
   const hasFilters = keyword || activeCategory || activeLevel !== "All";
 
   const handleEnroll = (course) => {
@@ -124,109 +130,191 @@ const CoursesPage = () => {
     toggleWishlist(courseId);
   };
 
+  const activeSortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Sort";
+
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
       <div className="px-6 pt-10 pb-20 mx-auto max-w-7xl">
 
         {/* ── Header ── */}
-        <div className="flex flex-col justify-between gap-6 mb-10 md:flex-row md:items-end">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-            <h1 className="mb-4 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
-              All Courses<br />
-              <span className="gradient-text">In One Place</span>
-            </h1>
-            <p className="max-w-xl text-lg leading-relaxed text-muted">
-              Hundreds of expert-led courses across every discipline.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="flex flex-wrap items-center gap-3"
-          >
-            <Input
-              prefix={<Icon name="search" size={16} color="var(--text-muted)" />}
-              value={keyword}
-              onChange={(e) => handleFilter(setKeyword, e.target.value)}
-              placeholder="Search courses..."
-              allowClear
-              style={{ borderRadius: 999, minWidth: 220 }}
-            />
-            <Select
-              value={sortBy}
-              onChange={(val) => handleFilter(setSortBy, val)}
-              options={SORT_OPTIONS}
-              style={{ minWidth: 180, borderRadius: 999 }}
-            />
-          </motion.div>
-        </div>
-
-        {/* ── Category tabs ── */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex gap-3 pb-2 mb-4 overflow-x-auto scrollbar-hide"
+          transition={{ delay: 0.05 }}
+          className="mb-10"
         >
-          <button
-            onClick={() => handleFilter(setActiveCategory, "")}
-            className={`whitespace-nowrap px-6 py-2 rounded-full text-sm font-bold transition-all ${!activeCategory ? "btn-aurora" : "glass-card hover:border-primary/30"}`}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat._id}
-              onClick={() => handleFilter(setActiveCategory, cat._id)}
-              className={`whitespace-nowrap px-6 py-2 rounded-full text-sm font-bold transition-all ${activeCategory === cat._id ? "btn-aurora" : "glass-card hover:border-primary/30"}`}
-            >
-              {cat.name}
-            </button>
-          ))}
+          <h1 className="mb-3 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
+            All Courses<br />
+            <span className="gradient-text">In One Place</span>
+          </h1>
+          <p className="max-w-xl text-lg leading-relaxed text-muted">
+            Hundreds of expert-led courses across every discipline.
+          </p>
         </motion.div>
 
-        {/* ── Level tabs ── */}
-        <div className="flex gap-2 mb-8">
-          {LEVEL_OPTIONS.map((lvl) => (
-            <button
-              key={lvl}
-              onClick={() => handleFilter(setActiveLevel, lvl)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeLevel === lvl ? "btn-aurora" : "glass-card opacity-70 hover:opacity-100"}`}
+        {/* ── Filter Panel ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="glass-card rounded-[1.75rem] p-5 mb-8"
+          style={{ border: "1px solid rgba(255,255,255,0.6)" }}
+        >
+          {/* Row 1: Search + Sort */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {/* Search input */}
+            <div
+              className="flex items-center gap-2 flex-1 min-w-[220px] max-w-md px-4 py-2.5 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(0,0,0,0.07)" }}
             >
-              {lvl}
-            </button>
-          ))}
-        </div>
+              <Icon name="search" size={16} color="var(--text-muted)" />
+              <input
+                type="text"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Search courses..."
+                className="flex-1 bg-transparent outline-none text-sm font-medium text-body placeholder:text-muted"
+              />
+              {inputVal && (
+                <button onClick={handleClearSearch} className="text-muted hover:text-heading transition-colors">
+                  <Icon name="x" size={14} color="currentColor" />
+                </button>
+              )}
+            </div>
 
-        {/* ── Result count ── */}
+            {/* Search button */}
+            <button
+              onClick={handleSearch}
+              className="btn-aurora px-6 py-2.5 text-sm font-bold rounded-2xl flex items-center gap-2"
+            >
+              <Icon name="search" size={14} color="white" />
+              Search
+            </button>
+
+            {/* Sort dropdown */}
+            <div className="relative ml-auto">
+              <div className="flex items-center gap-2">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSortBy(opt.value)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                      sortBy === opt.value
+                        ? "btn-aurora"
+                        : "glass-card opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px mb-4" style={{ background: "rgba(0,0,0,0.06)" }} />
+
+          {/* Row 2: Category tabs */}
+          <div className="mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2.5">Category</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setActiveCategory("")}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  !activeCategory ? "btn-aurora" : "glass-card opacity-70 hover:opacity-100"
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat._id}
+                  onClick={() => setActiveCategory(activeCategory === cat._id ? "" : cat._id)}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    activeCategory === cat._id ? "btn-aurora" : "glass-card opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 3: Level tabs */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2.5">Level</p>
+            <div className="flex flex-wrap gap-2">
+              {LEVEL_OPTIONS.map((lvl) => (
+                <button
+                  key={lvl.value}
+                  onClick={() => setActiveLevel(lvl.value)}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    activeLevel === lvl.value ? "btn-aurora" : "glass-card opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  {lvl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Result info bar ── */}
         {!loading && (
-          <div className="flex items-center justify-between mb-8">
-            <p className="text-sm font-medium text-muted">
-              Showing <span className="font-bold text-heading">{courses.length}</span> of{" "}
-              <span className="font-bold text-heading">{total}</span> courses
-            </p>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-between mb-6"
+          >
+            <div className="flex items-center gap-3">
+              <p className="text-sm font-medium text-muted">
+                Showing{" "}
+                <span className="font-bold text-heading">{courses.length}</span>
+                {" "}of{" "}
+                <span className="font-bold text-heading">{total}</span>
+                {" "}courses
+              </p>
+              {hasFilters && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "rgba(2,132,199,0.1)", color: "var(--color-primary)" }}>
+                  Filtered
+                </span>
+              )}
+            </div>
             {hasFilters && (
               <button
                 onClick={clearFilters}
-                className="flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline transition-all"
               >
-                <Icon name="x" size={12} color="var(--color-primary)" /> Clear filters
+                <Icon name="x" size={12} color="var(--color-primary)" />
+                Clear all filters
               </button>
             )}
-          </div>
+          </motion.div>
         )}
 
-        {/* ── Grid ── */}
+        {/* ── Course Grid ── */}
         {loading ? (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(9)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : courses.length === 0 ? (
-          <div className="py-24 text-center">
-            <p className="mt-4 text-lg font-medium text-muted">No courses match your search.</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-24 text-center"
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6"
+              style={{ background: "rgba(2,132,199,0.08)" }}>
+              <Icon name="search" size={36} color="var(--color-primary)" />
+            </div>
+            <p className="text-xl font-bold text-heading mb-2">No courses found</p>
+            <p className="text-muted mb-6">Try adjusting your filters or search terms</p>
+            <button onClick={clearFilters} className="btn-aurora px-8 py-3 rounded-2xl font-bold">
+              Clear all filters
+            </button>
+          </motion.div>
         ) : (
           <motion.div layout className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence mode="popLayout">

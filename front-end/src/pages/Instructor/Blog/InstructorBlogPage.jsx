@@ -9,7 +9,9 @@ import {
   FileTextOutlined,
   LoadingOutlined,
   PlusOutlined,
+
   SaveOutlined,
+
   SendOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
@@ -35,11 +37,10 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BlogTinyEditor from "../../../components/blog/BlogTinyEditor";
-import { FilterBar } from "../../../components/shared";
 import BlogService from "../../../services/api/BlogService";
 import CourseService from "../../../services/api/CourseService";
 import UserService from "../../../services/api/UserService";
-import { INSTRUCTOR_COLORS } from "../../../styles/instructorTheme";
+import { FilterBar } from "../../../components/shared";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
@@ -170,34 +171,34 @@ const BlogPreviewModal = ({ blog, open, onClose }) => {
       onCancel={onClose}
       footer={null}
       width={760}
-      styles={{ body: { padding: 0 } }}
-      style={{ borderRadius: 20, overflow: "hidden" }}
+      closable={false}
+      styles={{ body: { padding: 0 }, content: { borderRadius: 20, overflow: "hidden", padding: 0 } }}
     >
-      {blog.thumbnail && (
-        <div style={{ height: 240, overflow: "hidden" }}>
-          <img
-            src={blog.thumbnail}
-            alt="cover"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </div>
-      )}
-      <div style={{ padding: "28px 32px" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 12,
-          }}
-        >
+      {/* Header với nút close — luôn nằm trên cùng, không bị thumbnail đè */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 20px",
+          borderBottom: blog.thumbnail ? "none" : `1px solid ${C.border}`,
+          background: blog.thumbnail ? "transparent" : "#fff",
+          position: blog.thumbnail ? "absolute" : "relative",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Tag
             style={{
               borderRadius: 20,
               fontWeight: 700,
               border: "none",
-              background: st.bg,
+              background: blog.thumbnail ? "rgba(255,255,255,0.9)" : st.bg,
               color: st.color,
+              backdropFilter: blog.thumbnail ? "blur(8px)" : "none",
             }}
           >
             {st.icon} {st.label}
@@ -208,20 +209,61 @@ const BlogPreviewModal = ({ blog, open, onClose }) => {
                 borderRadius: 20,
                 fontWeight: 600,
                 border: "none",
-                background: C.primaryBg,
+                background: blog.thumbnail ? "rgba(255,255,255,0.85)" : C.primaryBg,
                 color: C.primary,
+                backdropFilter: blog.thumbnail ? "blur(8px)" : "none",
               }}
             >
               {blog.category.name}
             </Tag>
           )}
         </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            border: "none",
+            background: blog.thumbnail ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.06)",
+            color: blog.thumbnail ? "#fff" : "#374151",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+            fontWeight: 700,
+            lineHeight: 1,
+            backdropFilter: blog.thumbnail ? "blur(4px)" : "none",
+            transition: "background 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = blog.thumbnail ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.12)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = blog.thumbnail ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.06)"; }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Thumbnail */}
+      {blog.thumbnail && (
+        <div style={{ height: 220, overflow: "hidden", position: "relative" }}>
+          <img
+            src={blog.thumbnail}
+            alt="cover"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{ padding: "24px 32px", maxHeight: "60vh", overflowY: "auto" }}>
         <h3
           style={{
-            margin: "0 0 10px",
+            margin: "0 0 8px",
             fontSize: 22,
             fontWeight: 800,
             color: C.text,
+            lineHeight: 1.3,
           }}
         >
           {blog.title}
@@ -653,20 +695,11 @@ const InstructorBlogPage = () => {
   const [editBlog, setEditBlog] = useState(null);
   const [deleteBlog, setDeleteBlog] = useState(null);
   const [submittingId, setSubmittingId] = useState(null);
-  const [filterValues, setFilterValues] = useState({
-    keyword: "",
-    category: "",
-  });
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
+  const [filterValues, setFilterValues] = useState({ keyword: "", category: "" });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   useEffect(() => {
-    CourseService.getCategories()
-      .then(setCategories)
-      .catch(() => {});
+    CourseService.getCategories().then(setCategories).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -702,7 +735,7 @@ const InstructorBlogPage = () => {
   };
 
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     setPagination((p) => ({ ...p, current: 1 }));
     loadBlogs(next);
@@ -910,10 +943,11 @@ const InstructorBlogPage = () => {
         style={{
           minHeight: "100vh",
           background: "#f9fafb",
+          padding: "28px 28px 40px",
         }}
       >
         {/* Header */}
-        {/* <motion.div
+        <motion.div
           {...up(0)}
           style={{
             display: "flex",
@@ -924,6 +958,23 @@ const InstructorBlogPage = () => {
           }}
         >
           <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: C.primaryBg,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                padding: "4px 14px",
+                marginBottom: 8,
+              }}
+            >
+              <FileTextOutlined style={{ color: C.primary, fontSize: 12 }} />
+              <Text style={{ color: C.primary, fontWeight: 700, fontSize: 12 }}>
+                Instructor Portal
+              </Text>
+            </div>
             <h2
               style={{
                 margin: "0 0 4px",
@@ -958,36 +1009,7 @@ const InstructorBlogPage = () => {
           >
             New Blog Post
           </Button>
-        </motion.div> */}
-        <div className="flex items-center justify-between pb-3">
-          <div>
-            <Title
-              level={2}
-              style={{
-                margin: "0 0 4px",
-                fontWeight: 900,
-                color: INSTRUCTOR_COLORS.primary,
-              }}
-            >
-              My Blog Posts
-            </Title>
-            <Text style={{ color: C.textSub, fontSize: 13 }}>
-              Manage, edit, and publish your articles
-            </Text>
-          </div>
-          <Button
-            type="primary"
-            size="large"
-            icon={<PlusOutlined />}
-            onClick={() => navigate(ROUTES.INSTRUCTOR_BLOG_CREATE)}
-            className="font-bold transition-all border-none shadow-md rounded-xl hover:shadow-lg"
-            style={{
-              background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
-            }}
-          >
-            New Blog Post
-          </Button>
-        </div>
+        </motion.div>
 
         {/* Stats */}
         <Row gutter={[14, 14]} style={{ marginBottom: 22 }}>
@@ -1033,33 +1055,16 @@ const InstructorBlogPage = () => {
         <motion.div {...up(0.15)}>
           <Card bordered={false} style={card} bodyStyle={{ padding: 0 }}>
             {/* FilterBar — dùng component dùng chung */}
-            <div
-              style={{
-                padding: "12px 20px",
-                borderBottom: `1px solid ${C.border}`,
-              }}
-            >
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
               <FilterBar
                 filters={[
+                  { key: "keyword", type: "search", placeholder: "Search posts...", width: 260 },
                   {
-                    key: "keyword",
-                    type: "search",
-                    placeholder: "Search posts...",
-                    width: 260,
-                  },
-                  {
-                    key: "category",
-                    type: "select",
-                    label: "Category",
-                    width: 180,
-                    defaultValue: "",
-                    allowClear: true,
+                    key: "category", type: "select", label: "Category", width: 180,
+                    defaultValue: "", allowClear: true,
                     options: [
                       { value: "", label: "All Categories" },
-                      ...categories.map((c) => ({
-                        value: c._id,
-                        label: c.name,
-                      })),
+                      ...categories.map((c) => ({ value: c._id, label: c.name })),
                     ],
                   },
                 ]}
@@ -1072,34 +1077,17 @@ const InstructorBlogPage = () => {
             </div>
 
             {/* Status tabs */}
-            <div
-              style={{
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                padding: "10px 20px",
-                borderBottom: `1px solid ${C.border}`,
-              }}
-            >
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 20px", borderBottom: `1px solid ${C.border}` }}>
               {TABS.map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => {
-                    setActiveTab(t.key);
-                    setPagination((p) => ({ ...p, current: 1 }));
-                  }}
+                  onClick={() => { setActiveTab(t.key); setPagination((p) => ({ ...p, current: 1 })); }}
                   style={{
-                    padding: "5px 14px",
-                    borderRadius: 20,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    border: "none",
-                    cursor: "pointer",
-                    background:
-                      activeTab === t.key ? C.primaryBg : "transparent",
+                    padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    border: "none", cursor: "pointer",
+                    background: activeTab === t.key ? C.primaryBg : "transparent",
                     color: activeTab === t.key ? C.primary : C.textSub,
-                    outline:
-                      activeTab === t.key ? `1px solid ${C.primary}30` : "none",
+                    outline: activeTab === t.key ? `1px solid ${C.primary}30` : "none",
                     transition: "all 0.2s",
                   }}
                 >

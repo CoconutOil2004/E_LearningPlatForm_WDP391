@@ -160,7 +160,7 @@ const InstructorStudentsPage = () => {
   };
 
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     fetchStudents(1, next);
   };
