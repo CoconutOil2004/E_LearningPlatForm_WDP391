@@ -64,6 +64,7 @@ const CourseDetailPage = () => {
     }
   }, [searchParams]);
 
+  /* ── Sync enrolled IDs from server ── */
   useEffect(() => {
     if (!isAuthenticated) {
       setEnrollChecked(true);
@@ -147,27 +148,23 @@ const CourseDetailPage = () => {
             .then(setEnrolledCourseIds)
             .catch(() => {});
           navigate(`/student/learning/${course._id}`);
-        } else {
         }
-      } catch (err) {
-        const msg = err?.response?.data?.message || err?.message;
-        const status = err?.response?.status;
-        if (status === 400)
-          message.warning(msg || "Cannot enroll in this course");
-        else if (status === 404) message.error("Course not found");
+      } catch {
+        // Interceptor tự hiện toast từ BE — không cần message thủ công ở đây
       } finally {
         setPaying(false);
       }
       return;
     }
+    // Paid course → redirect to payment
     setPaying(true);
     try {
       const res = await PaymentService.createPayment(course._id, "vnpay");
       if (res?.paymentUrl) {
         window.location.href = res.paymentUrl;
-      } else {
       }
-    } catch (err) {
+    } catch {
+      // Interceptor tự hiện toast từ BE
     } finally {
       setPaying(false);
     }

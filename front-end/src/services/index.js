@@ -115,8 +115,16 @@ api.interceptors.response.use(
       error.message = error.response.data.message;
     }
     // Auto toast: bắn error từ BE message
+    // Ngoại lệ: 403 từ course/enrollment/lesson → component tự xử lý, không toast toàn cục
     const _status = error.response?.status;
-    if (_status && _status !== 401) {
+    const _url    = originalRequest?.url || "";
+    const _isCourseAccess =
+      _status === 403 &&
+      (_url.includes("/courses/") ||
+        _url.includes("/enrollments/") ||
+        _url.includes("/lessons/"));
+
+    if (_status && _status !== 401 && !_isCourseAccess) {
       const _msg = error.response?.data?.message || error.message;
       if (_msg && typeof _msg === "string" && _msg.trim()) {
         toastEmitter.emit(_msg, "error");
