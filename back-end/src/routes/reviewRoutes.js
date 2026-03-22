@@ -4,6 +4,7 @@ const {
   createReview,
   getCourseReviews,
   getCourseRatingStats,
+  getMyReview,
   replyToReview,
 } = require("../controller/reviewController");
 const { protect } = require("../middleware/auth.middleware");
@@ -16,6 +17,7 @@ router.get("/course/:courseId/stats", getCourseRatingStats);
 
 // Protected routes
 router.post("/", protect, createReviewValidation, validate, createReview);
+router.get("/my-review/:courseId", protect, getMyReview);
 router.post("/:reviewId/reply", protect, replyReviewValidation, validate, replyToReview);
 
 // Admin global reviews

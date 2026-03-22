@@ -48,6 +48,7 @@ const ProfilePage = () => {
     avatarURL: user?.avatarURL || "",
   });
   const [pwForm, setPwForm] = useState({
+    currentPassword: "",
     password: "",
     confirm: "",
   });
@@ -146,10 +147,13 @@ const ProfilePage = () => {
     setSavingPw(true);
     setPwMsg(null);
     try {
-      const res = await AuthenService.updateProfile({ password: pwForm.password });
+      const res = await AuthenService.changePassword({
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.password,
+      });
       if (res.success) {
         setPwMsg({ type: "success", text: "Password changed successfully!" });
-        setPwForm({ password: "", confirm: "" });
+        setPwForm({ currentPassword: "", password: "", confirm: "" });
       } else {
         setPwMsg({ type: "error", text: res.message || "Change failed" });
       }
@@ -398,6 +402,19 @@ const ProfilePage = () => {
             🔐 Change Password
           </h3>
           <form onSubmit={handleChangePassword} className="space-y-4">
+            <div>
+              <label className="block mb-1 text-xs font-bold uppercase text-muted">
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={pwForm.currentPassword}
+                onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })}
+                className="w-full px-4 py-3 text-sm border rounded-xl bg-white/60 border-border focus:outline-none focus:ring-2 focus:ring-primary/30 text-heading"
+                placeholder="Your current password"
+                required
+              />
+            </div>
             <div>
               <label className="block mb-1 text-xs font-bold uppercase text-muted">
                 New Password

@@ -9,8 +9,6 @@ import { Button, ConfigProvider, Skeleton, Spin, Table, Typography } from "antd"
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-import CreateInstructorModal from "../../../components/admin/CreateInstructorModal";
-import useAdminUsers from "../../../hooks/useAdminUsers";
 import PaymentService from "../../../services/api/PaymentService";
 import { adminTheme, COLOR } from "../../../styles/adminTheme";
 import { formatThousands, pageVariants } from "../../../utils/helpers";
@@ -639,14 +637,6 @@ const TopCoursesTable = ({ data, loading }) => {
 
 /* ─── AdminDashboard ─────────────────────────────────────────────────────────── */
 const AdminDashboard = () => {
-  const {
-    showCreateModal,
-    isCreating,
-    openCreateModal,
-    closeCreateModal,
-    handleCreate,
-  } = useAdminUsers();
-
   const [summary, setSummary] = useState({ totalRevenue: 0, totalOrders: 0 });
   const [summaryLoading, setSummaryLoading] = useState(true);
 
@@ -759,15 +749,6 @@ const AdminDashboard = () => {
               Real-time revenue statistics
             </p>
           </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={openCreateModal}
-            style={{ borderRadius: 10, fontWeight: 700, background: COLOR.ocean, border: "none" }}
-          >
-            Create Instructor
-          </Button>
         </motion.div>
 
         {/* Summary cards */}
@@ -797,13 +778,6 @@ const AdminDashboard = () => {
 
         {/* Top courses */}
         <TopCoursesTable data={courseRevenue} loading={courseLoading} />
-
-        <CreateInstructorModal
-          open={showCreateModal}
-          onClose={closeCreateModal}
-          onSubmit={handleCreate}
-          loading={isCreating}
-        />
       </motion.div>
     </ConfigProvider>
   );

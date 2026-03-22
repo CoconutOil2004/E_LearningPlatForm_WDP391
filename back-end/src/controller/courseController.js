@@ -249,10 +249,26 @@ exports.getCoursesByCategory = async (req, res) => {
       Course.countDocuments(query),
     ]);
 
+    // Add isEnrolled flag for logged-in users
+    let purchasedCourseIds = [];
+    const userId = req.user?._id || null;
+    if (userId) {
+      const enrollments = await Enrollment.find({
+        userId,
+        paymentStatus: "paid",
+      }).select("courseId");
+      purchasedCourseIds = enrollments.map((e) => e.courseId.toString());
+    }
+
+    const result = courses.map((course) => ({
+      ...course,
+      isEnrolled: purchasedCourseIds.includes(course._id.toString()),
+    }));
+
     return res.status(200).json({
       success: true,
       message: "Courses by category retrieved successfully.",
-      data: courses,
+      data: result,
       pagination: {
         page,
         limit,
@@ -289,7 +305,7 @@ exports.createCourse = async (req, res) => {
     }
 
     const course = await Course.create({
-      title: trimmedTitle,
+      title: title,
       description: (description || "").trim(),
       category: categoryValidation.category._id,
       level,
@@ -779,7 +795,7 @@ exports.approveCourse = async (req, res) => {
       title: "Course approved",
       message: `Congratulations! Your course "${course.title}" has been approved and published.`,
       type: "success",
-      link: `/learning/${course._id}`,
+      link: `/student/learning/${course._id}`,
     });
 
     res.json({

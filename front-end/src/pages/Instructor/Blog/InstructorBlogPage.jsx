@@ -9,9 +9,9 @@ import {
   FileTextOutlined,
   LoadingOutlined,
   PlusOutlined,
-  ReloadOutlined,
+
   SaveOutlined,
-  SearchOutlined,
+
   SendOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
@@ -40,6 +40,7 @@ import BlogTinyEditor from "../../../components/blog/BlogTinyEditor";
 import BlogService from "../../../services/api/BlogService";
 import CourseService from "../../../services/api/CourseService";
 import UserService from "../../../services/api/UserService";
+import { FilterBar } from "../../../components/shared";
 import { ROUTES } from "../../../utils/constants";
 import { pageVariants } from "../../../utils/helpers";
 
@@ -170,34 +171,34 @@ const BlogPreviewModal = ({ blog, open, onClose }) => {
       onCancel={onClose}
       footer={null}
       width={760}
-      styles={{ body: { padding: 0 } }}
-      style={{ borderRadius: 20, overflow: "hidden" }}
+      closable={false}
+      styles={{ body: { padding: 0 }, content: { borderRadius: 20, overflow: "hidden", padding: 0 } }}
     >
-      {blog.thumbnail && (
-        <div style={{ height: 240, overflow: "hidden" }}>
-          <img
-            src={blog.thumbnail}
-            alt="cover"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </div>
-      )}
-      <div style={{ padding: "28px 32px" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 12,
-          }}
-        >
+      {/* Header với nút close — luôn nằm trên cùng, không bị thumbnail đè */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "14px 20px",
+          borderBottom: blog.thumbnail ? "none" : `1px solid ${C.border}`,
+          background: blog.thumbnail ? "transparent" : "#fff",
+          position: blog.thumbnail ? "absolute" : "relative",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Tag
             style={{
               borderRadius: 20,
               fontWeight: 700,
               border: "none",
-              background: st.bg,
+              background: blog.thumbnail ? "rgba(255,255,255,0.9)" : st.bg,
               color: st.color,
+              backdropFilter: blog.thumbnail ? "blur(8px)" : "none",
             }}
           >
             {st.icon} {st.label}
@@ -208,20 +209,61 @@ const BlogPreviewModal = ({ blog, open, onClose }) => {
                 borderRadius: 20,
                 fontWeight: 600,
                 border: "none",
-                background: C.primaryBg,
+                background: blog.thumbnail ? "rgba(255,255,255,0.85)" : C.primaryBg,
                 color: C.primary,
+                backdropFilter: blog.thumbnail ? "blur(8px)" : "none",
               }}
             >
               {blog.category.name}
             </Tag>
           )}
         </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            border: "none",
+            background: blog.thumbnail ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.06)",
+            color: blog.thumbnail ? "#fff" : "#374151",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+            fontWeight: 700,
+            lineHeight: 1,
+            backdropFilter: blog.thumbnail ? "blur(4px)" : "none",
+            transition: "background 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = blog.thumbnail ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.12)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = blog.thumbnail ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.06)"; }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Thumbnail */}
+      {blog.thumbnail && (
+        <div style={{ height: 220, overflow: "hidden", position: "relative" }}>
+          <img
+            src={blog.thumbnail}
+            alt="cover"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{ padding: "24px 32px", maxHeight: "60vh", overflowY: "auto" }}>
         <h3
           style={{
-            margin: "0 0 10px",
+            margin: "0 0 8px",
             fontSize: 22,
             fontWeight: 800,
             color: C.text,
+            lineHeight: 1.3,
           }}
         >
           {blog.title}
@@ -648,33 +690,30 @@ const InstructorBlogPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
-  const [search, setSearch] = useState("");
   const [categories, setCategories] = useState([]);
   const [previewBlog, setPreviewBlog] = useState(null);
   const [editBlog, setEditBlog] = useState(null);
   const [deleteBlog, setDeleteBlog] = useState(null);
   const [submittingId, setSubmittingId] = useState(null);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
+  const [filterValues, setFilterValues] = useState({ keyword: "", category: "" });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   useEffect(() => {
-    CourseService.getCategories()
-      .then(setCategories)
-      .catch(() => { });
+    CourseService.getCategories().then(setCategories).catch(() => {});
   }, []);
+
   useEffect(() => {
     loadBlogs();
-  }, [activeTab, pagination.current]);
+  }, [activeTab, pagination.current, filterValues.category]);
 
-  const loadBlogs = async () => {
+  const loadBlogs = async (overrides = {}) => {
     setLoading(true);
     try {
+      const vals = { ...filterValues, ...overrides };
       const params = { page: pagination.current, limit: pagination.pageSize };
       if (activeTab !== "all") params.status = activeTab;
-      if (search.trim()) params.search = search.trim();
+      if (vals.keyword.trim()) params.search = vals.keyword.trim();
+      if (vals.category) params.category = vals.category;
       const res = await BlogService.getMyBlogs(params);
       setBlogs(res.data || []);
       setPagination((p) => ({ ...p, total: res.pagination?.totalItems || 0 }));
@@ -683,6 +722,31 @@ const InstructorBlogPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // FilterBar handlers
+  const handleFilterChange = (key, value) => {
+    const next = { ...filterValues, [key]: value ?? "" };
+    setFilterValues(next);
+    if (key !== "keyword") {
+      setPagination((p) => ({ ...p, current: 1 }));
+      loadBlogs(next);
+    }
+  };
+
+  const handleSearch = (val) => {
+    const next = { ...filterValues, keyword: val ?? "" };
+    setFilterValues(next);
+    setPagination((p) => ({ ...p, current: 1 }));
+    loadBlogs(next);
+  };
+
+  const handleReset = () => {
+    const reset = { keyword: "", category: "" };
+    setFilterValues(reset);
+    setActiveTab("all");
+    setPagination((p) => ({ ...p, current: 1 }));
+    loadBlogs(reset);
   };
 
   const handleSubmitForReview = async (blog) => {
@@ -783,28 +847,6 @@ const InstructorBlogPage = () => {
       ),
     },
     {
-      title: "Status",
-      key: "status",
-      width: 120,
-      render: (_, r) => {
-        const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
-        return (
-          <Tag
-            style={{
-              borderRadius: 20,
-              border: "none",
-              background: st.bg,
-              color: st.color,
-              fontWeight: 700,
-              fontSize: 11,
-            }}
-          >
-            {st.icon} {st.label}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Created",
       key: "date",
       width: 110,
@@ -865,6 +907,28 @@ const InstructorBlogPage = () => {
           )}
         </Space>
       ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      width: 120,
+      render: (_, r) => {
+        const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
+        return (
+          <Tag
+            style={{
+              borderRadius: 20,
+              border: "none",
+              background: st.bg,
+              color: st.color,
+              fontWeight: 700,
+              fontSize: 11,
+            }}
+          >
+            {st.icon} {st.label}
+          </Tag>
+        );
+      },
     },
   ];
 
@@ -990,62 +1054,46 @@ const InstructorBlogPage = () => {
         {/* Table */}
         <motion.div {...up(0.15)}>
           <Card bordered={false} style={card} bodyStyle={{ padding: 0 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                padding: "16px 20px",
-                borderBottom: `1px solid ${C.border}`,
-              }}
-            >
-              <div
-                style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap" }}
-              >
-                {TABS.map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => {
-                      setActiveTab(t.key);
-                      setPagination((p) => ({ ...p, current: 1 }));
-                    }}
-                    style={{
-                      padding: "5px 14px",
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      border: "none",
-                      cursor: "pointer",
-                      background:
-                        activeTab === t.key ? C.primaryBg : "transparent",
-                      color: activeTab === t.key ? C.primary : C.textSub,
-                      outline:
-                        activeTab === t.key
-                          ? `1px solid ${C.primary}30`
-                          : "none",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <Input
-                prefix={<SearchOutlined style={{ color: C.textMuted }} />}
-                placeholder="Search posts..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onPressEnter={loadBlogs}
-                style={{ width: 220, borderRadius: 10 }}
+            {/* FilterBar — dùng component dùng chung */}
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
+              <FilterBar
+                filters={[
+                  { key: "keyword", type: "search", placeholder: "Search posts...", width: 260 },
+                  {
+                    key: "category", type: "select", label: "Category", width: 180,
+                    defaultValue: "", allowClear: true,
+                    options: [
+                      { value: "", label: "All Categories" },
+                      ...categories.map((c) => ({ value: c._id, label: c.name })),
+                    ],
+                  },
+                ]}
+                values={filterValues}
+                onChange={handleFilterChange}
+                onSearch={handleSearch}
+                onReset={handleReset}
+                theme="purple"
               />
-              <Tooltip title="Refresh">
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={loadBlogs}
-                  style={{ borderRadius: 10, borderColor: C.border }}
-                />
-              </Tooltip>
+            </div>
+
+            {/* Status tabs */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "10px 20px", borderBottom: `1px solid ${C.border}` }}>
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => { setActiveTab(t.key); setPagination((p) => ({ ...p, current: 1 })); }}
+                  style={{
+                    padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    border: "none", cursor: "pointer",
+                    background: activeTab === t.key ? C.primaryBg : "transparent",
+                    color: activeTab === t.key ? C.primary : C.textSub,
+                    outline: activeTab === t.key ? `1px solid ${C.primary}30` : "none",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
 
             <Table

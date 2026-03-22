@@ -1,23 +1,8 @@
-import { Outlet, ScrollRestoration, useLocation } from "react-router-dom";
+import { Outlet, ScrollRestoration } from "react-router-dom";
 import Footer from "../components/home/Footer/FooterElearning";
 import Header from "../components/home/Header/HeaderElearning";
-import { ROUTES } from "../utils/constants";
-
-const NO_FOOTER_PATHS = [
-  ROUTES.STUDENT_DASHBOARD,
-  ROUTES.MY_COURSES,
-  ROUTES.WISHLIST,
-  ROUTES.PROGRESS,
-  ROUTES.STUDENT_PROFILE,
-  ROUTES.STUDENT_SETTINGS,
-];
 
 const PublicLayout = ({ hideHeaderFooter = false }) => {
-  const location = useLocation();
-  const hideFooter = NO_FOOTER_PATHS.some((p) =>
-    location.pathname.startsWith(p),
-  );
-
   return (
     <div
       className="flex flex-col min-h-screen"
@@ -28,7 +13,7 @@ const PublicLayout = ({ hideHeaderFooter = false }) => {
       <main className="flex-grow min-h-[60vh]">
         <Outlet />
       </main>
-      {!hideHeaderFooter && !hideFooter && <Footer />}
+      {<Footer />}
     </div>
   );
 };

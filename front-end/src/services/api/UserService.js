@@ -3,9 +3,9 @@ import { api } from "../index";
 class UserService {
   // ─── Instructors ────────────────────────────────────────────────────────────
 
-  async getInstructors({ page = 1, limit = 20 } = {}) {
+  async getInstructors({ page = 1, limit = 20, search, status } = {}) {
     const { data } = await api.get("/users/instructors", {
-      params: { page, limit },
+      params: { page, limit, search, status },
     });
     return data;
   }
@@ -27,19 +27,21 @@ class UserService {
 
   // ─── Students ───────────────────────────────────────────────────────────────
 
-  async getStudents({ page = 1, limit = 20 } = {}) {
+  async getStudents({ page = 1, limit = 20, search, status } = {}) {
     const { data } = await api.get("/users/students", {
-      params: { page, limit },
+      params: { page, limit, search, status },
     });
     return data;
   }
 
   // ─── Instructor Specific ───────────────────────────────────────────────────
 
-  async getInstructorStudents({ page = 1, limit = 20 } = {}) {
-    const { data } = await api.get("/users/instructor/students", {
-      params: { page, limit },
-    });
+  async getInstructorStudents({ page = 1, limit = 20, search, courseId, completed } = {}) {
+    const params = { page, limit };
+    if (search?.trim()) params.search = search.trim();
+    if (courseId)       params.courseId = courseId;
+    if (completed !== undefined && completed !== '') params.completed = completed;
+    const { data } = await api.get("/users/instructor/students", { params });
     return data;
   }
 

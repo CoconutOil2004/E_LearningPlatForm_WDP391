@@ -151,6 +151,30 @@ const getCourseRatingStats = async (req, res) => {
 };
 
 /**
+ * Get current user's review for a course
+ */
+const getMyReview = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user.id;
+
+    const review = await Review.findOne({ userId, courseId })
+      .populate("userId", "fullname avatarURL");
+
+    return res.status(200).json({
+      success: true,
+      data: review
+    });
+  } catch (error) {
+    logger.error("Error fetching user review:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching your review"
+    });
+  }
+};
+
+/**
  * Reply to a review (Instructor only)
  */
 const replyToReview = async (req, res) => {
@@ -203,27 +227,87 @@ const replyToReview = async (req, res) => {
  */
 const getAllReviews = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const skip = (page - 1) * limit;
+    const { page = 1, limit = 20, search, rating, courseId } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (p - 1) * l;
 
-    const [reviews, total] = await Promise.all([
-      Review.find()
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate("userId", "fullname avatarURL")
-        .populate("courseId", "title"),
-      Review.countDocuments(),
+    const matchQuery = {};
+    if (rating) matchQuery.rating = parseInt(rating);
+    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
+      matchQuery.courseId = new mongoose.Types.ObjectId(courseId);
+    }
+
+    const searchMatch = [];
+    if (search) {
+      searchMatch.push(
+        { "user.fullname": { $regex: search, $options: "i" } },
+        { "course.title": { $regex: search, $options: "i" } },
+        { comment: { $regex: search, $options: "i" } }
+      );
+    }
+
+    const pipeline = [
+      // preMatch trước lookup — dùng index courseId/rating
+      ...(Object.keys(matchQuery).length > 0 ? [{ $match: matchQuery }] : []),
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "courseId",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      { $unwind: "$course" },
+    ];
+
+    if (searchMatch.length > 0) {
+      pipeline.push({ $match: { $or: searchMatch } });
+    }
+
+    const [reviews, countResult] = await Promise.all([
+      Review.aggregate([
+        ...pipeline,
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: l },
+        {
+          $project: {
+            _id: 1,
+            rating: 1,
+            comment: 1,
+            createdAt: 1,
+            instructorReply: 1,
+            "userId._id": "$user._id",
+            "userId.fullname": "$user.fullname",
+            "userId.avatarURL": "$user.avatarURL",
+            "courseId._id": "$course._id",
+            "courseId.title": "$course.title",
+          },
+        },
+      ]),
+      Review.aggregate([...pipeline, { $count: "total" }]),
     ]);
+
+    const total = countResult[0]?.total || 0;
 
     return res.status(200).json({
       success: true,
       reviews,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit),
+        page: p,
+        limit: l,
+        totalPages: Math.ceil(total / l),
       },
     });
   } catch (error) {
@@ -297,6 +381,7 @@ module.exports = {
   createReview,
   getCourseReviews,
   getCourseRatingStats,
+  getMyReview,
   replyToReview,
   getAllReviews,
   deleteReview,

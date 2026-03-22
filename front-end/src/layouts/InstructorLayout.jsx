@@ -1,7 +1,5 @@
 import {
-  BarChartOutlined,
   BookOutlined,
-  DollarOutlined,
   EditOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -36,21 +34,21 @@ const NAV_ITEMS = [
     label: "My Courses",
     path: ROUTES.INSTRUCTOR_COURSES,
   },
-  {
-    icon: <DollarOutlined />,
-    label: "Revenue",
-    path: ROUTES.INSTRUCTOR_REVENUE,
-  },
+  // {
+  //   icon: <DollarOutlined />,
+  //   label: "Revenue",
+  //   path: ROUTES.INSTRUCTOR_REVENUE,
+  // },
   {
     icon: <TeamOutlined />,
     label: "Students",
     path: ROUTES.INSTRUCTOR_STUDENTS,
   },
-  {
-    icon: <BarChartOutlined />,
-    label: "Analytics",
-    path: ROUTES.INSTRUCTOR_ANALYTICS,
-  },
+  // {
+  //   icon: <BarChartOutlined />,
+  //   label: "Analytics",
+  //   path: ROUTES.INSTRUCTOR_ANALYTICS,
+  // },
   {
     icon: <EditOutlined />,
     label: "My Blogs",

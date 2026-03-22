@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { User, Enrollment, Course, Order } = require('../models');
 const logger = require('../utils/logger');
 const bcrypt = require("bcryptjs");
@@ -73,63 +74,7 @@ const getUserById = async (req, res) => {
   }
 };
 
-// Get user profile from token
-const getProfile = async (req, res) => {
-    try {
-      const userId = req.user.id; // req.user is assigned from auth token middleware
-  
-      const user = await User.findById(userId).select("-password"); // exclude password field
-      if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      res.json({ success: true, user });
-    } catch (error) {
-      logger.error("Error fetching profile info:", error);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  };
-  
-  const updateProfile = async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { avatarURL, password, fullname } = req.body;
-  
-      const updateData = {};
-  
-      // If fullname is provided
-      if (fullname) {
-        updateData.fullname = fullname;
-      }
-  
-      // If avatarURL is provided
-      if (avatarURL) {
-        updateData.avatarURL = avatarURL;
-      }
-  
-      // If new password is provided → hash before saving
-      if (password) {
-        const salt = await bcrypt.genSalt(10);
-        updateData.password = await bcrypt.hash(password, salt);
-      }
-  
-      // Update user
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      ).select("-password");
-  
-      if (!updatedUser) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      res.json({ success: true, message: "Profile updated successfully", user: updatedUser });
-    } catch (error) {
-      logger.error("Error updating profile:", error);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  };
+// Remove duplicate profile functions. Consolidation in authController.js
 
 /**
  * Get student list
@@ -140,14 +85,26 @@ const getProfile = async (req, res) => {
  */
 const getStudents = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, status } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
+    const matchQuery = { role: 'student' };
+    if (search) {
+      matchQuery.$or = [
+        { fullname: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (status) {
+      matchQuery.action = status;
+    }
+
     const [students, total] = await Promise.all([
       User.aggregate([
-        { $match: { role: 'student' } },
+        { $match: matchQuery },
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: l },
@@ -176,7 +133,7 @@ const getStudents = async (req, res) => {
         },
         { $project: { password: 0, otp: 0, otpExpires: 0, enrollments: 0 } }
       ]),
-      User.countDocuments({ role: 'student' }),
+      User.countDocuments(matchQuery),
     ]);
 
     logger.info(`Fetched ${students.length} students with stats (total: ${total})`);
@@ -291,14 +248,26 @@ Please log in and change your password to secure your account.`;
  */
 const getInstructors = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, status } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
+    const matchQuery = { role: 'instructor' };
+    if (search) {
+      matchQuery.$or = [
+        { fullname: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (status) {
+      matchQuery.action = status;
+    }
+
     const [instructors, total] = await Promise.all([
       User.aggregate([
-        { $match: { role: 'instructor' } },
+        { $match: matchQuery },
         { $sort: { createdAt: -1 } },
         { $skip: skip },
         { $limit: l },
@@ -341,7 +310,7 @@ const getInstructors = async (req, res) => {
         },
         { $project: { password: 0, otp: 0, otpExpires: 0, courses: 0, allEnrollments: 0, paidOrders: 0 } }
       ]),
-      User.countDocuments({ role: 'instructor' }),
+      User.countDocuments(matchQuery),
     ]);
 
     logger.info(`Fetched ${instructors.length} instructors with stats (total: ${total})`);
@@ -519,56 +488,88 @@ const updateStudentAction = async (req, res) => {
 const getInstructorStudents = async (req, res) => {
   try {
     const instructorId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search = '', courseId, completed } = req.query;
     const p = Math.max(1, parseInt(page));
     const l = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (p - 1) * l;
 
     // 1. Tìm các khóa học của instructor này
-    const instructorCourses = await Course.find({ instructorId }).select('_id');
+    const courseQuery = { instructorId };
+    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
+      courseQuery._id = courseId;
+    }
+    const instructorCourses = await Course.find(courseQuery).select('_id');
     const courseIds = instructorCourses.map(c => c._id);
 
-    // 2. Aggregate Enrollments của các khóa học đó
-    const [enrollments, total] = await Promise.all([
-      Enrollment.aggregate([
-        { $match: { courseId: { $in: courseIds } } },
-        { $sort: { createdAt: -1 } },
-        { $skip: skip },
-        { $limit: l },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'userId',
-            foreignField: '_id',
-            as: 'student'
-          }
-        },
-        { $unwind: '$student' },
-        {
-          $lookup: {
-            from: 'courses',
-            localField: 'courseId',
-            foreignField: '_id',
-            as: 'course'
-          }
-        },
-        { $unwind: '$course' },
-        {
-          $project: {
-            _id: 1,
-            enrollmentDate: 1,
-            progress: 1,
-            completed: 1,
-            'student.fullname': 1,
-            'student.email': 1,
-            'student.avatarURL': 1,
-            'course.title': 1,
-            'course.thumbnail': 1
-          }
+    // 2. Build enrollment match — hỗ trợ filter completed
+    const enrollmentMatch = { courseId: { $in: courseIds } };
+    if (completed === 'true')  enrollmentMatch.completed = true;
+    if (completed === 'false') enrollmentMatch.completed = false;
+
+    // 3. Aggregate Enrollments — hỗ trợ search theo tên/email student
+    const pipeline = [
+      { $match: enrollmentMatch },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'student'
         }
-      ]),
-      Enrollment.countDocuments({ courseId: { $in: courseIds } })
+      },
+      { $unwind: '$student' },
+      {
+        $lookup: {
+          from: 'courses',
+          localField: 'courseId',
+          foreignField: '_id',
+          as: 'course'
+        }
+      },
+      { $unwind: '$course' },
+    ];
+
+    // Search filter sau khi đã lookup student/course
+    if (search.trim()) {
+      const regex = new RegExp(search.trim(), 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'student.fullname': regex },
+            { 'student.email': regex },
+            { 'course.title': regex },
+          ]
+        }
+      });
+    }
+
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const dataPipeline = [
+      ...pipeline,
+      { $skip: skip },
+      { $limit: l },
+      {
+        $project: {
+          _id: 1,
+          enrollmentDate: 1,
+          progress: 1,
+          completed: 1,
+          'student.fullname': 1,
+          'student.email': 1,
+          'student.avatarURL': 1,
+          'course._id': 1,
+          'course.title': 1,
+          'course.thumbnail': 1,
+        }
+      }
+    ];
+
+    const [enrollments, countResult] = await Promise.all([
+      Enrollment.aggregate(dataPipeline),
+      Enrollment.aggregate(countPipeline),
     ]);
+    const total = countResult[0]?.total ?? 0;
 
     res.json({
       success: true,
@@ -645,8 +646,6 @@ const getInstructorRevenue = async (req, res) => {
 module.exports = {
   searchUsers,
   getUserById,
-  getProfile,
-  updateProfile,
   getStudents,
   getInstructors,
   createInstructor,

@@ -2,12 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import AuthenService from "../../services/api/AuthenService";
 
-/**
- * courseStore — manages enrollment, learning progress, and wishlist.
- *
- * Lesson progress is stored by lessonId (ObjectId string) to sync with the server.
- * When a student returns, syncFromServerItemsProgress() is called to restore from itemsProgress returned by BE.
- */
 const useCourseStore = create(
   persist(
     (set, get) => ({
@@ -16,20 +10,10 @@ const useCourseStore = create(
       wishlistSynced: false,
 
       setWishlistIds: (ids) =>
-        set({ wishlistIds: Array.isArray(ids) ? ids : [], wishlistSynced: true }),
-
-      /**
-       * lessonProgress:
-       * {
-       *   [courseId]: {
-       *     completedLessonIds: string[],
-       *     currentLessonId: string|null,
-       *     currentFlatIdx: number,
-       *     serverProgress: number,
-       *     itemsProgress: Array,
-       *   }
-       * }
-       */
+        set({
+          wishlistIds: Array.isArray(ids) ? ids : [],
+          wishlistSynced: true,
+        }),
       lessonProgress: {},
       quizScores: {},
 
@@ -54,24 +38,17 @@ const useCourseStore = create(
         }));
 
         try {
-          // Sync with BE
           const response = await AuthenService.toggleWishlist(courseId);
           if (response.success && response.wishlistIds) {
-            // Update with actual server state
             set({ wishlistIds: response.wishlistIds });
           }
         } catch (error) {
           console.error("Failed to sync wishlist with server:", error);
-          // Rollback not strictly necessary as BE failed, but local state mismatch persists
         }
       },
 
       isWishlisted: (courseId) => get().wishlistIds.includes(courseId),
 
-      /**
-       * Sync entire itemsProgress from server to store.
-       * Called when mounting LearningPage to restore progress.
-       */
       syncFromServerItemsProgress: (
         courseId,
         itemsProgress,
@@ -100,9 +77,6 @@ const useCourseStore = create(
           };
         }),
 
-      /**
-       * Update itemsProgress after each heartbeat/completeLesson response.
-       */
       updateItemsProgress: (courseId, itemsProgress, progress, completed) =>
         set((state) => {
           const completedLessonIds = (itemsProgress || [])

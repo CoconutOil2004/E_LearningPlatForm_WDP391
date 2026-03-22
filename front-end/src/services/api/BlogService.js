@@ -43,10 +43,11 @@ class BlogService {
   }
 
   /** Instructor gets their own blogs */
-  async getMyBlogs({ page = 1, limit = 10, status, search } = {}) {
+  async getMyBlogs({ page = 1, limit = 10, status, search, category } = {}) {
     const params = { page, limit };
     if (status) params.status = status;
     if (search) params.search = search;
+    if (category) params.category = category;
     const { data } = await api.get("/blogs/my", { params });
     return data;
   }

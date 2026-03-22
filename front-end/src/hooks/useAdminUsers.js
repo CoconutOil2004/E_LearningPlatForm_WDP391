@@ -23,6 +23,9 @@ const useAdminUsers = () => {
   const [loading, setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
 
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState(undefined);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating,      setIsCreating]      = useState(false);
   const [createError,     setCreateError]     = useState(null);
@@ -33,7 +36,12 @@ const useAdminUsers = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await UserService.getInstructors({ page: p, limit: PAGE_SIZE });
+      const res = await UserService.getInstructors({ 
+        page: p, 
+        limit: PAGE_SIZE,
+        search: search.trim() || undefined,
+        status: status || undefined
+      });
       setInstructors(res.instructors ?? []);
       setInstructorPagination(res.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
@@ -41,13 +49,18 @@ const useAdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search, status]);
 
   const fetchStudents = useCallback(async (p = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await UserService.getStudents({ page: p, limit: PAGE_SIZE });
+      const res = await UserService.getStudents({ 
+        page: p, 
+        limit: PAGE_SIZE,
+        search: search.trim() || undefined,
+        status: status || undefined
+      });
       setStudents(res.students ?? []);
       setStudentPagination(res.pagination ?? { total: 0, totalPages: 1 });
     } catch (err) {
@@ -55,7 +68,7 @@ const useAdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search, status]);
 
   // Initial fetch for both on mount
   useEffect(() => {
@@ -72,9 +85,9 @@ const useAdminUsers = () => {
   }, [tab, page, fetchInstructors, fetchStudents]);
 
   useEffect(() => { 
-    // Reset page to 1 when tab changes, which might trigger the second effect if page was > 1
-    if (page !== 1) setPage(1); 
-  }, [tab]);
+    // Reset page to 1 when tab, search or status changes
+    setPage(1); 
+  }, [tab, search, status]);
 
   const refetch = useCallback(() => {
     if (tab === TABS.INSTRUCTOR) fetchInstructors(page);
@@ -152,6 +165,8 @@ const useAdminUsers = () => {
     instructorPagination, studentPagination, 
     page, setPage,
     loading, error,
+    search, setSearch,
+    status, setStatus,
     showCreateModal, isCreating, createError,
     openCreateModal, closeCreateModal, handleCreate,
     handleToggleLock,

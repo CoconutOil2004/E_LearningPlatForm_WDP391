@@ -12,6 +12,7 @@ const checkEnrollment = require("../middleware/checkEnrollment");
 const {
   getMyCourses,
   enrollFreeCourse,
+  getEnrollmentByCourseId,
 } = require("../controller/enrollmentController");
 const {
   completeLesson,
@@ -35,6 +36,9 @@ router.get("/my-courses", protect, getMyCourses);
 
 /* Enroll free course */
 router.post("/enroll-free", protect, enrollFreeValidation, validate, enrollFreeCourse);
+
+/* Get single enrollment */
+router.get("/:courseId", protect, getEnrollmentByCourseId);
 
 /* Mark lesson completed */
 router.post(

@@ -38,10 +38,11 @@ const parseImages = (images) => {
 /** GET /blogs/public  – Retrieve list of approved blogs */
 const getPublicBlogs = async (req, res) => {
   try {
-    const { page = 1, limit = 9, search = "", category } = req.query;
+    const { page = 1, limit = 9, search = "", category, status, startDate, endDate } = req.query;
 
     const query = { status: "approved", deleted: false };
 
+    // Lọc theo search
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
@@ -49,7 +50,22 @@ const getPublicBlogs = async (req, res) => {
       ];
     }
 
+    // Lọc theo category
     if (category && isValidObjectId(category)) query.category = category;
+
+    // Lọc theo status
+    if (status && ["approved", "pending", "rejected"].includes(status)) {
+      query.status = status;
+    }
+
+    // Lọc theo ngày bắt đầu (startDate) và kết thúc (endDate)
+    if (startDate) query.createdAt = { $gte: new Date(startDate) };
+    if (endDate) {
+      query.createdAt = {
+        ...query.createdAt,
+        $lte: new Date(endDate),
+      };
+    }
 
     const currentPage = Math.max(Number(page) || 1, 1);
     const pageSize = Math.max(Number(limit) || 9, 1);
@@ -101,12 +117,13 @@ const getPublicBlogById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Blog not found." });
     }
 
-    // Related blogs in the same category
+    // Related blogs in the same category, with date filter
     const related = await Blog.find({
       _id: { $ne: id },
       category: blog.category?._id,
       status: "approved",
       deleted: false,
+      createdAt: { $gte: new Date(blog.createdAt) }, // Example: Only blogs published after the current blog
     })
       .populate("author", "fullname avatar")
       .sort({ approvedAt: -1 })
@@ -276,7 +293,7 @@ const deleteOwnBlog = async (req, res) => {
 
 const manageBlogs = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "", status, category, author, deleted } = req.query;
+    const { page = 1, limit = 10, search = "", status, category, author, deleted, startDate, endDate } = req.query;
     const query = {};
 
     if (search) {
@@ -287,12 +304,21 @@ const manageBlogs = async (req, res) => {
     }
 
     if (status) query.status = status;
-    else query.status = { $ne: "draft" };
+    else query.status = { $ne: "draft" }; // Mặc định là không hiển thị bài viết ở trạng thái draft
     if (category && isValidObjectId(category)) query.category = category;
     if (author && isValidObjectId(author)) query.author = author;
 
     const deletedValue = normalizeBoolean(deleted);
     query.deleted = deletedValue !== undefined ? deletedValue : false;
+
+    // Lọc theo ngày bắt đầu (startDate) và kết thúc (endDate)
+    if (startDate) query.createdAt = { $gte: new Date(startDate) };
+    if (endDate) {
+      query.createdAt = {
+        ...query.createdAt,
+        $lte: new Date(endDate),
+      };
+    }
 
     const currentPage = Math.max(Number(page) || 1, 1);
     const pageSize = Math.max(Number(limit) || 10, 1);

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
+/* Font imports removed */
 
 @tailwind base;
 @tailwind components;
@@ -82,9 +82,8 @@
     --radius-full: 9999px;
 
     /* ── Typography ── */
-    --font-body: "Outfit", sans-serif; /* ← font chữ thường, paragraph, label */
-    --font-heading:
-      "Syne", sans-serif; /* ← font tiêu đề h1 h2 h3, font-black */
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-heading: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
     /* ── Tailwind bridge ── */
     --background: var(--bg-page);

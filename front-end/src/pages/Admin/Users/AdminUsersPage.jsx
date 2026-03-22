@@ -1,6 +1,5 @@
 import {
   LockOutlined,
-  MailOutlined,
   PlusOutlined,
   TeamOutlined,
   UnlockOutlined,
@@ -10,9 +9,6 @@ import {
   Avatar,
   Button,
   Card,
-  Form,
-  Input,
-  Modal,
   Space,
   Table,
   Tabs,
@@ -23,6 +19,7 @@ import CreateInstructorModal from "../../../components/admin/CreateInstructorMod
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
 import StatsRow from "../../../components/admin/StatsRow";
+import { FilterBar } from "../../../components/shared";
 import useAdminUsers from "../../../hooks/useAdminUsers";
 import { COLOR } from "../../../styles/adminTheme";
 import { formatThousands } from "../../../utils/helpers";
@@ -30,15 +27,32 @@ import { formatThousands } from "../../../utils/helpers";
 const { Text } = Typography;
 
 const initials = (name = "") =>
-  name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
+// ─── Filter config ─────────────────────────────────────────────────────────────
+const FILTER_CONFIG = [
+  {
+    key: "keyword",
+    type: "search",
+    placeholder: "Search by name, email or username...",
+    width: 320,
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Status",
+    width: 160,
+    defaultValue: "",
+    allowClear: true,
+    options: [
+      { value: "",       label: "All Status" },
+      { value: "unlock", label: "Active" },
+      { value: "lock",   label: "Locked" },
+    ],
+  },
+];
 
-// ─── UsersTable ───────────────────────────────────────────────────────────────
+// ─── UsersTable ────────────────────────────────────────────────────────────────
 const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, pagination, onPageChange }) => {
   const instructorCols = [
     {
@@ -46,33 +60,21 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
       dataIndex: "coursesCount",
       key: "courses",
       width: 100,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.ocean }}>
-          {v ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.ocean }}>{v ?? 0}</Text>,
     },
     {
       title: "Students",
       dataIndex: "studentsCount",
       key: "students",
       width: 120,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.ocean }}>
-          {v?.toLocaleString() ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.ocean }}>{v?.toLocaleString() ?? 0}</Text>,
     },
     {
       title: "Revenue",
       dataIndex: "totalRevenue",
       key: "revenue",
       width: 140,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.green }}>
-          {formatThousands(v ?? 0)}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.green }}>{formatThousands(v ?? 0)}</Text>,
     },
   ];
 
@@ -82,22 +84,14 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
       dataIndex: "enrolledCourses",
       key: "enrolled",
       width: 100,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.ocean }}>
-          {v ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.ocean }}>{v ?? 0}</Text>,
     },
     {
       title: "Completed",
       dataIndex: "completedCourses",
       key: "completed",
       width: 120,
-      render: (v) => (
-        <Text strong style={{ color: COLOR.green }}>
-          {v ?? 0}
-        </Text>
-      ),
+      render: (v) => <Text strong style={{ color: COLOR.green }}>{v ?? 0}</Text>,
     },
   ];
 
@@ -113,50 +107,19 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
           <Avatar
             size={40}
             src={record.avatarURL}
-            style={{
-              background: `linear-gradient(135deg, ${COLOR.ocean}, ${COLOR.teal})`,
-              fontWeight: 900,
-            }}
+            style={{ background: `linear-gradient(135deg, ${COLOR.ocean}, ${COLOR.teal})`, fontWeight: 900 }}
           >
             {initials(name)}
           </Avatar>
           <Space direction="vertical" size={0}>
-            <Text strong style={{ color: COLOR.ocean }}>
-              {name}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.email}
-            </Text>
+            <Text strong style={{ color: COLOR.ocean }}>{name}</Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>{record.email}</Text>
           </Space>
         </Space>
       ),
     },
-    {
-      title: "Status",
-      // BUG FIX 1: change dataIndex from "isLocked" to "action" — matches BE field
-      dataIndex: "action",
-      key: "status",
-      width: 120,
-      render: (action) => {
-        // BUG FIX 1: action === "lock" means it is currently locked
-        const locked = action === "lock";
-        return (
-          <Tag
-            icon={locked ? <LockOutlined /> : null}
-            color={locked ? "error" : "success"}
-            style={{
-              fontWeight: 700,
-              textTransform: "uppercase",
-              padding: "3px 10px",
-              borderRadius: 12,
-            }}
-          >
-            {locked ? "Locked" : "Active"}
-          </Tag>
-        );
-      },
-    },
     ...(type === "instructor" ? instructorCols : studentCols),
+    // Actions trước Status
     {
       title: "Actions",
       key: "actions",
@@ -171,12 +134,7 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
             icon={<UnlockOutlined />}
             loading={actionLoading === record._id}
             onClick={() => onToggleLock(record)}
-            style={{
-              borderRadius: 8,
-              backgroundColor: COLOR.green,
-              borderColor: COLOR.green,
-              color: "#fff",
-            }}
+            style={{ borderRadius: 8, backgroundColor: COLOR.green, borderColor: COLOR.green }}
           >
             Unlock
           </Button>
@@ -191,6 +149,25 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
           >
             Lock
           </Button>
+        );
+      },
+    },
+    // Status sau Actions
+    {
+      title: "Status",
+      dataIndex: "action",
+      key: "status",
+      width: 120,
+      render: (action) => {
+        const locked = action === "lock";
+        return (
+          <Tag
+            icon={locked ? <LockOutlined /> : null}
+            color={locked ? "error" : "success"}
+            style={{ fontWeight: 700, textTransform: "uppercase", padding: "3px 10px", borderRadius: 12 }}
+          >
+            {locked ? "Locked" : "Active"}
+          </Tag>
         );
       },
     },
@@ -209,56 +186,53 @@ const UsersTable = ({ users, loading, onToggleLock, actionLoading, type, paginat
         total: pagination.total,
         showSizeChanger: false,
         showTotal: (t) => `Total ${t} ${type}s`,
-        onChange: onPageChange
+        onChange: onPageChange,
       }}
     />
   );
 };
 
-// ─── AdminUsersPage ───────────────────────────────────────────────────────────
+// ─── AdminUsersPage ────────────────────────────────────────────────────────────
 const AdminUsersPage = () => {
-  /* eslint-disable no-unused-vars */
   const {
-    tab,
-    setTab,
-    TABS,
-    instructors,
-    students,
-    instructorPagination,
-    studentPagination,
-    page,
-    setPage,
+    tab, setTab, TABS,
+    instructors, students,
+    instructorPagination, studentPagination,
+    page, setPage,
     loading,
-    showCreateModal,
-    isCreating,
-    openCreateModal,
-    closeCreateModal,
-    handleCreate,
-    handleToggleLock,
-    actionLoading,
+    showCreateModal, isCreating,
+    openCreateModal, closeCreateModal, handleCreate,
+    handleToggleLock, actionLoading,
+    search, setSearch,
+    status, setStatus,
+    refetch,
   } = useAdminUsers();
 
+  const filterValues = {
+    keyword: search,
+    status: status ?? "",
+  };
+
+  const handleFilterChange = (key, value) => {
+    if (key === "status")  setStatus(value || undefined);
+    if (key === "keyword") setSearch(value ?? "");
+  };
+
+  const handleSearch = (val) => {
+    setSearch(val ?? "");
+    refetch();
+  };
+
+  const handleReset = () => {
+    setSearch("");
+    setStatus(undefined);
+  };
+
   const stats = [
-    {
-      title: "Total Instructors",
-      value: instructorPagination.total,
-      prefix: <UserOutlined />,
-    },
-    {
-      title: "Active Instructors",
-      value: instructors.filter((i) => i.action !== "lock").length,
-      valueColor: COLOR.green,
-    },
-    {
-      title: "Total Students",
-      value: studentPagination.total,
-      prefix: <TeamOutlined />,
-    },
-    {
-      title: "Active Students",
-      value: students.filter((s) => s.action !== "lock").length,
-      valueColor: COLOR.green,
-    },
+    { title: "Total Instructors",  value: instructorPagination.total, prefix: <UserOutlined /> },
+    { title: "Active Instructors", value: instructors.filter((i) => i.action !== "lock").length, valueColor: COLOR.green },
+    { title: "Total Students",     value: studentPagination.total, prefix: <TeamOutlined /> },
+    { title: "Active Students",    value: students.filter((s) => s.action !== "lock").length, valueColor: COLOR.green },
   ];
 
   const tabItems = [
@@ -326,6 +300,22 @@ const AdminUsersPage = () => {
 
       <StatsRow items={stats} />
 
+      {/* FilterBar dùng component dùng chung */}
+      <Card
+        bordered={false}
+        style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)", marginBottom: 16 }}
+        bodyStyle={{ padding: "12px 24px" }}
+      >
+        <FilterBar
+          filters={FILTER_CONFIG}
+          values={filterValues}
+          onChange={handleFilterChange}
+          onSearch={handleSearch}
+          onReset={handleReset}
+          theme="blue"
+        />
+      </Card>
+
       <Card
         bordered={false}
         style={{ borderRadius: 16, boxShadow: "0 2px 12px rgba(0,119,182,0.06)" }}
@@ -333,14 +323,11 @@ const AdminUsersPage = () => {
       >
         <Tabs
           activeKey={tab}
-          onChange={setTab}
+          onChange={(key) => { setTab(key); setPage(1); }}
           items={tabItems}
           size="large"
           style={{ padding: "0 24px" }}
-          tabBarStyle={{
-            marginBottom: 0,
-            borderBottom: `1px solid ${COLOR.gray100}`,
-          }}
+          tabBarStyle={{ marginBottom: 0, borderBottom: `1px solid ${COLOR.gray100}` }}
         />
       </Card>
 

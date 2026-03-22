@@ -133,7 +133,7 @@ const AdminCoursesPage = () => {
 
   // FilterBar: onSearch fires only on button/Enter
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     fetchCourses({ page: 1, vals: next });
   };
@@ -259,23 +259,6 @@ const AdminCoursesPage = () => {
       },
     },
     {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 130,
-      render: (status) => {
-        const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
-        return (
-          <Tag
-            color={cfg.antdColor}
-            style={{ fontWeight: 700, borderRadius: 8 }}
-          >
-            {cfg.label}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Price",
       dataIndex: "price",
       key: "price",
@@ -323,6 +306,23 @@ const AdminCoursesPage = () => {
           View
         </Button>
       ),
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 130,
+      render: (status) => {
+        const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
+        return (
+          <Tag
+            color={cfg.antdColor}
+            style={{ fontWeight: 700, borderRadius: 8 }}
+          >
+            {cfg.label}
+          </Tag>
+        );
+      },
     },
   ];
 

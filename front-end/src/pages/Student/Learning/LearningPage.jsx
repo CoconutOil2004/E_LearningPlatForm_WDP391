@@ -2,7 +2,6 @@ import {
   CheckCircleOutlined,
   LeftOutlined,
   RightOutlined,
-  StarOutlined,
 } from "@ant-design/icons";
 import { Button, Typography, message } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,17 +13,14 @@ import QuizPlayer from "../../../components/learning/QuizPlayer";
 import VideoPlayer from "../../../components/learning/VideoPlayer";
 import CourseService from "../../../services/api/CourseService";
 import EnrollmentService from "../../../services/api/EnrollmentService";
-import ReviewModal from "../../../components/shared/ReviewModal";
 import useAuthStore from "../../../store/slices/authStore";
 import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 
 const { Text, Title } = Typography;
 
-/** Heartbeat interval (ms) — gửi mỗi 10 giây */
 const HEARTBEAT_INTERVAL_MS = 10_000;
 
-/** Threshold hoàn thành video = 30% duration (khớp BE LESSON_COMPLETE_THRESHOLD) */
 const COMPLETION_THRESHOLD = 0.3;
 
 /* ─── LoadingScreen ────────────────────────────────────────────────────────── */
@@ -586,15 +582,15 @@ const LearningPage = () => {
         color: "#fff",
       }}
     >
-        <LearningHeader
-          course={course}
-          progressPercent={progressPercent}
-          completed={completedCount}
-          totalLessons={lessonItems.length}
-          onBack={() => navigate(ROUTES.MY_COURSES)}
-          onToggleSidebar={() => setSidebarOpen((v) => !v)}
-          onRate={() => setReviewModalOpen(true)}
-        />
+      <LearningHeader
+        course={course}
+        progressPercent={progressPercent}
+        completed={completedCount}
+        totalLessons={lessonItems.length}
+        onBack={() => navigate(ROUTES.MY_COURSES)}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        // onRate={() => setReviewModalOpen(true)}
+      />
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {sidebarOpen && (
@@ -661,7 +657,7 @@ const LearningPage = () => {
         </div>
       </div>
 
-      <ReviewModal
+      {/* <ReviewModal
         open={reviewModalOpen}
         onCancel={() => setReviewModalOpen(false)}
         courseId={courseId}
@@ -669,7 +665,7 @@ const LearningPage = () => {
           // Re-fetch reviews in the sidebar if it's open
           message.success("Review saved!");
         }}
-      />
+      /> */}
     </div>
   );
 };

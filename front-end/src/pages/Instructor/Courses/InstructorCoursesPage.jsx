@@ -235,7 +235,7 @@ const InstructorCoursesPage = () => {
 
   // FilterBar: onSearch fires only on button/Enter for type:"search"
   const handleSearch = (val) => {
-    const next = { ...filterValues, keyword: val ?? filterValues.keyword };
+    const next = { ...filterValues, keyword: val ?? "" };
     setFilterValues(next);
     loadCourses(next);
   };
@@ -315,24 +315,6 @@ const InstructorCoursesPage = () => {
       render: (_, record) => <CourseRow record={record} />,
     },
     {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 130,
-      render: (s) => {
-        const cfg =
-          INSTRUCTOR_STATUS_CONFIG[s] || INSTRUCTOR_STATUS_CONFIG.draft;
-        return (
-          <Tag
-            className="px-3 py-1 font-semibold border-none rounded-md"
-            style={{ backgroundColor: cfg.bg, color: cfg.text }}
-          >
-            {cfg.label}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Price",
       dataIndex: "price",
       key: "price",
@@ -370,10 +352,10 @@ const InstructorCoursesPage = () => {
         </Text>
       ),
     },
+    // Actions trước Status
     {
       title: "Actions",
       key: "actions",
-      align: "right",
       width: 160,
       render: (_, record) => {
         const canEdit = ["draft", "rejected"].includes(record.status);
@@ -423,6 +405,25 @@ const InstructorCoursesPage = () => {
         );
       },
     },
+    // Status sau Actions
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 130,
+      render: (s) => {
+        const cfg =
+          INSTRUCTOR_STATUS_CONFIG[s] || INSTRUCTOR_STATUS_CONFIG.draft;
+        return (
+          <Tag
+            className="px-3 py-1 font-semibold border-none rounded-md"
+            style={{ backgroundColor: cfg.bg, color: cfg.text }}
+          >
+            {cfg.label}
+          </Tag>
+        );
+      },
+    },
   ];
 
   return (
@@ -444,7 +445,7 @@ const InstructorCoursesPage = () => {
               color: "#8B5CF6",
             }}
           >
-            My Blog Posts
+            My Courses
           </h2>
         </div>
 

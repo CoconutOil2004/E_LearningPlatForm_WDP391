@@ -1,17 +1,13 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import CourseCard from "../../../components/common/CourseCard";
 import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
 import PaymentService from "../../../services/api/PaymentService";
 import { ROUTES } from "../../../utils/constants";
-import { formatDurationClock, pageVariants } from "../../../utils/helpers";
-
-const countLessons = (sections = []) =>
-  sections.reduce(
-    (a, s) => a + (s.items?.filter((i) => i.itemType === "lesson").length ?? 0),
-    0,
-  );
+import { pageVariants } from "../../../utils/helpers";
 
 const TABS = ["all", "inProgress", "completed"];
 const TAB_LABELS = {
@@ -20,154 +16,28 @@ const TAB_LABELS = {
   completed: "Completed",
 };
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
-const MyCourseCard = ({ enrollment }) => {
-  const navigate = useNavigate();
-  const { course, progress, continueLesson } = enrollment;
-  const instructor =
-    course?.instructor?.fullname ??
-    course?.instructorId?.fullname ??
-    course?.instructorId?.email ??
-    "Instructor";
-  const lessons = countLessons(course?.sections);
-  const duration = formatDurationClock(course?.totalDuration);
-  const progressPct = Math.min(100, Math.max(0, progress ?? 0));
+/* ── Skeleton ── */
+const SkeletonCard = () => (
+  <div className="overflow-hidden glass-card rounded-2xl animate-pulse">
+    <div style={{ aspectRatio: "16/9", background: "rgba(255,255,255,0.4)" }} />
+    <div className="p-5 space-y-3">
+      <div className="w-3/4 h-4 rounded-full bg-white/40" />
+      <div className="w-1/2 h-3 rounded-full bg-white/30" />
+      <div className="h-2 rounded-full bg-white/20" />
+    </div>
+  </div>
+);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
-      className="overflow-hidden cursor-pointer glass-card rounded-2xl group"
-    >
-      <div
-        className="relative overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/20"
-        style={{ aspectRatio: "16/9" }}
-      >
-        <img
-          src={
-            course?.thumbnail ||
-            "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=225&fit=crop"
-          }
-          alt={course?.title}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
-          className="transition-transform duration-500 group-hover:scale-105"
-        />
-        {progressPct > 0 && (
-          <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/20">
-            <div
-              className="h-full transition-all duration-500"
-              style={{
-                width: `${progressPct}%`,
-                background:
-                  progressPct === 100
-                    ? "#10B981"
-                    : "var(--gradient-brand, #667eea)",
-              }}
-            />
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center transition-opacity opacity-0 bg-black/20 group-hover:opacity-100">
-          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/90">
-            <Icon name="play" size={20} color="var(--color-primary)" />
-          </div>
-        </div>
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-center gap-2 mb-2">
-          {course?.category?.name && (
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">
-              {course.category.name}
-            </span>
-          )}
-          {course?.level && (
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted bg-white/50 px-2 py-0.5 rounded border border-border/30">
-              {course.level}
-            </span>
-          )}
-        </div>
-        <h3 className="mb-1 text-sm font-bold leading-snug text-heading line-clamp-2">
-          {course?.title}
-        </h3>
-        <p className="mb-3 text-xs text-muted">{instructor}</p>
-        <div className="flex items-center gap-4 mb-4 text-xs text-muted">
-          {duration && (
-            <span className="flex items-center gap-1">
-              <Icon name="clock" size={12} /> {duration}
-            </span>
-          )}
-          {lessons > 0 && (
-            <span className="flex items-center gap-1">
-              <Icon name="book" size={12} /> {lessons} lessons
-            </span>
-          )}
-        </div>
-        <div>
-          <div className="flex justify-between text-xs mb-1.5">
-            <span className="font-semibold text-body">
-              {progressPct > 0 ? `${progressPct}% complete` : "Not started"}
-            </span>
-            {progressPct === 100 && (
-              <span className="flex items-center gap-1 font-bold text-green-600">
-                <Icon name="award" size={12} color="#10B981" /> Complete
-              </span>
-            )}
-          </div>
-          <div className="h-1.5 bg-border/40 rounded-full overflow-hidden">
-            <div
-              className="h-full transition-all duration-500 rounded-full"
-              style={{
-                width: `${progressPct}%`,
-                background:
-                  progressPct === 100
-                    ? "#10B981"
-                    : "var(--gradient-brand, #667eea)",
-              }}
-            />
-          </div>
-        </div>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            if (progressPct === 100 && course?._id) {
-              navigate(`/student/certificate/${course._id}`);
-            } else if (course?._id) {
-              navigate(`/student/learning/${course._id}`);
-            }
-          }}
-          className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
-            progressPct === 100 ? "bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/30" : "btn-aurora"
-          }`}
-        >
-          {progressPct === 0
-            ? "Start Learning"
-            : progressPct === 100
-              ? "View Certificate"
-              : continueLesson?.title
-                ? `Continue: ${continueLesson.title.slice(0, 28)}${continueLesson.title.length > 28 ? "…" : ""}`
-                : "Continue"}
-        </button>
-      </div>
-    </motion.div>
-  );
-};
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+/* ── Main ── */
 const MyCoursesPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
+
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
 
   useEffect(() => {
-    // Use enrollment endpoint which returns progress + continueLesson
     PaymentService.getMyCourses()
       .then((data) => setEnrollments(data ?? []))
       .catch(() => toast.error("Failed to load your courses"))
@@ -200,17 +70,25 @@ const MyCoursesPage = () => {
       exit="exit"
     >
       <div className="max-w-6xl px-6 py-10 mx-auto">
-        <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-black tracking-tight text-heading">
-            My Courses
-          </h1>
-          <p className="text-muted">
-            {enrollments.length > 0
-              ? `Enrolled in ${enrollments.length} course${enrollments.length > 1 ? "s" : ""}`
-              : "Your enrolled courses will appear here"}
-          </p>
+        {/* Header */}
+        <div className="flex flex-col justify-between gap-6 mb-10 md:flex-row md:items-end">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <h1 className="mb-4 text-5xl font-black leading-none tracking-tighter md:text-6xl text-heading">
+              My <span className="gradient-text">Courses</span>
+            </h1>
+            <p className="text-muted">
+              {enrollments.length > 0
+                ? `Enrolled in ${enrollments.length} course${enrollments.length > 1 ? "s" : ""}`
+                : "Your enrolled courses will appear here"}
+            </p>
+          </motion.div>
         </div>
 
+        {/* Tabs */}
         <div className="flex gap-2 mb-8">
           {TABS.map((t) => (
             <button
@@ -223,7 +101,9 @@ const MyCoursesPage = () => {
               {TAB_LABELS[t]}
               {tabCounts[t] > 0 && (
                 <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full font-black ${t === tab ? "bg-white/30" : "bg-white/60"}`}
+                  className={`text-xs px-1.5 py-0.5 rounded-full font-black ${
+                    t === tab ? "bg-white/30" : "bg-white/60"
+                  }`}
                 >
                   {tabCounts[t]}
                 </span>
@@ -232,25 +112,11 @@ const MyCoursesPage = () => {
           ))}
         </div>
 
+        {/* Content */}
         {loading ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="overflow-hidden glass-card rounded-2xl animate-pulse"
-              >
-                <div
-                  style={{
-                    aspectRatio: "16/9",
-                    background: "rgba(255,255,255,0.4)",
-                  }}
-                />
-                <div className="p-5 space-y-3">
-                  <div className="w-3/4 h-4 rounded-full bg-white/40" />
-                  <div className="w-1/2 h-3 rounded-full bg-white/30" />
-                  <div className="h-2 rounded-full bg-white/20" />
-                </div>
-              </div>
+              <SkeletonCard key={i} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -286,7 +152,17 @@ const MyCoursesPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
               >
-                <MyCourseCard enrollment={enrollment} />
+                {/*
+                  CourseCard variant="enrolled":
+                  - course data lấy từ enrollment.course
+                  - enrollment object truyền vào để hiện progress + continueLesson
+                */}
+                <CourseCard
+                  course={enrollment.course}
+                  variant="enrolled"
+                  isEnrolled
+                  enrollment={enrollment}
+                />
               </motion.div>
             ))}
           </div>

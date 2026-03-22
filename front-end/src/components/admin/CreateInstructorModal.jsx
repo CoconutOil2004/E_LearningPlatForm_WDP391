@@ -55,12 +55,12 @@ const CreateInstructorModal = ({
           type="primary"
           loading={loading}
           onClick={handleSubmit}
-          style={{ 
-            borderRadius: 8, 
-            background: COLOR.ocean, 
+          style={{
+            borderRadius: 8,
+            background: COLOR.ocean,
             borderColor: COLOR.ocean,
-            color: '#ffffff',
-            fontWeight: 600
+            color: "#ffffff",
+            fontWeight: 600,
           }}
         >
           Create Instructor
@@ -84,8 +84,9 @@ const CreateInstructorModal = ({
           }
           name="email"
           rules={[
-            { required: true, message: "Please input email!" },
-            { type: "email", message: "Please input valid email!" },
+            { required: true, message: "Email is required" },
+            { type: "email", message: "Please enter a valid email address" },
+            { max: 100, message: "Email cannot exceed 100 characters" },
           ]}
         >
           <Input
@@ -110,8 +111,10 @@ const CreateInstructorModal = ({
           }
           name="fullname"
           rules={[
-            { required: true, message: "Please input full name!" },
-            { min: 3, message: "Name must be at least 3 characters!" },
+            { required: true, message: "Full name is required" },
+            { min: 2, message: "Name must be at least 2 characters" },
+            { max: 60, message: "Name cannot exceed 60 characters" },
+            { whitespace: true, message: "Name cannot be empty spaces" },
           ]}
         >
           <Input

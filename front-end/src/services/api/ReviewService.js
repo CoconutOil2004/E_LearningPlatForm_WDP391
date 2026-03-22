@@ -10,6 +10,11 @@ class ReviewService {
     return res.data;
   }
 
+  async getMyReview(courseId) {
+    const res = await api.get(`/reviews/my-review/${courseId}`);
+    return res.data;
+  }
+
   /**
    * Get reviews for a specific course
    * @param {string} courseId 
@@ -39,13 +44,14 @@ class ReviewService {
 
   /**
    * Get all reviews (Admin only)
-   * @param {number} page 
-   * @param {number} limit 
+   * @param {Object} params { page, limit, search, rating, courseId }
    */
-  async getAllReviews(page = 1, limit = 20) {
-    const res = await api.get("/reviews/admin/all", {
-      params: { page, limit }
-    });
+  async getAllReviews({ page = 1, limit = 20, search, rating, courseId } = {}) {
+    const params = { page, limit };
+    if (search?.trim()) params.search = search.trim();
+    if (rating)         params.rating = rating;
+    if (courseId)       params.courseId = courseId;
+    const res = await api.get("/reviews/admin/all", { params });
     return res.data;
   }
 

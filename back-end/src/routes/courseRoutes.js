@@ -16,13 +16,13 @@ const {
   rejectCourse,
 } = require("../controller/courseController");
 
-const { protect, authorize, isAdmin } = require("../middleware/auth.middleware");
+const { protect, authorize, isAdmin, optionalAuth } = require("../middleware/auth.middleware");
 const { validate } = require("../middleware/validation.middleware");
 const { createCourseValidation, updateCourseValidation } = require("../validations/course.validation");
 
 /* ========================= PUBLIC ========================= */
-router.get("/search", searchCourses);
-router.get("/by-category/:categoryId", getCoursesByCategory);
+router.get("/search", optionalAuth, searchCourses);
+router.get("/by-category/:categoryId", optionalAuth, getCoursesByCategory);
 router.get("/levels", (req, res) => {
   const { LEVEL_ENUM } = require("../controller/courseController");
   res.json({ success: true, data: LEVEL_ENUM });
