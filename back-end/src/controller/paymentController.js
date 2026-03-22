@@ -1,9 +1,18 @@
 const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const Payment = require("../models/Payment");
+const User = require("../models/User");
 const { createPaymentUrl, verifyReturnUrl } = require("../utils/vnpay");
 const { buildItemsProgress } = require("../utils/buildItemsProgress");
 const { sendNotification } = require("../utils/notificationUtils");
+
+/** Chuỗi courseId cho redirect URL (populate có thể trả về object). */
+function getCourseIdForRedirect(payment) {
+  const cid = payment?.enrollmentId?.courseId;
+  if (cid == null) return "";
+  if (typeof cid === "object" && cid._id != null) return String(cid._id);
+  return String(cid);
+}
 
 /* ===============================
    CREATE PAYMENT (VNPay)
@@ -100,7 +109,7 @@ exports.paymentCallback = async (req, res) => {
 
     const payment = await Payment.findById(verify.orderId).populate({
       path: "enrollmentId",
-      populate: { path: "courseId", select: "title" }
+      populate: { path: "courseId", select: "title instructorId" },
     });
 
     if (!payment) {
@@ -110,8 +119,9 @@ exports.paymentCallback = async (req, res) => {
     }
 
     if (payment.status === "success") {
+      const cid = getCourseIdForRedirect(payment);
       return res.redirect(
-        `${process.env.CLIENT_URL || "http://localhost:9999"}?payment=success&courseId=${payment.enrollmentId.courseId}`,
+        `${process.env.CLIENT_URL || "http://localhost:9999"}?payment=success&courseId=${encodeURIComponent(cid)}`,
       );
     }
 
@@ -159,10 +169,12 @@ exports.paymentCallback = async (req, res) => {
     }
 
     const clientUrl = process.env.CLIENT_URL || "http://localhost:9999";
-    const courseId = payment.enrollmentId?.courseId || "";
+    const courseId = getCourseIdForRedirect(payment);
 
     if (verify.isSuccess) {
-      return res.redirect(`${clientUrl}?payment=success&courseId=${courseId}`);
+      return res.redirect(
+        `${clientUrl}?payment=success&courseId=${encodeURIComponent(courseId)}`,
+      );
     }
 
     return res.redirect(

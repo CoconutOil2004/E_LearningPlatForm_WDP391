@@ -1,7 +1,7 @@
 import { Col, message, Row, Skeleton, Space, Typography } from "antd";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import CourseReview from "../../../components/shared/CourseReview";
 import CourseService from "../../../services/api/CourseService";
@@ -27,7 +27,6 @@ const SectionHeading = ({ children }) => (
 /* ─── CourseDetailPage ───────────────────────────────────────────────────── */
 const CourseDetailPage = () => {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const { user, isAuthenticated } = useAuthStore();
@@ -43,26 +42,6 @@ const CourseDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [enrollChecked, setEnrollChecked] = useState(false);
   const [paying, setPaying] = useState(false);
-
-  /* ── Payment redirect handling ── */
-  useEffect(() => {
-    const payment = searchParams.get("payment");
-    const courseId = searchParams.get("courseId");
-    if (payment === "success" && courseId) {
-      message.success("Payment successful! You can start learning now.");
-      enroll(courseId);
-      PaymentService.getEnrolledCourseIds()
-        .then(setEnrolledCourseIds)
-        .catch(() => {});
-      navigate(`/courses/${courseId}`, { replace: true });
-    } else if (payment === "failed") {
-      message.error("Payment failed. Please try again.");
-      navigate(`/courses/${id}`, { replace: true });
-    } else if (payment === "error") {
-      message.error("An error occurred during payment.");
-      navigate(`/courses/${id}`, { replace: true });
-    }
-  }, [searchParams]);
 
   /* ── Sync enrolled IDs from server ── */
   useEffect(() => {
