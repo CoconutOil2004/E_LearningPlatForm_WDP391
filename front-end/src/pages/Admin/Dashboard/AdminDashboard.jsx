@@ -2,10 +2,9 @@ import {
   ArrowUpOutlined,
   BookOutlined,
   DollarOutlined,
-  PlusOutlined,
   ShoppingCartOutlined,
 } from "@ant-design/icons";
-import { Button, ConfigProvider, Skeleton, Spin, Table, Typography } from "antd";
+import { ConfigProvider, Skeleton, Spin, Table, Typography } from "antd";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -255,7 +254,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                 key={pct}
                 style={{
                   position: "absolute",
-                  left: 0,
+                  left: 30,
                   right: 0,
                   bottom: `${pct}%`,
                   height: 1,
@@ -270,7 +269,7 @@ const RevenueChart = ({ data, groupBy, onGroupBy, loading, totalRevenue }) => {
                 key={pct}
                 style={{
                   position: "absolute",
-                  right: "calc(100% + 8px)",
+                  right: "calc(97%)",
                   bottom: `${pct}%`,
                   fontSize: 11,
                   color: COLOR.gray400,
@@ -731,7 +730,12 @@ const AdminDashboard = () => {
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.38 }}
-          style={{ marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}
+          style={{
+            marginBottom: 28,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+          }}
         >
           <div>
             <h1
@@ -745,7 +749,9 @@ const AdminDashboard = () => {
             >
               Dashboard
             </h1>
-            <p style={{ color: COLOR.gray500, fontSize: 13, margin: "4px 0 0" }}>
+            <p
+              style={{ color: COLOR.gray500, fontSize: 13, margin: "4px 0 0" }}
+            >
               Real-time revenue statistics
             </p>
           </div>

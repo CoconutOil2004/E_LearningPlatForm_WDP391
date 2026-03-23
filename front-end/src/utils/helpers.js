@@ -62,6 +62,13 @@ export const formatThousands = (num) => {
   return Number(num).toLocaleString("en-US") + "đ";
 };
 
+// ─── Input formatting ─────────────────────────────────────────────────────────
+
+export const inputNumberFormatter = (value) =>
+  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+export const inputNumberParser = (value) => value?.replace(/\$\s?|(,*)/g, "");
+
 // ─── Duration formatting ──────────────────────────────────────────────────────
 /**
  * Format duration in seconds to "Xh Ym" (used in course cards, course detail)
