@@ -90,6 +90,17 @@ const GlobalInitializer = () => {
     };
   }, [isAuthenticated, user?._id, fetchNotifications, setupSocket, disconnectSocket]);
 
+  // ── Sync enrolled course IDs from server whenever user logs in ──
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setEnrolledCourseIds([]);
+      return;
+    }
+    PaymentService.getEnrolledCourseIds()
+      .then(setEnrolledCourseIds)
+      .catch(() => {});
+  }, [isAuthenticated, user?._id, setEnrolledCourseIds]);
+
   return null; // This component doesn't render anything
 };
 

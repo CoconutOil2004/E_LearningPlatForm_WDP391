@@ -4,6 +4,8 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
   EyeOutlined,
+  EyeInvisibleOutlined,
+  UndoOutlined,
   FileTextOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
@@ -59,6 +61,7 @@ const TABS = [
   { key: "pending",  label: "Pending Review" },
   { key: "approved", label: "Published" },
   { key: "rejected", label: "Rejected" },
+  { key: "hidden",   label: "Hidden" },
 ];
 
 // ─── Modals ──────────────────────────────────────────────────────────────────────
@@ -165,7 +168,12 @@ const AdminBlogPage = () => {
         search:   vals.keyword.trim() || undefined,
         category: vals.category       || undefined,
       };
-      if (activeTab !== "all") params.status = activeTab;
+      if (activeTab === "hidden") {
+        params.deleted = true;
+      } else {
+        params.deleted = false;
+        if (activeTab !== "all") params.status = activeTab;
+      }
 
       const res = await BlogService.manageBlogs(params);
       if (res.success) {
@@ -213,10 +221,36 @@ const AdminBlogPage = () => {
     Modal.confirm({
       title: "Delete Blog Post",
       icon: <ExclamationCircleOutlined />,
-      content: "Are you sure you want to delete this blog?",
+      content: "Are you sure you want to permanently delete this blog?",
       okText: "Delete", okType: "danger",
       onOk: async () => {
         try { await BlogService.adminDeleteBlog(id); message.success("Deleted."); fetchBlogs(); } catch { }
+      },
+    });
+  };
+
+  const handleHide = (id) => {
+    Modal.confirm({
+      title: "Hide Blog Post",
+      icon: <EyeInvisibleOutlined style={{ color: "#d97706" }} />,
+      content: "This blog will be hidden from public view. You can restore it anytime.",
+      okText: "Hide Post",
+      okButtonProps: { style: { background: "#d97706", borderColor: "#d97706", color: "#fff" } },
+      onOk: async () => {
+        try { await BlogService.adminDeleteBlog(id); message.success("Blog hidden from public."); fetchBlogs(); } catch { }
+      },
+    });
+  };
+
+  const handleRestore = (id) => {
+    Modal.confirm({
+      title: "Restore Blog Post",
+      icon: <UndoOutlined style={{ color: "#059669" }} />,
+      content: "This blog will be visible to the public again.",
+      okText: "Restore",
+      okButtonProps: { style: { background: "#059669", borderColor: "#059669", color: "#fff" } },
+      onOk: async () => {
+        try { await BlogService.restoreBlog(id); message.success("Blog is now visible again."); fetchBlogs(); } catch { }
       },
     });
   };
@@ -271,7 +305,7 @@ const AdminBlogPage = () => {
     {
       title: "Actions",
       key: "actions",
-      width: 160,
+      width: 200,
       render: (_, r) => (
         <Space>
           <Tooltip title="View"><Button type="text" icon={<EyeOutlined />} onClick={() => setPreviewBlog(r)} /></Tooltip>
@@ -285,6 +319,15 @@ const AdminBlogPage = () => {
               </Tooltip>
             </>
           )}
+          {r.deleted ? (
+            <Tooltip title="Restore (make visible)">
+              <Button type="text" icon={<UndoOutlined />} style={{ color: "#059669" }} onClick={() => handleRestore(r._id)} />
+            </Tooltip>
+          ) : (
+            <Tooltip title="Hide from public">
+              <Button type="text" icon={<EyeInvisibleOutlined />} style={{ color: "#d97706" }} onClick={() => handleHide(r._id)} />
+            </Tooltip>
+          )}
           <Tooltip title="Delete"><Button type="text" icon={<DeleteOutlined />} danger onClick={() => handleDelete(r._id)} /></Tooltip>
         </Space>
       ),
@@ -293,13 +336,20 @@ const AdminBlogPage = () => {
     {
       title: "Status",
       key: "status",
-      width: 120,
+      width: 140,
       render: (_, r) => {
         const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
         return (
-          <Tag style={{ borderRadius: 12, border: "none", background: st.bg, color: st.color, fontWeight: 700, padding: "3px 10px" }}>
-            {st.label}
-          </Tag>
+          <Space direction="vertical" size={4}>
+            <Tag style={{ borderRadius: 12, border: "none", background: st.bg, color: st.color, fontWeight: 700, padding: "3px 10px" }}>
+              {st.icon} {st.label}
+            </Tag>
+            {r.deleted && (
+              <Tag style={{ borderRadius: 12, border: "none", background: "#fef3c7", color: "#d97706", fontWeight: 700, padding: "3px 10px" }}>
+                <EyeInvisibleOutlined /> Hidden
+              </Tag>
+            )}
+          </Space>
         );
       },
     },

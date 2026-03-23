@@ -486,6 +486,28 @@ const getMyBlogs = async (req, res) => {
   }
 };
 
+
+const restoreBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid blog ID." });
+    }
+
+    const blog = await Blog.findOne({ _id: id, deleted: true });
+    if (!blog) return res.status(404).json({ success: false, message: "Deleted blog not found." });
+
+    blog.deleted = false;
+    blog.deletedAt = null;
+    blog.deletedBy = null;
+    await blog.save();
+
+    return res.status(200).json({ success: true, message: "Blog restored successfully." });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error restoring blog.", error: error.message });
+  }
+};
+
 module.exports = {
   // Public
   getPublicBlogs,
@@ -501,5 +523,6 @@ module.exports = {
   approveBlog,
   rejectBlog,
   softDeleteBlog,
+  restoreBlog,
   getBlogById,
 };
