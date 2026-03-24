@@ -2,16 +2,6 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:9999";
 const BACKEND_API_URI = `${API_BASE_URL}/api`;
 
-// Format USD currency (default)
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-
-const formatUSD = (amount) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
-
 const ROLES = {
   GUEST: "guest",
   STUDENT: "student",
@@ -20,6 +10,7 @@ const ROLES = {
 };
 
 const ROUTES = {
+  // --- Public ---
   HOME: "/",
   COURSES: "/courses",
   COURSE_DETAIL: "/courses/:id",
@@ -28,18 +19,22 @@ const ROUTES = {
   CONTACT: "/contact",
   ROADMAP: "/roadmap",
 
-  // Blog public
+  // --- Blog Public ---
   BLOG_LIST: "/blog",
   BLOG_DETAIL: "/blog/:id",
 
-  // Auth
+  // --- Auth ---
   LOGIN: "/signin",
   REGISTER: "/signup",
   VERIFY_OTP: "/verify-otp",
+  RESEND_OTP: "/resend-otp", // Mới bổ sung
   FORGOT_PASSWORD: "/forgot-password",
   RESET_PASSWORD: "/reset-password",
+  CHANGE_PASSWORD_REQUIRED: "/change-password-required",
+  STORE_REGISTRATION: "/store-registration", // Mới bổ sung
+  AUTH_CALLBACK: "/auth/callback", // Mới bổ sung
 
-  // Student
+  // --- Student ---
   STUDENT_DASHBOARD: "/",
   MY_COURSES: "/student/my-courses",
   LEARNING: "/student/learning/:courseId",
@@ -51,7 +46,7 @@ const ROUTES = {
   STUDENT_PROFILE: "/student/profile",
   STUDENT_SETTINGS: "/student/settings",
 
-  // Instructor
+  // --- Instructor ---
   INSTRUCTOR_DASHBOARD: "/instructor/dashboard",
   INSTRUCTOR_COURSES: "/instructor/courses",
   CREATE_COURSE: "/instructor/courses/create",
@@ -64,7 +59,7 @@ const ROUTES = {
   INSTRUCTOR_BLOG_CREATE: "/instructor/blog/create",
   INSTRUCTOR_BLOG_EDIT: "/instructor/blog/edit/:id",
 
-  // Admin
+  // --- Admin ---
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_USERS: "/admin/users",
   ADMIN_COURSES: "/admin/courses",
@@ -78,7 +73,6 @@ const ROUTES = {
   ADMIN_REVIEWS: "/admin/reviews",
   ADMIN_COMMENTS: "/admin/comments",
   ADMIN_PROFILE: "/admin/profile",
-  CHANGE_PASSWORD_REQUIRED: "/change-password-required",
 };
 
-export { API_BASE_URL, BACKEND_API_URI, formatCurrency, formatUSD, ROLES, ROUTES };
+export { API_BASE_URL, BACKEND_API_URI, ROLES, ROUTES };

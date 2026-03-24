@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import CourseService from "../services/api/CourseService";
 
 /**
@@ -33,14 +33,14 @@ import CourseService from "../services/api/CourseService";
  *   - If some categories fail → skip those categories (allSettled), don't crash whole process
  */
 const useCategorySection = ({
-  limit         = 4,
-  sortBy        = "popular",
+  limit = 4,
+  sortBy = "popular",
   maxCategories = 5,
 } = {}) => {
   const [sections, setSections] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
-  const [tick,     setTick]     = useState(0); // trigger refetch
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0); // trigger refetch
 
   // Dùng AbortController để cancel request nếu component unmount
   const abortRef = useRef(null);
@@ -60,7 +60,6 @@ const useCategorySection = ({
       try {
         // ── STEP 1: get categories list ────────────────────────────
         const categories = await CourseService.getCategories();
-        console.log("✅ Categories:", categories);  
         if (cancelled) return;
 
         if (!categories.length) {
@@ -75,10 +74,9 @@ const useCategorySection = ({
         // ── STEP 2: fetch courses in parallel (allSettled = don't crash if one fails) ──
         const results = await Promise.allSettled(
           targetCategories.map((cat) =>
-            CourseService.getCoursesByCategory(cat._id, { limit, sortBy })
-          )
+            CourseService.getCoursesByCategory(cat._id, { limit, sortBy }),
+          ),
         );
-        console.log("✅ Course results:", results);
 
         if (cancelled) return;
 

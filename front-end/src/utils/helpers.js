@@ -27,15 +27,6 @@ export const cardVariants = {
   },
 };
 
-export const sidebarItemVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: (i) => ({
-    opacity: 1,
-    x: 0,
-    transition: { delay: i * 0.05 },
-  }),
-};
-
 // ─── String helpers ───────────────────────────────────────────────────────────
 /**
  * Truncate text to a max length with "..."
@@ -71,17 +62,6 @@ export const inputNumberParser = (value) => value?.replace(/\$\s?|(,*)/g, "");
 
 // ─── Duration formatting ──────────────────────────────────────────────────────
 /**
- * Format duration in seconds to "Xh Ym" (used in course cards, course detail)
- * e.g. 3700 → "1h 1m", 180 → "3m"
- */
-export const formatDuration = (seconds) => {
-  if (!seconds || isNaN(seconds)) return null;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
-
-/**
  * Format duration in seconds to "hh:mm:ss" or "mm:ss" (used in lesson/video lists)
  * e.g. 3700 → "1:01:40", 185 → "3:05"
  */
@@ -98,16 +78,6 @@ export const formatDurationClock = (seconds) => {
   return parts.join(":");
 };
 
-/**
- * Format duration in seconds to short "m:ss" (used in sidebar / lesson row)
- * e.g. 185 → "3:05"
- */
-export const formatDurationShort = (seconds) => {
-  if (!seconds) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-};
 /**
  * Format date to "X units ago"
  * e.g. "5 minutes ago", "2 hours ago", "yesterday", "3 days ago"

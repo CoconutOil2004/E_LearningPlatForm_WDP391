@@ -25,7 +25,6 @@ const ResendOTP = ({ email, onResend }) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/api/resend-otp`, { email });
 
-      console.log("Resend response:", res.data);
       if (res.data.success) {
         toast.success(
           res.data.message || "A new OTP has been sent to your email",

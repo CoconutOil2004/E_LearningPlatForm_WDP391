@@ -1,34 +1,31 @@
 import {
   DollarOutlined,
-  ShoppingOutlined,
-  RiseOutlined,
   HistoryOutlined,
   InfoCircleOutlined,
-  TrophyOutlined
+  RiseOutlined,
+  ShoppingOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
-import { 
-  Card, 
-  Space, 
-  Typography, 
-  Row, 
-  Col, 
-  Table, 
-  Avatar, 
-  Empty, 
+import {
+  Avatar,
+  Card,
+  Col,
+  ConfigProvider,
+  Empty,
   message,
+  Row,
+  Space,
+  Table,
   Tooltip,
-  ConfigProvider
+  Typography,
 } from "antd";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import UserService from "../../../services/api/UserService";
-import { pageVariants } from "../../../utils/helpers";
 import { COLOR } from "../../../styles/adminTheme";
+import { formatThousands, pageVariants } from "../../../utils/helpers";
 
 const { Text, Title } = Typography;
-
-const formatUSD = (value) => 
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
 const InstructorRevenuePage = () => {
   const [data, setData] = useState(null);
@@ -55,10 +52,10 @@ const InstructorRevenuePage = () => {
       key: "course",
       render: (_, record) => (
         <Space>
-          <img 
-            src={record.courseId?.thumbnail} 
-            alt="" 
-            className="w-12 h-8 object-cover rounded shadow-sm"
+          <img
+            src={record.courseId?.thumbnail}
+            alt=""
+            className="object-cover w-12 h-8 rounded shadow-sm"
           />
           <Text strong>{record.courseId?.title}</Text>
         </Space>
@@ -80,7 +77,7 @@ const InstructorRevenuePage = () => {
       key: "amount",
       render: (amount) => (
         <Text strong style={{ color: COLOR.green }}>
-          {formatUSD(amount)}
+          {formatThousands(amount)}
         </Text>
       ),
     },
@@ -99,42 +96,51 @@ const InstructorRevenuePage = () => {
   const statCards = [
     {
       title: "Total Revenue",
-      value: formatUSD(data?.stats?.totalRevenue || 0),
+      value: formatThousands(data?.stats?.totalRevenue || 0),
       icon: <DollarOutlined className="text-2xl" />,
       color: "#4A90E2",
-      bg: "rgba(74, 144, 226, 0.1)"
+      bg: "rgba(74, 144, 226, 0.1)",
     },
     {
       title: "This Month",
-      value: formatUSD(data?.stats?.monthRevenue || 0),
+      value: formatThousands(data?.stats?.monthRevenue || 0),
       icon: <RiseOutlined className="text-2xl" />,
       color: "#27AE60",
-      bg: "rgba(39, 174, 96, 0.1)"
+      bg: "rgba(39, 174, 96, 0.1)",
     },
     {
       title: "Today",
-      value: formatUSD(data?.stats?.todayRevenue || 0),
+      value: formatThousands(data?.stats?.todayRevenue || 0),
       icon: <ShoppingOutlined className="text-2xl" />,
       color: "#F2994A",
-      bg: "rgba(242, 153, 74, 0.1)"
+      bg: "rgba(242, 153, 74, 0.1)",
     },
     {
       title: "Total Sales",
       value: data?.stats?.totalSales || 0,
       icon: <TrophyOutlined className="text-2xl" />,
       color: "#9B51E0",
-      bg: "rgba(155, 81, 224, 0.1)"
-    }
+      bg: "rgba(155, 81, 224, 0.1)",
+    },
   ];
 
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
       <div className="flex flex-col gap-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div>
-            <Title level={2} style={{ margin: 0, fontWeight: 900 }}>Financial Overview</Title>
-            <Text type="secondary">Monitor your earnings and course performance</Text>
+            <Title level={2} style={{ margin: 0, fontWeight: 900 }}>
+              Financial Overview
+            </Title>
+            <Text type="secondary">
+              Monitor your earnings and course performance
+            </Text>
           </div>
           <Tooltip title="Revenue is updated immediately after successful student payment">
             <InfoCircleOutlined className="text-gray-400 cursor-help" />
@@ -145,23 +151,26 @@ const InstructorRevenuePage = () => {
         <Row gutter={[24, 24]}>
           {statCards.map((stat, idx) => (
             <Col xs={24} sm={12} lg={6} key={idx}>
-              <Card 
-                bordered={false} 
-                className="rounded-3xl shadow-sm hover:shadow-md transition-shadow h-full"
+              <Card
+                bordered={false}
+                className="h-full transition-shadow shadow-sm rounded-3xl hover:shadow-md"
                 bodyStyle={{ padding: "24px" }}
               >
-                <div className="flex items-center gap-4 h-full">
-                  <div 
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                <div className="flex items-center h-full gap-4">
+                  <div
+                    className="flex items-center justify-center w-12 h-12 rounded-2xl shrink-0"
                     style={{ background: stat.bg, color: stat.color }}
                   >
                     {stat.icon}
                   </div>
                   <div className="min-w-0">
-                    <Text type="secondary" className="text-[11px] font-bold uppercase tracking-widest block mb-1">
+                    <Text
+                      type="secondary"
+                      className="text-[11px] font-bold uppercase tracking-widest block mb-1"
+                    >
                       {stat.title}
                     </Text>
-                    <Text strong className="text-xl truncate block">
+                    <Text strong className="block text-xl truncate">
                       {stat.value}
                     </Text>
                   </div>
@@ -172,7 +181,7 @@ const InstructorRevenuePage = () => {
         </Row>
 
         {/* Transaction History */}
-        <Card 
+        <Card
           title={
             <div className="flex items-center gap-2 py-2">
               <HistoryOutlined className="text-blue-500" />
@@ -180,7 +189,7 @@ const InstructorRevenuePage = () => {
             </div>
           }
           bordered={false}
-          className="rounded-3xl shadow-xl overflow-hidden"
+          className="overflow-hidden shadow-xl rounded-3xl"
           bodyStyle={{ padding: 0 }}
         >
           <ConfigProvider
@@ -196,19 +205,19 @@ const InstructorRevenuePage = () => {
               },
             }}
           >
-            <Table 
-              columns={columns} 
-              dataSource={data?.recentOrders || []} 
+            <Table
+              columns={columns}
+              dataSource={data?.recentOrders || []}
               loading={loading}
               rowKey="_id"
               pagination={false}
               locale={{
                 emptyText: (
-                  <Empty 
-                    image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description="You don't have any revenue yet"
                   />
-                )
+                ),
               }}
             />
           </ConfigProvider>

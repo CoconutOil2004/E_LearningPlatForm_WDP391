@@ -4,7 +4,7 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
-import { ROUTES } from "./utils/constants";
+import { ROLES, ROUTES } from "./utils/constants";
 
 // ─── Layouts ─────────────────────────────────────────────────────────────────
 import AdminLayout from "./layouts/AdminLayout";
@@ -21,24 +21,24 @@ import ErrorPage from "./pages/ErrorPage";
 
 // ─── Auth Pages ───────────────────────────────────────────────────────────────
 import AuthCallback from "./pages/Auth/AuthCallback";
+import ForcedPasswordChange from "./pages/Auth/ForcedPasswordChange";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import OTPVerification from "./pages/Auth/OTPVerification";
 import ResendOTP from "./pages/Auth/ResendOTP";
+import ResetPassword from "./pages/Auth/ResetPassword";
 import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
 import StoreRegistration from "./pages/Auth/StoreRegistration";
-import ForcedPasswordChange from "./pages/Auth/ForcedPasswordChange";
-import ResetPassword from "./pages/Auth/ResetPassword";
 
 // ─── Public Pages ─────────────────────────────────────────────────────────────
+import BlogListPage from "./pages/Instructor/Blog/BlogListPage";
 import AboutPage from "./pages/Public/About/AboutPage";
+import BlogDetailPage from "./pages/Public/Blog/BlogDetailPage";
 import ContactPage from "./pages/Public/Contact/ContactPage";
 import CourseDetailPage from "./pages/Public/CourseDetail/CourseDetailPage";
 import CoursesPage from "./pages/Public/Courses/CoursesPage";
 import HomePage from "./pages/Public/Home/HomePage";
 import SearchPage from "./pages/Public/Search/SearchPage";
-import BlogListPage from "./pages/Instructor/Blog/BlogListPage";
-import BlogDetailPage from "./pages/Public/Blog/BlogDetailPage";
 
 // ─── Student Pages ────────────────────────────────────────────────────────────
 import CertificatePage from "./pages/Student/Certificate/CertificatePage";
@@ -49,40 +49,40 @@ import MyCoursesPage from "./pages/Student/MyCourses/MyCoursesPage";
 import StudentProfilePage from "./pages/Student/Profile/StudentProfilePage";
 import LearningProgressPage from "./pages/Student/Progress/LearningProgressPage";
 import QuizPage from "./pages/Student/Quiz/QuizPage";
+import RoadmapPage from "./pages/Student/Roadmap/RoadmapPage";
 import StudentSettingsPage from "./pages/Student/Settings/StudentSettingsPage";
 import WishlistPage from "./pages/Student/Wishlist/WishlistPage";
-import RoadmapPage from "./pages/Student/Roadmap/RoadmapPage";
 
 // ─── Instructor Pages ─────────────────────────────────────────────────────────
 import InstructorAnalyticsPage from "./pages/Instructor/Analytics/InstructorAnalyticsPage";
+import CreateBlogPage from "./pages/Instructor/Blog/CreateBlogPage";
+import InstructorBlogPage from "./pages/Instructor/Blog/InstructorBlogPage";
 import InstructorCoursesPage from "./pages/Instructor/Courses/InstructorCoursesPage";
 import CreateCoursePage from "./pages/Instructor/CreateCourse/CreateCoursePage";
 import InstructorDashboard from "./pages/Instructor/Dashboard/InstructorDashboard";
 import InstructorProfilePage from "./pages/Instructor/Profile/InstructorProfilePage";
 import InstructorRevenuePage from "./pages/Instructor/Revenue/InstructorRevenuePage";
 import InstructorStudentsPage from "./pages/Instructor/Students/InstructorStudentsPage";
-import InstructorBlogPage from "./pages/Instructor/Blog/InstructorBlogPage";
-import CreateBlogPage from "./pages/Instructor/Blog/CreateBlogPage";
 
 // ─── Admin Pages ──────────────────────────────────────────────────────────────
 import AdminAnalyticsPage from "./pages/Admin/Analytics/AdminAnalyticsPage";
 import AdminApprovalPage from "./pages/Admin/Approval/AdminApprovalPage";
+import AdminBlogPage from "./pages/Admin/Blog/AdminBlogPage";
+import AdminCommentPage from "./pages/Admin/Comment/AdminCommentPage";
 import AdminCoursesPage from "./pages/Admin/Courses/AdminCoursesPage";
 import AdminDashboard from "./pages/Admin/Dashboard/AdminDashboard";
 import AdminLogsPage from "./pages/Admin/Logs/AdminLogsPage";
+import AdminProfilePage from "./pages/Admin/Profile/AdminProfilePage";
 import AdminReportsPage from "./pages/Admin/Reports/AdminReportsPage";
 import AdminRevenuePage from "./pages/Admin/Revenue/AdminRevenuePage";
+import AdminReviewPage from "./pages/Admin/Review/AdminReviewPage";
 import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
 import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
-import AdminProfilePage from "./pages/Admin/Profile/AdminProfilePage";
-import AdminBlogPage from "./pages/Admin/Blog/AdminBlogPage";
-import AdminReviewPage from "./pages/Admin/Review/AdminReviewPage";
-import AdminCommentPage from "./pages/Admin/Comment/AdminCommentPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<RootLayout />} errorElement={<ErrorPage />}>
-      {/* Auth Routes */}
+      {/* ─── Auth Routes ─── */}
       <Route
         element={
           <GuestRoute>
@@ -90,103 +90,136 @@ const router = createBrowserRouter(
           </GuestRoute>
         }
       >
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/verify-otp" element={<OTPVerification />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/resend-otp" element={<ResendOTP />} />
-        <Route path="/store-registration" element={<StoreRegistration />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path={ROUTES.LOGIN} element={<SignIn />} />
+        <Route path={ROUTES.REGISTER} element={<SignUp />} />
+        <Route path={ROUTES.VERIFY_OTP} element={<OTPVerification />} />
+        <Route path={ROUTES.RESEND_OTP} element={<ResendOTP />} />
+        <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+        <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
+        <Route
+          path={ROUTES.STORE_REGISTRATION}
+          element={<StoreRegistration />}
+        />
+        <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
       </Route>
 
-      <Route path={ROUTES.CHANGE_PASSWORD_REQUIRED} element={<ForcedPasswordChange />} />
+      <Route
+        path={ROUTES.CHANGE_PASSWORD_REQUIRED}
+        element={<ForcedPasswordChange />}
+      />
 
-      {/* Public Routes — accessible by everyone including guests */}
+      {/* ─── Public Routes ─── */}
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="/courses" element={<CoursesPage />} />
-        <Route path="/courses/:id" element={<CourseDetailPage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        {/* ── Blog public routes (no auth required) ── */}
-        <Route path="/blog" element={<BlogListPage />} />
-        <Route path="/blog/:id" element={<BlogDetailPage />} />
+        <Route path={ROUTES.COURSES} element={<CoursesPage />} />
+        <Route path={ROUTES.COURSE_DETAIL} element={<CourseDetailPage />} />
+        <Route path={ROUTES.SEARCH} element={<SearchPage />} />
+        <Route path={ROUTES.ABOUT} element={<AboutPage />} />
+        <Route path={ROUTES.CONTACT} element={<ContactPage />} />
+        <Route path={ROUTES.BLOG_LIST} element={<BlogListPage />} />
+        <Route path={ROUTES.BLOG_DETAIL} element={<BlogDetailPage />} />
       </Route>
 
-      {/* Student Routes */}
+      {/* ─── Student Routes ─── */}
       <Route
         element={
-          <ProtectedRoute requiredRoles={["student", "instructor", "admin"]}>
+          <ProtectedRoute
+            requiredRoles={[ROLES.STUDENT, ROLES.INSTRUCTOR, ROLES.ADMIN]}
+          >
             <PublicLayout />
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<StudentDashboard />} />
-        <Route path="/student/my-courses" element={<MyCoursesPage />} />
-        <Route path="/student/certificates" element={<MyCertificatesPage />} />
-        <Route path="/student/wishlist" element={<WishlistPage />} />
-        <Route path="/student/progress" element={<LearningProgressPage />} />
-        <Route path="/student/profile" element={<StudentProfilePage />} />
-        <Route path="/student/settings" element={<StudentSettingsPage />} />
+        <Route path={ROUTES.STUDENT_DASHBOARD} element={<StudentDashboard />} />
+        <Route path={ROUTES.MY_COURSES} element={<MyCoursesPage />} />
+        <Route path={ROUTES.MY_CERTIFICATES} element={<MyCertificatesPage />} />
+        <Route path={ROUTES.WISHLIST} element={<WishlistPage />} />
+        <Route path={ROUTES.PROGRESS} element={<LearningProgressPage />} />
+        <Route path={ROUTES.STUDENT_PROFILE} element={<StudentProfilePage />} />
+        <Route
+          path={ROUTES.STUDENT_SETTINGS}
+          element={<StudentSettingsPage />}
+        />
         <Route path={ROUTES.ROADMAP} element={<RoadmapPage />} />
       </Route>
 
-      {/* Student fullscreen pages */}
+      {/* ─── Student Fullscreen Pages ─── */}
       <Route
         element={
-          <ProtectedRoute requiredRoles={["student", "instructor", "admin"]}>
+          <ProtectedRoute
+            requiredRoles={[ROLES.STUDENT, ROLES.INSTRUCTOR, ROLES.ADMIN]}
+          >
             <Outlet />
           </ProtectedRoute>
         }
       >
-        <Route path="/student/learning/:courseId" element={<LearningPage />} />
-        <Route path="/student/quiz/:courseId" element={<QuizPage />} />
-        <Route path="/student/certificate/:courseId" element={<CertificatePage />} />
+        <Route path={ROUTES.LEARNING} element={<LearningPage />} />
+        <Route path={ROUTES.QUIZ} element={<QuizPage />} />
+        <Route path={ROUTES.CERTIFICATE} element={<CertificatePage />} />
       </Route>
 
-      {/* Instructor Routes */}
+      {/* ─── Instructor Routes ─── */}
       <Route
         element={
-          <ProtectedRoute requiredRoles={["instructor"]}>
+          <ProtectedRoute requiredRoles={[ROLES.INSTRUCTOR]}>
             <InstructorLayout />
           </ProtectedRoute>
         }
       >
-        <Route path="/instructor/dashboard" element={<InstructorDashboard />} />
-        <Route path="/instructor/courses" element={<InstructorCoursesPage />} />
-        <Route path="/instructor/courses/create" element={<CreateCoursePage />} />
-        <Route path="/instructor/courses/edit/:id" element={<CreateCoursePage />} />
-        <Route path="/instructor/revenue" element={<InstructorRevenuePage />} />
-        <Route path="/instructor/students" element={<InstructorStudentsPage />} />
-        <Route path="/instructor/blog" element={<InstructorBlogPage />} />
-        <Route path="/instructor/blog/create" element={<CreateBlogPage />} />
-        <Route path="/instructor/analytics" element={<InstructorAnalyticsPage />} />
-        <Route path="/instructor/profile" element={<InstructorProfilePage />} />
+        <Route
+          path={ROUTES.INSTRUCTOR_DASHBOARD}
+          element={<InstructorDashboard />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_COURSES}
+          element={<InstructorCoursesPage />}
+        />
+        <Route path={ROUTES.CREATE_COURSE} element={<CreateCoursePage />} />
+        <Route path={ROUTES.EDIT_COURSE} element={<CreateCoursePage />} />
+        <Route
+          path={ROUTES.INSTRUCTOR_REVENUE}
+          element={<InstructorRevenuePage />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_STUDENTS}
+          element={<InstructorStudentsPage />}
+        />
+        <Route path={ROUTES.INSTRUCTOR_BLOG} element={<InstructorBlogPage />} />
+        <Route
+          path={ROUTES.INSTRUCTOR_BLOG_CREATE}
+          element={<CreateBlogPage />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_ANALYTICS}
+          element={<InstructorAnalyticsPage />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_PROFILE}
+          element={<InstructorProfilePage />}
+        />
       </Route>
 
-      {/* Admin Routes */}
+      {/* ─── Admin Routes ─── */}
       <Route
         element={
-          <ProtectedRoute requiredRoles={["admin"]}>
+          <ProtectedRoute requiredRoles={[ROLES.ADMIN]}>
             <AdminLayout />
           </ProtectedRoute>
         }
       >
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/courses" element={<AdminCoursesPage />} />
-        <Route path="/admin/approval" element={<AdminApprovalPage />} />
-        <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
-        <Route path="/admin/revenue" element={<AdminRevenuePage />} />
-        <Route path="/admin/reports" element={<AdminReportsPage />} />
-        <Route path="/admin/settings" element={<AdminSettingsPage />} />
-        <Route path="/admin/logs" element={<AdminLogsPage />} />
-        <Route path="/admin/blog" element={<AdminBlogPage />} />
-        <Route path="/admin/reviews" element={<AdminReviewPage />} />
-        <Route path="/admin/comments" element={<AdminCommentPage />} />
-        <Route path="/admin/profile" element={<AdminProfilePage />} />
+        <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboard />} />
+        <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
+        <Route path={ROUTES.ADMIN_COURSES} element={<AdminCoursesPage />} />
+        <Route path={ROUTES.ADMIN_APPROVAL} element={<AdminApprovalPage />} />
+        <Route path={ROUTES.ADMIN_ANALYTICS} element={<AdminAnalyticsPage />} />
+        <Route path={ROUTES.ADMIN_REVENUE} element={<AdminRevenuePage />} />
+        <Route path={ROUTES.ADMIN_REPORTS} element={<AdminReportsPage />} />
+        <Route path={ROUTES.ADMIN_SETTINGS} element={<AdminSettingsPage />} />
+        <Route path={ROUTES.ADMIN_LOGS} element={<AdminLogsPage />} />
+        <Route path={ROUTES.ADMIN_BLOG} element={<AdminBlogPage />} />
+        <Route path={ROUTES.ADMIN_REVIEWS} element={<AdminReviewPage />} />
+        <Route path={ROUTES.ADMIN_COMMENTS} element={<AdminCommentPage />} />
+        <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
       </Route>
 
       <Route path="*" element={<ErrorPage />} />

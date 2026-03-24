@@ -1,5 +1,4 @@
-import { createContext, useContext, useEffect } from "react";
-import { toastEmitter } from "../contexts/ToastContext";
+import { createContext, useContext, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthService from "../services/api/AuthenService";
 import useAuthStore from "../store/slices/authStore";
@@ -8,10 +7,6 @@ import { ROUTES } from "../utils/constants";
 
 const AuthContext = createContext(null);
 
-/**
- * AuthProvider — handles login/register/logout flows.
- * Components can call useAuth() to get helpers.
- */
 export const AuthProvider = ({ children }) => {
   const {
     setCredentials,
@@ -23,34 +18,35 @@ export const AuthProvider = ({ children }) => {
   const { setWishlistIds } = useCourseStore();
   const navigate = useNavigate();
 
-  // Rehydrate user profile on mount if token exists
-  // Also sync the user's watchlist from the DB into the local store
+  const hasRehydrated = useRef(false);
+
   useEffect(() => {
-    if (token && isAuthenticated) {
-      AuthService.getProfile()
-        .then((res) => {
-          // Backend returns { success, data: user }
-          // res = response.data from axios, so user is at res.data
-          const user = res?.data || res?.user;
-          if (user) {
-            updateUser(user);
-          }
-          if (user?.watchlist) {
-            setWishlistIds(user.watchlist.map((id) => id.toString()));
-          }
-        })
-        .catch(() => {
-          // Token invalid — force logout
-          storeLogout();
-        });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (hasRehydrated.current) return;
+    hasRehydrated.current = true;
+
+    if (!token || !isAuthenticated) return;
+
+    AuthService.getProfile()
+      .then((res) => {
+        const user = res?.data || res?.user;
+        if (user) {
+          updateUser(user);
+        }
+        if (user?.watchlist) {
+          setWishlistIds(user.watchlist.map((id) => id.toString()));
+        }
+      })
+      .catch(() => {
+        storeLogout();
+      });
+  });
 
   const login = async (email, password) => {
     try {
       const res = await AuthService.login({ email, password });
       const user = res.user || { name: "User", email, role: "student" };
       setCredentials(user, res.token);
+
       if (user.mustChangePassword) {
         navigate(ROUTES.CHANGE_PASSWORD_REQUIRED);
         return { success: true };
@@ -60,6 +56,7 @@ export const AuthProvider = ({ children }) => {
       if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD);
       else if (role === "instructor") navigate(ROUTES.INSTRUCTOR_DASHBOARD);
       else navigate(ROUTES.STUDENT_DASHBOARD);
+
       return { success: true };
     } catch (error) {
       return { success: false, message: error.message || "Sign in failed" };
@@ -68,7 +65,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (data) => {
     try {
-      const res = await AuthService.register(data);
+      await AuthService.register(data);
       navigate(`${ROUTES.VERIFY_OTP}?email=${encodeURIComponent(data.email)}`);
       return { success: true };
     } catch (error) {
@@ -83,7 +80,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await AuthService.logout();
     } catch {
-      // ignore server errors
+      // Bỏ qua lỗi server-side logout
     } finally {
       storeLogout();
       navigate(ROUTES.HOME);
