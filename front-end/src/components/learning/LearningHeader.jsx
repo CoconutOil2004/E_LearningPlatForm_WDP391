@@ -1,9 +1,5 @@
-import {
-  ArrowLeftOutlined,
-  MenuOutlined,
-  StarOutlined,
-} from "@ant-design/icons";
-import { Progress as AntProgress, Button, Typography, Tooltip } from "antd";
+import { ArrowLeftOutlined, MenuOutlined } from "@ant-design/icons";
+import { Progress as AntProgress, Button, Typography } from "antd";
 
 const { Text, Title } = Typography;
 
@@ -83,7 +79,7 @@ const LearningHeader = ({
           alignItems: "center",
           gap: 12,
           width: 220,
-          '@media(maxWidth: 768px)': { display: 'none' }
+          "@media(maxWidth: 768px)": { display: "none" },
         }}
       >
         <AntProgress
@@ -106,15 +102,6 @@ const LearningHeader = ({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <Tooltip title="Leave a review">
-          <Button
-            type="text"
-            icon={<StarOutlined style={{ color: "#F59E0B" }} />}
-            onClick={onRate}
-            style={{ color: "#fff" }}
-          />
-        </Tooltip>
-        
         <Button
           type="text"
           icon={<MenuOutlined />}
