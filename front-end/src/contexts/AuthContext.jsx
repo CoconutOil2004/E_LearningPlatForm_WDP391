@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
       .catch(() => {
         storeLogout();
       });
-  });
+  }, []);
 
   const login = async (email, password) => {
     try {

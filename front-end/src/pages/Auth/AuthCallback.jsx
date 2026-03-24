@@ -28,41 +28,19 @@ const AuthCallback = () => {
         navigate("/signin?error=google_failed", { replace: true });
         return;
       }
-
-      // Persist the token to localStorage, exactly what AuthService.login does natively
       localStorage.setItem("token", token);
       localStorage.setItem("accessToken", token);
-
       setCredentials(user, token);
 
-      // Give the store a moment to update before navigating
-      setTimeout(() => {
-        if (user.mustChangePassword) {
-          navigate(ROUTES.CHANGE_PASSWORD_REQUIRED, { replace: true });
-        } else {
-          const role = user.role;
-          if (role === "admin")
-            navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
-          else if (role === "instructor")
-            navigate(ROUTES.INSTRUCTOR_DASHBOARD, { replace: true });
-          else navigate("/", { replace: true });
-        }
-      }, 100);
-
-      if (user.role === "admin") {
-        navigate("/admin/dashboard", { replace: true });
+      if (user.mustChangePassword) {
+        navigate(ROUTES.CHANGE_PASSWORD_REQUIRED, { replace: true });
         return;
       }
-
-      if (user.role === "instructor") {
-        navigate("/instructor/dashboard", { replace: true });
-        return;
-      }
-
-      if (user.role === "student") {
-        navigate("/", { replace: true });
-        return;
-      }
+      const role = user.role;
+      if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+      else if (role === "instructor")
+        navigate(ROUTES.INSTRUCTOR_DASHBOARD, { replace: true });
+      else navigate("/", { replace: true });
     } catch (error) {
       console.error("Google callback error:", error);
       navigate("/signin?error=google_failed", { replace: true });
