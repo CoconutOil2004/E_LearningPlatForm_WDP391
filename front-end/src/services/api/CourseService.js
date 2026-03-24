@@ -84,19 +84,35 @@ class CourseService {
   }
 
   // ─── POST /api/courses ────────────────────────────────────────────────────
-  // Instructor only. Body: { title (max 60, required), description,
-  //                          categoryId (required), level (required), thumbnail?, language? }
-  // BE automatically sets: status="draft", price=0
-  // → Course (populated category.name, instructorId.fullname/email)
-  createCourse({ title, description, categoryId, level, language, thumbnail }) {
+  // Instructor only.
+  // Body: { title (max 60, required), description, categoryId (required),
+  //         level (required), price?, thumbnail?, language?,
+  //         sections?,        ← optional, shape same as updateCourse
+  //         submitForReview?  ← if true, BE sets status="pending" in one shot }
+  // BE automatically sets: status="draft" (or "pending" when submitForReview=true), price=0 default
+  // → Course (populated category.name, instructorId.fullname/email, sections.items.itemId)
+  createCourse({
+    title,
+    description,
+    categoryId,
+    level,
+    price,
+    language,
+    thumbnail,
+    sections,
+    submitForReview = false,
+  }) {
     return api
       .post("/courses", {
         title,
         description,
         categoryId,
         level,
+        price,
         language,
         thumbnail,
+        ...(sections !== undefined && { sections }),
+        submitForReview,
       })
       .then((r) => r.data?.data ?? null);
   }
@@ -159,9 +175,16 @@ class CourseService {
 
   // ─── GET /api/courses/admin/pending ───────────────────────────────────────
   // Admin only.
+  // Query: keyword? (search by title), dateFrom? (ISO date), dateTo? (ISO date)
   // → { success, count, data: Course[] }
-  getPendingCourses() {
-    return api.get("/courses/admin/pending").then((r) => r.data?.data ?? []);
+  getPendingCourses({ keyword, dateFrom, dateTo } = {}) {
+    const params = {};
+    if (keyword && keyword.trim()) params.keyword = keyword.trim();
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo) params.dateTo = dateTo;
+    return api
+      .get("/courses/admin/pending", { params })
+      .then((r) => r.data?.data ?? []);
   }
 
   // ─── GET /api/courses/instructor/mine ─────────────────────────────────────

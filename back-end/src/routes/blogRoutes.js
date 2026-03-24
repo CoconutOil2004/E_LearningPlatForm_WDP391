@@ -16,6 +16,7 @@ const {
   approveBlog,
   rejectBlog,
   softDeleteBlog,
+  restoreBlog,
   getBlogById,
 } = require("../controller/blogController");
 
@@ -39,6 +40,7 @@ router.get("/admin/manage", protect, authorize("admin"), manageBlogs);
 router.patch("/admin/:id/approve", protect, authorize("admin"), approveBlog);
 router.patch("/admin/:id/reject", protect, authorize("admin"), rejectBlog);
 router.delete("/admin/:id", protect, authorize("admin"), softDeleteBlog);
+router.patch("/admin/:id/restore", protect, authorize("admin"), restoreBlog);
 
 // ─── PROTECTED (auth required) ────────────────────────────────────────────────
 router.get("/:id", protect, getBlogById);

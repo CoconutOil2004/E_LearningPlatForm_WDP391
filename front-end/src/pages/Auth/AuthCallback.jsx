@@ -14,9 +14,6 @@ const AuthCallback = () => {
       const token = params.get("token");
       const userParam = params.get("user");
 
-      console.log("token:", token);
-      console.log("userParam:", userParam);
-
       if (!token || !userParam) {
         navigate("/signin?error=google_failed", { replace: true });
         return;
@@ -31,42 +28,19 @@ const AuthCallback = () => {
         navigate("/signin?error=google_failed", { replace: true });
         return;
       }
-
-      console.log("Parsed user:", user);
-
-      // Persist the token to localStorage, exactly what AuthService.login does natively
       localStorage.setItem("token", token);
       localStorage.setItem("accessToken", token);
-      
       setCredentials(user, token);
 
-      // Give the store a moment to update before navigating
-      setTimeout(() => {
-        if (user.mustChangePassword) {
-          navigate(ROUTES.CHANGE_PASSWORD_REQUIRED, { replace: true });
-        } else {
-          const role = user.role;
-          if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
-          else if (role === "instructor") navigate(ROUTES.INSTRUCTOR_DASHBOARD, { replace: true });
-          else navigate("/", { replace: true });
-        }
-      }, 100);
-
-      if (user.role === "admin") {
-        navigate("/admin/dashboard", { replace: true });
+      if (user.mustChangePassword) {
+        navigate(ROUTES.CHANGE_PASSWORD_REQUIRED, { replace: true });
         return;
       }
-
-      if (user.role === "instructor") {
-        navigate("/instructor/dashboard", { replace: true });
-        return;
-      }
-
-      if (user.role === "student") {
-        navigate("/", { replace: true });
-        return;
-      }
-
+      const role = user.role;
+      if (role === "admin") navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+      else if (role === "instructor")
+        navigate(ROUTES.INSTRUCTOR_DASHBOARD, { replace: true });
+      else navigate("/", { replace: true });
     } catch (error) {
       console.error("Google callback error:", error);
       navigate("/signin?error=google_failed", { replace: true });
@@ -74,7 +48,7 @@ const AuthCallback = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-page flex items-center justify-center">
+    <div className="flex items-center justify-center min-h-screen bg-page">
       <div className="space-y-4 text-center">
         <svg
           className="w-10 h-10 mx-auto animate-spin text-primary"

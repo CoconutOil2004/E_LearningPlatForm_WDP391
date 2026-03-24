@@ -54,17 +54,11 @@ exports.searchCourses = async (req, res) => {
       myCourses,
     } = req.query;
 
-    /* ======================
-       SAFE PARSE
-    ====================== */
     page = Number.isInteger(+page) ? Math.max(+page, 1) : 1;
     limit = Number.isInteger(+limit) ? Math.min(Math.max(+limit, 1), 50) : 10;
 
     const query = { status: "published" };
 
-    /* ======================
-       KEYWORD SEARCH
-    ====================== */
     if (keyword?.trim()) {
       query.$text = { $search: keyword.trim() };
     }
@@ -74,27 +68,16 @@ exports.searchCourses = async (req, res) => {
     }
     if (level) query.level = level;
 
-    /* ======================
-       PRICE FILTER
-    ====================== */
     if (minPrice || maxPrice) {
       query.price = {};
-
       if (!isNaN(minPrice)) query.price.$gte = Number(minPrice);
-
       if (!isNaN(maxPrice)) query.price.$lte = Number(maxPrice);
     }
 
-    /* ======================
-       RATING FILTER
-    ====================== */
     if (!isNaN(minRating)) {
       query.rating = { $gte: Number(minRating) };
     }
 
-    /* ======================
-       USER ENROLLMENTS
-    ====================== */
     let purchasedCourseIds = [];
     const userId = req.user?._id || null;
 
@@ -106,7 +89,6 @@ exports.searchCourses = async (req, res) => {
 
       purchasedCourseIds = enrollments.map((e) => e.courseId.toString());
 
-      /* My courses only */
       if (myCourses === "true") {
         query._id = {
           $in: purchasedCourseIds.map((id) => new mongoose.Types.ObjectId(id)),
@@ -123,9 +105,6 @@ exports.searchCourses = async (req, res) => {
       });
     }
 
-    /* ======================
-       SORT (Udemy Logic)
-    ====================== */
     let sortOption = { createdAt: -1 };
 
     switch (sortBy) {
@@ -143,7 +122,6 @@ exports.searchCourses = async (req, res) => {
         break;
     }
 
-    /* text search priority */
     if (keyword) {
       sortOption = {
         score: { $meta: "textScore" },
@@ -151,14 +129,8 @@ exports.searchCourses = async (req, res) => {
       };
     }
 
-    /* ======================
-       PROJECTION
-    ====================== */
     const projection = keyword ? { score: { $meta: "textScore" } } : {};
 
-    /* ======================
-       QUERY + COUNT PARALLEL
-    ====================== */
     const [courses, total] = await Promise.all([
       Course.find(query, projection)
         .populate("instructorId", "fullname email")
@@ -171,9 +143,6 @@ exports.searchCourses = async (req, res) => {
       Course.countDocuments(query),
     ]);
 
-    /* ======================
-       ADD isEnrolled FLAG
-    ====================== */
     const result = courses.map((course) => ({
       ...course,
       isEnrolled: purchasedCourseIds.includes(course._id.toString()),
@@ -198,7 +167,6 @@ exports.searchCourses = async (req, res) => {
 
 /* =====================================================
    GET COURSES BY CATEGORY (public)
-   GET /api/courses/by-category/:categoryId?page=1&limit=10&sortBy=...
 ===================================================== */
 exports.getCoursesByCategory = async (req, res) => {
   try {
@@ -249,7 +217,6 @@ exports.getCoursesByCategory = async (req, res) => {
       Course.countDocuments(query),
     ]);
 
-    // Add isEnrolled flag for logged-in users
     let purchasedCourseIds = [];
     const userId = req.user?._id || null;
     if (userId) {
@@ -288,8 +255,7 @@ exports.getCoursesByCategory = async (req, res) => {
 
 /* =====================================================
    CREATE COURSE (Instructor)
-   title is required max 60, categoryId must exist, level is enum.
-   Default status: draft, price: 0. Response 201 + populate category name.
+   ✅ FIX: Thiếu res.json() response → request bị treo vô hạn
 ===================================================== */
 exports.createCourse = async (req, res) => {
   try {
@@ -319,6 +285,13 @@ exports.createCourse = async (req, res) => {
       .populate("instructorId", "fullname email")
       .populate("category", "name")
       .lean();
+
+    // ✅ FIX: Response bị thiếu hoàn toàn trong bản gốc — đây là nguyên nhân request treo mãi
+    return res.status(201).json({
+      success: true,
+      message: "Course created successfully.",
+      data: populated,
+    });
   } catch (err) {
     if (err.name === "ValidationError") {
       return res
@@ -333,7 +306,6 @@ exports.createCourse = async (req, res) => {
 
 /* =====================================================
    GET COURSE PREVIEW (public) – syllabus only, videoUrl excluded
-   Published courses only. For non-enrolled users to view course structure.
 ===================================================== */
 exports.getCoursePreview = async (req, res) => {
   try {
@@ -344,7 +316,6 @@ exports.getCoursePreview = async (req, res) => {
         .json({ success: false, message: "Invalid course ID." });
     }
 
-    // Select thumbnail
     const course = await Course.findOne({ _id: id, status: "published" })
       .select(
         "title description price level rating enrollmentCount totalDuration thumbnail category instructorId sections",
@@ -360,7 +331,6 @@ exports.getCoursePreview = async (req, res) => {
         .json({ success: false, message: "Course not found." });
     }
 
-    // Response object — include thumbnail
     res.json({
       success: true,
       message: "Course preview retrieved successfully.",
@@ -373,7 +343,7 @@ exports.getCoursePreview = async (req, res) => {
         rating: course.rating,
         enrollmentCount: course.enrollmentCount,
         totalDuration: course.totalDuration,
-        thumbnail: course.thumbnail ?? null, // ← THÊM DÒNG NÀY
+        thumbnail: course.thumbnail ?? null,
         category: course.category,
         instructorId: course.instructorId,
         sections: course.sections,
@@ -389,9 +359,7 @@ exports.getCoursePreview = async (req, res) => {
 
 /* =====================================================
    GET COURSE DETAIL – full (videoUrl + questions)
-   Admin / Course Instructor: immediate access.
-   Student: access only if enrolled (course purchased).
-==================================================== = */
+===================================================== */
 exports.getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -454,10 +422,8 @@ exports.getCourseById = async (req, res) => {
 };
 
 /* =====================================================
-   UPDATE COURSE (CRUD) – receives sections from FE, saves to DB
+   UPDATE COURSE (CRUD)
    Body: title?, description?, categoryId?, level?, price?, status?, sections?
-   sections = [ { title, items: [ { itemType, itemRef, title, orderIndex, itemId?, videoUrl?, duration?, videoPublicId?, questions? } ] } ]
-   Item without itemId → BE creates new Lesson/Quiz. Old ItemId missing from payload → deletes corresponding Lesson/Quiz.
 ===================================================== */
 exports.updateCourse = async (req, res) => {
   try {
@@ -524,6 +490,7 @@ exports.updateCourse = async (req, res) => {
       course.status = status;
     }
 
+    // ── Process sections ──────────────────────────────────────────────────────
     const oldItemIds = new Set();
     (course.sections || []).forEach((sec) => {
       (sec.items || []).forEach((it) => {
@@ -557,6 +524,7 @@ exports.updateCourse = async (req, res) => {
               : null;
 
           if (!itemId) {
+            // Create new Lesson or Quiz
             if (itemType === "lesson") {
               const videoUrl =
                 it.videoUrl && String(it.videoUrl).trim()
@@ -584,6 +552,7 @@ exports.updateCourse = async (req, res) => {
               itemId = quiz._id;
             }
           } else {
+            // Reuse existing — accumulate duration
             const existing = await Lesson.findById(itemId)
               .select("duration")
               .lean();
@@ -603,6 +572,7 @@ exports.updateCourse = async (req, res) => {
         newSections.push({ title: sectionTitle, items: newItems });
       }
 
+      // Delete removed items
       for (const oldId of oldItemIds) {
         if (newItemIds.has(oldId)) continue;
         const lesson = await Lesson.findById(oldId)
@@ -654,7 +624,7 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
-/* ====================== UPLOAD VIDEO (FE calls first, then sends url into PUT course sections) ====================== */
+/* ====================== UPLOAD VIDEO ====================== */
 exports.uploadVideo = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
@@ -706,10 +676,26 @@ exports.submitCourse = async (req, res) => {
       });
     }
 
+    // Validate that course has at least 1 section with 1 item before submitting
+    if (!course.sections || course.sections.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Course must have at least 1 section before submitting.",
+      });
+    }
+
+    for (const sec of course.sections) {
+      if (!sec.items || sec.items.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Section "${sec.title}" must have at least 1 lesson or quiz.`,
+        });
+      }
+    }
+
     course.status = "pending";
     await course.save();
 
-    // Notify all admins (except self if admin)
     await notifyAdmins(
       req.app,
       {
@@ -736,10 +722,36 @@ exports.submitCourse = async (req, res) => {
 
 /* =====================================================
    ADMIN: GET PENDING COURSES
+   Query: keyword? (search by title), dateFrom? (ISO), dateTo? (ISO)
 ===================================================== */
 exports.getPendingCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ status: "pending" })
+    const { keyword, dateFrom, dateTo } = req.query;
+
+    const query = { status: "pending" };
+
+    if (keyword && keyword.trim()) {
+      query.title = { $regex: keyword.trim(), $options: "i" };
+    }
+
+    if (dateFrom || dateTo) {
+      query.updatedAt = {};
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (!isNaN(from)) query.updatedAt.$gte = from;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        if (!isNaN(to)) {
+          // include the full end day
+          to.setHours(23, 59, 59, 999);
+          query.updatedAt.$lte = to;
+        }
+      }
+      if (Object.keys(query.updatedAt).length === 0) delete query.updatedAt;
+    }
+
+    const courses = await Course.find(query)
       .populate("instructorId", "fullname email")
       .populate("category", "name")
       .sort({ updatedAt: 1 })
@@ -789,7 +801,6 @@ exports.approveCourse = async (req, res) => {
     course.status = "published";
     await course.save();
 
-    // Notify instructor
     await sendNotification(req.app, {
       userId: course.instructorId,
       title: "Course approved",
@@ -810,8 +821,6 @@ exports.approveCourse = async (req, res) => {
 
 /* =====================================================
    ADMIN: GET ALL COURSES (all statuses)
-   GET /api/courses/admin/all
-   Query: status? page? limit? keyword? minPrice? maxPrice?
 ===================================================== */
 exports.getAdminAllCourses = async (req, res) => {
   try {
@@ -858,10 +867,11 @@ exports.getAdminAllCourses = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message || "Server error while approving course.",
+      message: error.message || "Server error while fetching admin courses.",
     });
   }
 };
+
 exports.rejectCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -904,7 +914,6 @@ exports.rejectCourse = async (req, res) => {
       .populate("category", "name")
       .lean();
 
-    // Notify instructor
     await sendNotification(req.app, {
       userId: course.instructorId,
       title: "Course rejected",
@@ -925,12 +934,9 @@ exports.rejectCourse = async (req, res) => {
     });
   }
 };
+
 /* =====================================================
-   INSTRUCTOR: GET MY COURSES (all statuses)
-   GET /api/courses/instructor/mine
-   Query: status?  ("draft"|"pending"|"published"|"rejected")
-          keyword? (search by title)
-          sortBy?  ("priceAsc"|"priceDesc"|"newest"|"oldest") – default: newest
+   INSTRUCTOR: GET MY COURSES
 ===================================================== */
 exports.getInstructorCourses = async (req, res) => {
   try {

@@ -1,8 +1,3 @@
-/**
- * Instructor Theme Configuration
- * Sử dụng Ant Design theme system kết hợp với Purple Theme hiện đại
- */
-
 export const instructorTheme = {
   token: {
     colorPrimary: "#8B5CF6", // Purple 500

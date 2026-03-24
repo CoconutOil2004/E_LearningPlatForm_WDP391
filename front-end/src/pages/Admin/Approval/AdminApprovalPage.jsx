@@ -3,6 +3,7 @@ import {
   ClockCircleOutlined,
   CloseOutlined,
   EyeOutlined,
+  SearchOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import {
@@ -11,6 +12,7 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Empty,
   Form,
   Input,
@@ -22,7 +24,8 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import { useEffect, useState } from "react";
+import dayjs from "dayjs";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AdminPageLayout from "../../../components/admin/AdminPageLayout";
 import PageHeader from "../../../components/admin/PageHeader";
 import CourseDetailModal from "../../../components/shared/CourseDetailModal";
@@ -33,6 +36,72 @@ import { formatDurationClock, formatThousands } from "../../../utils/helpers";
 
 const { Text, Paragraph, Title } = Typography;
 const { TextArea } = Input;
+const { RangePicker } = DatePicker;
+
+// ─── FilterBar ────────────────────────────────────────────────────────────────
+const FilterBar = ({
+  total,
+  filtered,
+  onSearch,
+  onDateChange,
+  onReset,
+  hasFilter,
+}) => (
+  <Card
+    bordered={false}
+    style={{
+      borderRadius: 14,
+      marginBottom: 20,
+      boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+    }}
+    bodyStyle={{ padding: "14px 20px" }}
+  >
+    <Row gutter={[12, 12]} align="middle">
+      <Col xs={24} sm={12} md={8}>
+        <Input
+          allowClear
+          prefix={<SearchOutlined style={{ color: COLOR.gray500 }} />}
+          placeholder="Search by course title..."
+          onChange={(e) => onSearch(e.target.value)}
+          style={{ borderRadius: 8 }}
+        />
+      </Col>
+      <Col xs={24} sm={12} md={10}>
+        <RangePicker
+          style={{ width: "100%", borderRadius: 8 }}
+          placeholder={["Submitted from", "Submitted to"]}
+          onChange={onDateChange}
+          format="DD/MM/YYYY"
+          disabledDate={(d) => d && d.isAfter(dayjs(), "day")}
+        />
+      </Col>
+      <Col xs={24} sm={12} md={6}>
+        <Row justify="space-between" align="middle" gutter={8}>
+          <Col>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Showing{" "}
+              <Text strong style={{ color: COLOR.ocean }}>
+                {filtered}
+              </Text>{" "}
+              / {total} pending
+            </Text>
+          </Col>
+          {hasFilter && (
+            <Col>
+              <Button
+                size="small"
+                onClick={onReset}
+                style={{ borderRadius: 6 }}
+              >
+                Reset
+              </Button>
+            </Col>
+          )}
+        </Row>
+      </Col>
+    </Row>
+  </Card>
+);
 
 // ─── CourseCard ───────────────────────────────────────────────────────────────
 const CourseCard = ({
@@ -58,7 +127,6 @@ const CourseCard = ({
         borderRadius: 16,
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
         overflow: "hidden",
-        // Fixed height layout so all cards in a row are same height
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -137,7 +205,7 @@ const CourseCard = ({
         </div>
       </div>
 
-      {/* Body — flex:1 so content stretches */}
+      {/* Body */}
       <div
         style={{
           padding: 20,
@@ -150,7 +218,6 @@ const CourseCard = ({
           <Tag style={{ borderRadius: 6, fontWeight: 600 }}>{course.level}</Tag>
         </Space>
 
-        {/* Title — fixed 2 lines */}
         <Title
           level={5}
           style={{
@@ -171,7 +238,6 @@ const CourseCard = ({
           </Text>
         </Space>
 
-        {/* Description — fixed 2 lines */}
         <div style={{ minHeight: 36, marginBottom: 12 }}>
           {course.description ? (
             <Paragraph
@@ -191,7 +257,6 @@ const CourseCard = ({
           )}
         </div>
 
-        {/* Meta */}
         <Space
           split={<Text type="secondary">·</Text>}
           style={{ marginBottom: 12, flexWrap: "wrap" }}
@@ -209,7 +274,14 @@ const CourseCard = ({
           </Text>
         </Space>
 
-        {/* Curriculum preview — fixed height */}
+        {/* Submitted date */}
+        {course.updatedAt && (
+          <Text type="secondary" style={{ fontSize: 11, marginBottom: 10 }}>
+            Submitted: {dayjs(course.updatedAt).format("DD/MM/YYYY HH:mm")}
+          </Text>
+        )}
+
+        {/* Curriculum preview */}
         <div
           style={{
             background: COLOR.gray50,
@@ -271,7 +343,7 @@ const CourseCard = ({
           )}
         </div>
 
-        {/* Actions pinned to bottom */}
+        {/* Actions */}
         <Space style={{ width: "100%", marginTop: "auto" }}>
           <Tooltip title="View full details & preview content">
             <Button
@@ -368,35 +440,85 @@ const RejectModal = ({ open, onConfirm, onCancel }) => {
 // ─── AdminApprovalPage ────────────────────────────────────────────────────────
 const AdminApprovalPage = () => {
   const toast = useToast();
+
+  // raw data from API
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
+
+  // filter state
+  const [keyword, setKeyword] = useState("");
+  const [dateRange, setDateRange] = useState([null, null]);
+  const debounceRef = useRef(null);
 
   // detail modal
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // ── Fetch with current filters ────────────────────────────────────────────
+  const fetchCourses = useCallback(
+    (kw = keyword, range = dateRange) => {
+      setLoading(true);
+      CourseService.getPendingCourses({
+        keyword: kw,
+        dateFrom: range?.[0]
+          ? range[0].startOf("day").toISOString()
+          : undefined,
+        dateTo: range?.[1] ? range[1].endOf("day").toISOString() : undefined,
+      })
+        .then(setCourses)
+        .catch(() => toast.error("Failed to load pending courses"))
+        .finally(() => setLoading(false));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   useEffect(() => {
-    CourseService.getPendingCourses()
-      .then(setCourses)
-      .catch(() => toast.error("Failed to load pending courses"))
-      .finally(() => setLoading(false));
+    fetchCourses("", [null, null]);
   }, []);
 
+  // ── Debounced keyword search ──────────────────────────────────────────────
+  const handleSearch = (value) => {
+    setKeyword(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchCourses(value, dateRange);
+    }, 400);
+  };
+
+  // ── Date range change ─────────────────────────────────────────────────────
+  const handleDateChange = (dates) => {
+    setDateRange(dates ?? [null, null]);
+    fetchCourses(keyword, dates ?? [null, null]);
+  };
+
+  // ── Reset filters ─────────────────────────────────────────────────────────
+  const handleReset = () => {
+    setKeyword("");
+    setDateRange([null, null]);
+    fetchCourses("", [null, null]);
+  };
+
+  const hasFilter = keyword.trim() !== "" || dateRange?.[0] != null;
+
+  // ── Approve ───────────────────────────────────────────────────────────────
   const handleApprove = async (courseId) => {
     setProcessing(courseId);
     try {
       await CourseService.approveCourse(courseId);
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
       if (selectedCourse?._id === courseId) setModalOpen(false);
-    } catch (err) {
+    } catch {
+      toast.error("Failed to approve course");
     } finally {
       setProcessing(null);
     }
   };
 
+  // ── Reject ────────────────────────────────────────────────────────────────
   const handleRejectConfirm = async (reason) => {
     const courseId = rejectTarget;
     setRejectTarget(null);
@@ -405,12 +527,14 @@ const AdminApprovalPage = () => {
       await CourseService.rejectCourse(courseId, reason);
       setCourses((prev) => prev.filter((c) => c._id !== courseId));
       if (selectedCourse?._id === courseId) setModalOpen(false);
-    } catch (err) {
+    } catch {
+      toast.error("Failed to reject course");
     } finally {
       setProcessing(null);
     }
   };
 
+  // ── View detail ───────────────────────────────────────────────────────────
   const handleViewDetail = async (course) => {
     setSelectedCourse(course);
     setModalOpen(true);
@@ -448,6 +572,16 @@ const AdminApprovalPage = () => {
         }
       />
 
+      {/* Filter bar — always visible */}
+      <FilterBar
+        total={courses.length}
+        filtered={courses.length}
+        onSearch={handleSearch}
+        onDateChange={handleDateChange}
+        onReset={handleReset}
+        hasFilter={hasFilter}
+      />
+
       {loading ? (
         <div
           style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}
@@ -464,17 +598,18 @@ const AdminApprovalPage = () => {
             description={
               <Space direction="vertical" size={4}>
                 <Text strong style={{ fontSize: 18 }}>
-                  All clear!
+                  {hasFilter ? "No results found" : "All clear!"}
                 </Text>
                 <Text type="secondary">
-                  No courses pending review at the moment.
+                  {hasFilter
+                    ? "Try adjusting your search or date range."
+                    : "No courses pending review at the moment."}
                 </Text>
               </Space>
             }
           />
         </Card>
       ) : (
-        // align="stretch" + display:flex on Col ensures equal-height cards
         <Row gutter={[20, 20]} align="stretch">
           {courses.map((course) => (
             <Col

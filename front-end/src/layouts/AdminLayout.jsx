@@ -24,19 +24,18 @@ import {
   Typography,
 } from "antd";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Outlet,
   ScrollRestoration,
   useLocation,
   useNavigate,
 } from "react-router-dom";
+import NotificationBell from "../components/shared/NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
 import useAuthStore from "../store/slices/authStore";
-import useNotificationStore from "../store/slices/notificationStore";
 import { adminTheme, COLOR } from "../styles/adminTheme";
 import { ROUTES } from "../utils/constants";
-import NotificationBell from "../components/shared/NotificationBell";
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -67,7 +66,11 @@ const NAV_ITEMS = [
     icon: <SafetyCertificateOutlined />,
     label: "Operations Hub",
   },
-  { key: ROUTES.ADMIN_BLOG, icon: <FileTextOutlined />, label: "Blog Management" },
+  {
+    key: ROUTES.ADMIN_BLOG,
+    icon: <FileTextOutlined />,
+    label: "Blog Management",
+  },
   { key: ROUTES.ADMIN_REVIEWS, icon: <StarOutlined />, label: "Reviews" },
   { key: ROUTES.ADMIN_COMMENTS, icon: <MessageOutlined />, label: "Comments" },
   { key: ROUTES.ADMIN_PROFILE, icon: <UserOutlined />, label: "Profile" },
@@ -256,8 +259,13 @@ const AdminLayout = () => {
                     cursor: "pointer",
                     transition: "all 0.2s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(255,255,255,0.1)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(255,255,255,0.05)")
+                  }
                 >
                   <Avatar
                     size={32}
@@ -270,7 +278,8 @@ const AdminLayout = () => {
                       border: "2px solid #00BFA5",
                     }}
                   >
-                    {!user?.avatarURL && initials(user?.fullname || user?.username || "Admin")}
+                    {!user?.avatarURL &&
+                      initials(user?.fullname || user?.username || "Admin")}
                   </Avatar>
                   <div style={{ minWidth: 0 }}>
                     <div
@@ -381,41 +390,43 @@ const AdminLayout = () => {
           }}
         >
           {/* Dashboard Header */}
-          <header 
-            style={{ 
-              height: 56, 
-              background: "white", 
-              borderBottom: "1px solid rgba(0,0,0,0.05)", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "space-between", 
+          <header
+            style={{
+              height: 56,
+              background: "white",
+              borderBottom: "1px solid rgba(0,0,0,0.05)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               padding: "0 24px",
-              flexShrink: 0
+              flexShrink: 0,
             }}
           >
             <div>
-               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#1e293b" }}>
+              {/* <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#1e293b" }}>
                   {location.pathname.split('/').pop()?.replace('-', ' ') || 'Admin Dashboard'}
-               </h2>
+               </h2> */}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-               <NotificationBell />
-               <div style={{ width: 1, height: 24, background: "rgba(0,0,0,0.05)" }} />
-               <button 
-                  onClick={() => navigate(ROUTES.HOME)}
-                  style={{ 
-                    fontSize: 12, 
-                    fontWeight: 700, 
-                    color: "#00BFA5", 
-                    background: "#F0FDFA", 
-                    border: "none", 
-                    padding: "6px 12px", 
-                    borderRadius: 8, 
-                    cursor: "pointer" 
-                  }}
-               >
-                  Public View
-               </button>
+              <NotificationBell />
+              <div
+                style={{ width: 1, height: 24, background: "rgba(0,0,0,0.05)" }}
+              />
+              <button
+                onClick={() => navigate(ROUTES.HOME)}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#00BFA5",
+                  background: "#F0FDFA",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                Public View
+              </button>
             </div>
           </header>
 

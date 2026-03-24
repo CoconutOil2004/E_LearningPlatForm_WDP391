@@ -103,6 +103,18 @@ class BlogService {
     const { data } = await api.delete(`/blogs/admin/${id}`);
     return data;
   }
+
+  /** Admin gets deleted blogs */
+  async getDeletedBlogs(params = {}) {
+    const { data } = await api.get("/blogs/admin/manage", { params: { ...params, deleted: true } });
+    return data;
+  }
+
+  /** Admin restores a soft-deleted blog */
+  async restoreBlog(id) {
+    const { data } = await api.patch(`/blogs/admin/${id}/restore`);
+    return data;
+  }
 }
 
 export default new BlogService();

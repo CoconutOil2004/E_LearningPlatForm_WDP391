@@ -149,18 +149,6 @@ const useCourseStore = create(
         set((state) => ({
           quizScores: { ...state.quizScores, [courseId]: score },
         })),
-
-      // Legacy compat
-      syncProgress: (courseId, completedLessonIds) =>
-        set((state) => ({
-          lessonProgress: {
-            ...state.lessonProgress,
-            [courseId]: {
-              ...(state.lessonProgress[courseId] || { currentFlatIdx: 0 }),
-              completedLessonIds,
-            },
-          },
-        })),
     }),
     {
       name: "course-storage",

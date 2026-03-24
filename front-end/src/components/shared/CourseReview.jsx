@@ -155,7 +155,6 @@ const WriteReviewBox = ({ courseId, onSubmitted }) => {
     setSubmitting(true);
     try {
       await ReviewService.createReview({ courseId, rating, comment });
-      message.success("Review submitted!");
       setRating(0);
       setComment("");
       setOpen(false);

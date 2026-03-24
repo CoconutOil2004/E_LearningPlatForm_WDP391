@@ -15,7 +15,8 @@ let lastHandledPaymentLocation = "";
  */
 const GlobalInitializer = () => {
   const { isAuthenticated, user } = useAuthStore();
-  const { fetchNotifications, setupSocket, disconnectSocket } = useNotificationStore();
+  const { fetchNotifications, setupSocket, disconnectSocket } =
+    useNotificationStore();
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
@@ -39,9 +40,7 @@ const GlobalInitializer = () => {
 
     if (payment === "success") {
       if (!invalidCourseId) {
-        toast.success(
-          "Thanh toán thành công! Bạn có thể bắt đầu học ngay.",
-        );
+        toast.success("Thanh toán thành công! Bạn có thể bắt đầu học ngay.");
         enroll(courseIdParam);
         PaymentService.getEnrolledCourseIds()
           .then(setEnrolledCourseIds)
@@ -49,7 +48,10 @@ const GlobalInitializer = () => {
         navigate(`/courses/${courseIdParam}`, { replace: true });
       } else {
         toast.success("Thanh toán thành công!");
-        navigate({ pathname: location.pathname, search: "" }, { replace: true });
+        navigate(
+          { pathname: location.pathname, search: "" },
+          { replace: true },
+        );
       }
       return;
     }
@@ -76,7 +78,6 @@ const GlobalInitializer = () => {
   useEffect(() => {
     const userId = user?._id || user?.id;
     if (isAuthenticated && userId) {
-      console.log("[GlobalInitializer] Initializing notifications for user:", userId);
       fetchNotifications();
       setupSocket(userId);
     } else {
@@ -85,10 +86,27 @@ const GlobalInitializer = () => {
 
     // Cleanup on unmount (though this stays mounted mostly)
     return () => {
-      // We don't necessarily want to disconnect on every re-render, 
+      // We don't necessarily want to disconnect on every re-render,
       // the store handles the "if exists" check.
     };
-  }, [isAuthenticated, user?._id, fetchNotifications, setupSocket, disconnectSocket]);
+  }, [
+    isAuthenticated,
+    user?._id,
+    fetchNotifications,
+    setupSocket,
+    disconnectSocket,
+  ]);
+
+  // ── Sync enrolled course IDs from server whenever user logs in ──
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setEnrolledCourseIds([]);
+      return;
+    }
+    PaymentService.getEnrolledCourseIds()
+      .then(setEnrolledCourseIds)
+      .catch(() => {});
+  }, [isAuthenticated, user?._id, setEnrolledCourseIds]);
 
   return null; // This component doesn't render anything
 };

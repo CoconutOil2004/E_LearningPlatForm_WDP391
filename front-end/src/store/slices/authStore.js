@@ -14,18 +14,24 @@ const useAuthStore = create(
       role: "guest",
       isAuthenticated: false,
 
-      setCredentials: (user, token) =>
+      setCredentials: (user, token) => {
+        if (token) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("accessToken", token);
+        }
         set({
           user,
           token,
           role: user?.role || "student",
           isAuthenticated: true,
-        }),
+        });
+      },
 
       logout: () => {
         localStorage.removeItem("token");
         localStorage.removeItem("accessToken");
         useCourseStore.getState().setEnrolledCourseIds([]);
+        useCourseStore.getState().setWishlistIds([]);
         set({ user: null, token: null, role: "guest", isAuthenticated: false });
       },
 
