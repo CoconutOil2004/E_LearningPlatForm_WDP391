@@ -8,8 +8,6 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  MessageOutlined,
-  SafetyCertificateOutlined,
   // SettingOutlined,
   StarOutlined,
   TeamOutlined,
@@ -61,18 +59,18 @@ const NAV_ITEMS = [
   // { key: ROUTES.ADMIN_REVENUE, icon: <DollarOutlined />, label: "Revenue" },
   // { key: ROUTES.ADMIN_REPORTS, icon: <FileTextOutlined />, label: "Reports" },
   // { key: ROUTES.ADMIN_SETTINGS, icon: <SettingOutlined />, label: "Settings" },
-  {
-    key: ROUTES.ADMIN_LOGS,
-    icon: <SafetyCertificateOutlined />,
-    label: "Operations Hub",
-  },
+  // {
+  //   key: ROUTES.ADMIN_LOGS,
+  //   icon: <SafetyCertificateOutlined />,
+  //   label: "Operations Hub",
+  // },
   {
     key: ROUTES.ADMIN_BLOG,
     icon: <FileTextOutlined />,
     label: "Blog Management",
   },
   { key: ROUTES.ADMIN_REVIEWS, icon: <StarOutlined />, label: "Reviews" },
-  { key: ROUTES.ADMIN_COMMENTS, icon: <MessageOutlined />, label: "Comments" },
+  // { key: ROUTES.ADMIN_COMMENTS, icon: <MessageOutlined />, label: "Comments" },
   { key: ROUTES.ADMIN_PROFILE, icon: <UserOutlined />, label: "Profile" },
 ];
 

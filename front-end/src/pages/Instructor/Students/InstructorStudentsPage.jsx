@@ -17,16 +17,15 @@ import {
   Space,
   Table,
   Tag,
-  Tooltip,
   Typography,
   message,
 } from "antd";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
+import { INSTRUCTOR_COLORS } from "../../../../src/styles/instructorTheme";
 import { FilterBar } from "../../../components/shared";
 import CourseService from "../../../services/api/CourseService";
 import UserService from "../../../services/api/UserService";
-import { INSTRUCTOR_COLORS } from "../../../../src/styles/instructorTheme";
 import { pageVariants } from "../../../utils/helpers";
 
 const { Text, Title } = Typography;
@@ -46,10 +45,7 @@ const buildFilterConfig = (courseOptions) => [
     width: 220,
     defaultValue: "",
     allowClear: true,
-    options: [
-      { value: "", label: "All Courses" },
-      ...courseOptions,
-    ],
+    options: [{ value: "", label: "All Courses" }, ...courseOptions],
   },
   {
     key: "completed",
@@ -59,9 +55,9 @@ const buildFilterConfig = (courseOptions) => [
     defaultValue: "",
     allowClear: true,
     options: [
-      { value: "",      label: "All Status" },
+      { value: "", label: "All Status" },
       { value: "false", label: "In Progress" },
-      { value: "true",  label: "Completed" },
+      { value: "true", label: "Completed" },
     ],
   },
 ];
@@ -70,19 +66,57 @@ const buildFilterConfig = (courseOptions) => [
 const StatCard = ({ label, value, icon, color, bg }) => (
   <Card
     bordered={false}
-    style={{ borderRadius: 16, border: "1px solid #f0f0f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+    style={{
+      borderRadius: 16,
+      border: "1px solid #f0f0f0",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+    }}
     bodyStyle={{ padding: "20px 24px" }}
   >
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
       <div>
-        <Text style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#9ca3af",
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+          }}
+        >
           {label}
         </Text>
-        <div style={{ fontSize: 28, fontWeight: 900, color: color || "#111827", lineHeight: 1.2, marginTop: 4 }}>
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 900,
+            color: color || "#111827",
+            lineHeight: 1.2,
+            marginTop: 4,
+          }}
+        >
           {typeof value === "number" ? value.toLocaleString() : value}
         </div>
       </div>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color }}>
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          background: bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 20,
+          color,
+        }}
+      >
         {icon}
       </div>
     </div>
@@ -91,20 +125,33 @@ const StatCard = ({ label, value, icon, color, bg }) => (
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 const InstructorStudentsPage = () => {
-  const [students, setStudents]     = useState([]);
-  const [loading, setLoading]       = useState(false);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [courseOptions, setCourseOptions] = useState([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [filterValues, setFilterValues] = useState({ keyword: "", courseId: "", completed: "" });
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+  const [filterValues, setFilterValues] = useState({
+    keyword: "",
+    courseId: "",
+    completed: "",
+  });
 
   // Stats tổng hợp (load lần đầu không filter)
-  const [stats, setStats] = useState({ total: 0, inProgress: 0, completed: 0, courses: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    inProgress: 0,
+    completed: 0,
+    courses: 0,
+  });
 
   // Load course list cho filter dropdown
   useEffect(() => {
     CourseService.getInstructorCourses({ status: "published" })
       .then((list) =>
-        setCourseOptions(list.map((c) => ({ value: c._id, label: c.title })))
+        setCourseOptions(list.map((c) => ({ value: c._id, label: c.title }))),
       )
       .catch(() => {});
   }, []);
@@ -117,8 +164,8 @@ const InstructorStudentsPage = () => {
         const res = await UserService.getInstructorStudents({
           page,
           limit: pagination.pageSize,
-          search:    vals.keyword   || undefined,
-          courseId:  vals.courseId  || undefined,
+          search: vals.keyword || undefined,
+          courseId: vals.courseId || undefined,
           completed: vals.completed !== "" ? vals.completed : undefined,
         });
         const list = res.students ?? [];
@@ -131,14 +178,16 @@ const InstructorStudentsPage = () => {
         // Cập nhật stats khi không có filter (page 1, no filter)
         if (!vals.keyword && !vals.courseId && vals.completed === "") {
           setStats({
-            total:      res.pagination?.total ?? 0,
+            total: res.pagination?.total ?? 0,
             inProgress: list.filter((s) => !s.completed).length,
-            completed:  list.filter((s) => s.completed).length,
-            courses:    new Set(list.map((s) => s.course?._id)).size,
+            completed: list.filter((s) => s.completed).length,
+            courses: new Set(list.map((s) => s.course?._id)).size,
           });
         }
       } catch (err) {
-        message.error(err?.response?.data?.message ?? "Failed to load student list");
+        message.error(
+          err?.response?.data?.message ?? "Failed to load student list",
+        );
       } finally {
         setLoading(false);
       }
@@ -176,18 +225,25 @@ const InstructorStudentsPage = () => {
     {
       title: "Student",
       key: "student",
-      width: 240,
+      width: 350,
       render: (_, record) => (
         <Space size="middle">
           <Avatar
             src={record.student.avatarURL}
             size={42}
-            style={{ background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`, fontWeight: 800 }}
+            style={{
+              background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
+              fontWeight: 800,
+            }}
           >
-            {!record.student.avatarURL && record.student.fullname?.charAt(0).toUpperCase()}
+            {!record.student.avatarURL &&
+              record.student.fullname?.charAt(0).toUpperCase()}
           </Avatar>
           <div>
-            <Text strong style={{ fontSize: 14, display: "block", lineHeight: 1.3 }}>
+            <Text
+              strong
+              style={{ fontSize: 14, display: "block", lineHeight: 1.3 }}
+            >
               {record.student.fullname}
             </Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -207,14 +263,34 @@ const InstructorStudentsPage = () => {
             <img
               src={record.course.thumbnail}
               alt=""
-              style={{ width: 44, height: 30, objectFit: "cover", borderRadius: 6, border: "1px solid #e5e7eb" }}
+              style={{
+                width: 44,
+                height: 30,
+                objectFit: "cover",
+                borderRadius: 6,
+                border: "1px solid #e5e7eb",
+              }}
             />
           ) : (
-            <div style={{ width: 44, height: 30, borderRadius: 6, background: `${INSTRUCTOR_COLORS.primary}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <BookOutlined style={{ color: INSTRUCTOR_COLORS.primary, fontSize: 14 }} />
+            <div
+              style={{
+                width: 44,
+                height: 30,
+                borderRadius: 6,
+                background: `${INSTRUCTOR_COLORS.primary}15`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <BookOutlined
+                style={{ color: INSTRUCTOR_COLORS.primary, fontSize: 14 }}
+              />
             </div>
           )}
-          <Text style={{ fontSize: 13.5, fontWeight: 500 }}>{record.course.title}</Text>
+          <Text style={{ fontSize: 13.5, fontWeight: 500 }}>
+            {record.course.title}
+          </Text>
         </Space>
       ),
     },
@@ -236,11 +312,25 @@ const InstructorStudentsPage = () => {
       width: 180,
       render: (_, record) => (
         <div style={{ paddingRight: 8 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 4,
+            }}
+          >
             <Text type="secondary" style={{ fontSize: 12 }}>
               {record.completed ? "Completed" : "In Progress"}
             </Text>
-            <Text strong style={{ fontSize: 12, color: record.completed ? INSTRUCTOR_COLORS.success : INSTRUCTOR_COLORS.primary }}>
+            <Text
+              strong
+              style={{
+                fontSize: 12,
+                color: record.completed
+                  ? INSTRUCTOR_COLORS.success
+                  : INSTRUCTOR_COLORS.primary,
+              }}
+            >
               {record.progress}%
             </Text>
           </div>
@@ -248,36 +338,40 @@ const InstructorStudentsPage = () => {
             percent={record.progress}
             size="small"
             showInfo={false}
-            strokeColor={record.completed ? INSTRUCTOR_COLORS.success : INSTRUCTOR_COLORS.primary}
+            strokeColor={
+              record.completed
+                ? INSTRUCTOR_COLORS.success
+                : INSTRUCTOR_COLORS.primary
+            }
             trailColor="#F0F5FF"
           />
         </div>
       ),
     },
     // Actions trước Status
-    {
-      title: "Actions",
-      key: "actions",
-      width: 100,
-      render: (_, record) => (
-        <Tooltip title="View progress detail">
-          <Tag
-            icon={<LineChartOutlined />}
-            style={{
-              cursor: "pointer",
-              borderRadius: 8,
-              border: `1px solid ${INSTRUCTOR_COLORS.primary}40`,
-              color: INSTRUCTOR_COLORS.primary,
-              background: `${INSTRUCTOR_COLORS.primary}10`,
-              fontWeight: 600,
-              padding: "3px 10px",
-            }}
-          >
-            Detail
-          </Tag>
-        </Tooltip>
-      ),
-    },
+    // {
+    //   title: "Actions",
+    //   key: "actions",
+    //   width: 100,
+    //   render: (_, record) => (
+    //     <Tooltip title="View progress detail">
+    //       <Tag
+    //         icon={<LineChartOutlined />}
+    //         style={{
+    //           cursor: "pointer",
+    //           borderRadius: 8,
+    //           border: `1px solid ${INSTRUCTOR_COLORS.primary}40`,
+    //           color: INSTRUCTOR_COLORS.primary,
+    //           background: `${INSTRUCTOR_COLORS.primary}10`,
+    //           fontWeight: 600,
+    //           padding: "3px 10px",
+    //         }}
+    //       >
+    //         Detail
+    //       </Tag>
+    //     </Tooltip>
+    //   ),
+    // },
     // Status sau Actions
     {
       title: "Status",
@@ -287,7 +381,13 @@ const InstructorStudentsPage = () => {
         <Tag
           icon={record.completed ? <CheckCircleOutlined /> : null}
           color={record.completed ? "success" : "processing"}
-          style={{ borderRadius: 20, border: "none", fontWeight: 700, fontSize: 12, padding: "3px 12px" }}
+          style={{
+            borderRadius: 20,
+            border: "none",
+            fontWeight: 700,
+            fontSize: 12,
+            padding: "3px 12px",
+          }}
         >
           {record.completed ? "Completed" : "Learning"}
         </Tag>
@@ -296,13 +396,30 @@ const InstructorStudentsPage = () => {
   ];
 
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+          }}
+        >
           <div>
-            <Title level={2} style={{ margin: "0 0 4px", fontWeight: 900, color: INSTRUCTOR_COLORS.primary }}>
+            <Title
+              level={2}
+              style={{
+                margin: "0 0 4px",
+                fontWeight: 900,
+                color: INSTRUCTOR_COLORS.primary,
+              }}
+            >
               Student Management
             </Title>
             <Text type="secondary" style={{ fontSize: 14 }}>
@@ -354,7 +471,11 @@ const InstructorStudentsPage = () => {
         {/* FilterBar — dùng component dùng chung */}
         <Card
           bordered={false}
-          style={{ borderRadius: 16, border: "1px solid #f0f0f0", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+          style={{
+            borderRadius: 16,
+            border: "1px solid #f0f0f0",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+          }}
           bodyStyle={{ padding: "12px 24px" }}
         >
           <FilterBar
@@ -370,7 +491,12 @@ const InstructorStudentsPage = () => {
         {/* Table */}
         <Card
           bordered={false}
-          style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #f0f0f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+          style={{
+            borderRadius: 16,
+            overflow: "hidden",
+            border: "1px solid #f0f0f0",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          }}
           bodyStyle={{ padding: 0 }}
         >
           <ConfigProvider
@@ -392,11 +518,11 @@ const InstructorStudentsPage = () => {
               rowKey="_id"
               scroll={{ x: 900 }}
               pagination={{
-                current:      pagination.current,
-                pageSize:     pagination.pageSize,
-                total:        pagination.total,
-                onChange:     (page) => fetchStudents(page),
-                showTotal:    (total) => `Total ${total} students`,
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                onChange: (page) => fetchStudents(page),
+                showTotal: (total) => `Total ${total} students`,
                 showSizeChanger: false,
                 style: { padding: "12px 24px" },
               }}
@@ -404,14 +530,15 @@ const InstructorStudentsPage = () => {
                 emptyText: (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description={<Text type="secondary">No students found</Text>}
+                    description={
+                      <Text type="secondary">No students found</Text>
+                    }
                   />
                 ),
               }}
             />
           </ConfigProvider>
         </Card>
-
       </div>
     </motion.div>
   );

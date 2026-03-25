@@ -119,7 +119,7 @@ const CourseFormHeader = ({
                 ) : (
                   <SendOutlined />
                 )}
-                Submit
+                Submit for Review
               </button>
             </Tooltip>
           </div>

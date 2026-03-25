@@ -177,12 +177,12 @@ const Header = () => {
 
         {/* Nav links */}
         <nav className="items-center justify-center flex-1 hidden gap-1 md:flex">
-          <Link
+          {/* <Link
             to={ROUTES.ROADMAP}
             className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
           >
             Roadmap
-          </Link>
+          </Link> */}
           <Link
             to={ROUTES.COURSES}
             className="px-4 py-2 text-sm font-semibold transition-colors rounded-xl text-muted hover:text-primary hover:bg-primary/10"
