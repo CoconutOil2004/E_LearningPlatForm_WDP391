@@ -259,7 +259,17 @@ exports.getCoursesByCategory = async (req, res) => {
 ===================================================== */
 exports.createCourse = async (req, res) => {
   try {
-    const { title, description, categoryId, level, thumbnail } = req.body;
+    const {
+      title,
+      description,
+      categoryId,
+      level,
+      thumbnail,
+      price,
+      language,
+      sections: bodySections,
+      submitForReview,
+    } = req.body;
     const instructorId = req.user._id;
 
     const categoryValidation = await validateCategoryId(categoryId);
@@ -275,18 +285,102 @@ exports.createCourse = async (req, res) => {
       description: (description || "").trim(),
       category: categoryValidation.category._id,
       level,
-      price: 0,
-      status: "draft",
+      price: Number(price) >= 0 ? Number(price) : 0,
+      language: language || "English",
+      status:
+        submitForReview === true || submitForReview === "true"
+          ? "pending"
+          : "draft",
       instructorId,
       thumbnail: (thumbnail && String(thumbnail).trim()) || null,
     });
 
+    // ── Process sections (same logic as updateCourse) ──────────────────────
+    if (Array.isArray(bodySections) && bodySections.length > 0) {
+      const newSections = [];
+      let totalDuration = 0;
+
+      for (const sec of bodySections) {
+        const sectionTitle =
+          (sec.title && String(sec.title).trim()) || "Section";
+        const newItems = [];
+        const items = Array.isArray(sec.items) ? sec.items : [];
+        let orderIndex = 0;
+
+        for (const it of items) {
+          orderIndex += 1;
+          const itemTitle =
+            (it.title && String(it.title).trim()) ||
+            (it.itemType === "quiz" ? "Quiz" : "Lesson");
+          const itemType = it.itemType === "quiz" ? "quiz" : "lesson";
+          const itemRef = itemType === "quiz" ? "Quiz" : "Lesson";
+
+          let itemId = null;
+
+          if (itemType === "lesson") {
+            const videoUrl =
+              it.videoUrl && String(it.videoUrl).trim()
+                ? String(it.videoUrl).trim()
+                : "";
+            const lesson = await Lesson.create({
+              title: itemTitle,
+              videoUrl: videoUrl || null,
+              videoPublicId:
+                (it.videoPublicId && String(it.videoPublicId).trim()) || null,
+              duration: Math.max(0, Number(it.duration) || 0),
+              courseId: course._id,
+            });
+            itemId = lesson._id;
+            totalDuration += lesson.duration;
+          } else {
+            const questionList = Array.isArray(it.questions)
+              ? it.questions
+              : [];
+            const quiz = await Quiz.create({
+              title: itemTitle,
+              courseId: course._id,
+              questions: questionList,
+            });
+            itemId = quiz._id;
+          }
+
+          newItems.push({
+            itemType,
+            itemRef,
+            itemId,
+            title: itemTitle,
+            orderIndex,
+          });
+        }
+
+        newSections.push({ title: sectionTitle, items: newItems });
+      }
+
+      course.sections = newSections;
+      course.totalDuration = totalDuration;
+      await course.save();
+
+      // Notify admins if submitted for review
+      if (course.status === "pending") {
+        await notifyAdmins(
+          req.app,
+          {
+            title: "New course pending approval",
+            message: `Instructor ${req.user.fullname || req.user.username} submitted course "${course.title}" for review.`,
+            type: "info",
+            link: "/admin/approval",
+          },
+          req.user._id,
+        );
+      }
+    }
+
     const populated = await Course.findById(course._id)
       .populate("instructorId", "fullname email")
       .populate("category", "name")
+      .populate({ path: "sections.items.itemId" })
       .lean();
 
-    // ✅ FIX: Response bị thiếu hoàn toàn trong bản gốc — đây là nguyên nhân request treo mãi
     return res.status(201).json({
       success: true,
       message: "Course created successfully.",
