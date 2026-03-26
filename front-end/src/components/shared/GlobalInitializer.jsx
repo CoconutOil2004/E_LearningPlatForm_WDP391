@@ -6,7 +6,7 @@ import useAuthStore from "../../store/slices/authStore";
 import useCourseStore from "../../store/slices/courseStore";
 import useNotificationStore from "../../store/slices/notificationStore";
 
-/** Tránh toast/navigation trùng khi Strict Mode remount (ref trong component bị reset). */
+/** Prevent duplicate toasts/navigation during Strict Mode remount. */
 let lastHandledPaymentLocation = "";
 
 /**
@@ -22,7 +22,7 @@ const GlobalInitializer = () => {
   const toast = useToast();
   const { enroll, setEnrolledCourseIds } = useCourseStore();
 
-  /* VNPay (và callback tương tự) redirect về CLIENT_URL/?payment=... — không phải /courses/:id */
+  /* VNPay (and similar callbacks) redirect to CLIENT_URL/?payment=... */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const payment = params.get("payment");
@@ -40,14 +40,14 @@ const GlobalInitializer = () => {
 
     if (payment === "success") {
       if (!invalidCourseId) {
-        toast.success("Thanh toán thành công! Bạn có thể bắt đầu học ngay.");
+        toast.success("Payment successful! You can start learning now.");
         enroll(courseIdParam);
         PaymentService.getEnrolledCourseIds()
           .then(setEnrolledCourseIds)
           .catch(() => {});
         navigate(`/courses/${courseIdParam}`, { replace: true });
       } else {
-        toast.success("Thanh toán thành công!");
+        toast.success("Payment successful!");
         navigate(
           { pathname: location.pathname, search: "" },
           { replace: true },
@@ -57,13 +57,13 @@ const GlobalInitializer = () => {
     }
 
     if (payment === "failed") {
-      toast.error("Thanh toán thất bại. Vui lòng thử lại.");
+      toast.error("Payment failed. Please try again.");
       navigate({ pathname: location.pathname, search: "" }, { replace: true });
       return;
     }
 
     if (payment === "error") {
-      toast.error("Đã xảy ra lỗi trong quá trình thanh toán.");
+      toast.error("An error occurred during the payment process.");
       navigate({ pathname: location.pathname, search: "" }, { replace: true });
     }
   }, [
@@ -84,10 +84,8 @@ const GlobalInitializer = () => {
       disconnectSocket();
     }
 
-    // Cleanup on unmount (though this stays mounted mostly)
     return () => {
-      // We don't necessarily want to disconnect on every re-render,
-      // the store handles the "if exists" check.
+      // Cleanup logic if necessary
     };
   }, [
     isAuthenticated,
@@ -97,7 +95,7 @@ const GlobalInitializer = () => {
     disconnectSocket,
   ]);
 
-  // ── Sync enrolled course IDs from server whenever user logs in ──
+  // Sync enrolled course IDs from server whenever user logs in
   useEffect(() => {
     if (!isAuthenticated) {
       setEnrolledCourseIds([]);
@@ -108,7 +106,7 @@ const GlobalInitializer = () => {
       .catch(() => {});
   }, [isAuthenticated, user?._id, setEnrolledCourseIds]);
 
-  return null; // This component doesn't render anything
+  return null;
 };
 
 export default GlobalInitializer;

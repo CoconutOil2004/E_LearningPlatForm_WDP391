@@ -65,11 +65,14 @@ exports.getMyCourses = async (req, res) => {
           const next = lessonItems.find(
             (item) => !completedIds.has(item.itemId?.toString()),
           );
+          // Nếu tất cả đã xem xong (next = undefined) → isRewatch = true, quay về bài đầu
+          const isRewatch = !next;
           const target = next || lessonItems[0];
           continueLesson = {
             lessonId: target.itemId?.toString(),
             title: target.title,
             order: target.orderIndex,
+            isRewatch,
           };
         }
 

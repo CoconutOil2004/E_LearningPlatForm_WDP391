@@ -80,8 +80,17 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     const video = videoRef.current;
     const onLoaded = () => {
       if (initialWatched > 0 && video.duration > 0) {
-        const restoreTo = Math.min(initialWatched, video.duration * 0.98);
-        video.currentTime = restoreTo;
+        // Nếu đã xem xong (watchedSeconds >= 95% duration) → rewatch từ đầu
+        const isCompleted = initialWatched >= video.duration * 0.95;
+        if (isCompleted) {
+          // Rewatch mode: reset về đầu, cho phép tua tự do toàn bộ video
+          highestWatchedRef.current = video.duration;
+          watchedAtSeekStartRef.current = video.duration;
+          video.currentTime = 0;
+        } else {
+          const restoreTo = Math.min(initialWatched, video.duration * 0.98);
+          video.currentTime = restoreTo;
+        }
       }
     };
     video.addEventListener("loadedmetadata", onLoaded);

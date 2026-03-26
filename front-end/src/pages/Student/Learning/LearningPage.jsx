@@ -4,6 +4,7 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { Button, Typography, message } from "antd";
+import { useToast } from "../../../contexts/ToastContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -85,7 +86,7 @@ const LessonBottomBar = ({
       </Title>
       {!canGoNext && (
         <Text style={{ color: "#F59E0B", fontSize: 12 }}>
-          ⚠️ Xem ít nhất 30% để mở khóa bài tiếp theo
+          ⚠️ Watch at least 30% to unlock the next lesson
         </Text>
       )}
     </div>
@@ -120,7 +121,7 @@ const LessonBottomBar = ({
         }}
       >
         {isCurrentDone
-          ? "Completed ✓"
+          ? "Completed"
           : canGoNext
             ? "Complete & Continue"
             : "Watching..."}
@@ -145,6 +146,7 @@ const LearningPage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const toast = useToast();
 
   const {
     enrolledCourseIds,
@@ -224,7 +226,7 @@ const LearningPage = () => {
         if (cancelled) return;
 
         if (!data) {
-          message.error("Course not found");
+          toast.error("Course not found");
           navigate(ROUTES.MY_COURSES);
           return;
         }
@@ -232,7 +234,7 @@ const LearningPage = () => {
         const hasEnrolled =
           enrolledCourseIds.includes(courseId) || serverEnrolled;
         if (!hasEnrolled) {
-          message.warning("Bạn chưa đăng ký khóa học này.");
+          toast.error("You are not enrolled in this course");
           navigate(`/courses/${courseId}`);
           return;
         }
@@ -262,6 +264,7 @@ const LearningPage = () => {
           const {
             itemsProgress: srvItems,
             progress,
+            completed: srvCompleted,
             continueLesson,
           } = enrollment;
 
@@ -276,11 +279,7 @@ const LearningPage = () => {
           setItemsProgress(srvItems);
           setServerProgress(progress ?? 0);
 
-          // Restore vị trí bài học.
-          // Ưu tiên: server continueLesson (source of truth về thứ tự học)
-          // savedFlatIdx chỉ dùng khi nó trỏ đúng vào lesson mà server đang chỉ định.
-          // Lý do: savedFlatIdx local có thể stale/sai do bug trước, còn
-          // continueLesson được build từ itemsProgress thực tế trên server.
+          // Restore vị trí bài học
           let targetIdx = 0;
 
           if (continueLesson?.lessonId) {
@@ -290,17 +289,26 @@ const LearningPage = () => {
             if (serverIdx >= 0) targetIdx = serverIdx;
           }
 
-          // savedFlatIdx chỉ được dùng nếu nó trỏ đúng bài mà server cho phép (không lock)
+          // Nếu đang rewatch (completed = true, isRewatch = true):
+          // - Ưu tiên savedFlatIdx (người dùng đang xem bài nào đó)
+          // - Không check lock vì tất cả đều "done", mọi bài đều được phép vào
+          const isRewatch = srvCompleted || continueLesson?.isRewatch;
+
           const savedFlatIdx = getCurrentFlatIdx(courseId);
           if (savedFlatIdx > 0 && savedFlatIdx < flat.length) {
-            const savedItem = flat[savedFlatIdx];
-            const savedLessonId = getLessonId(savedItem);
-            const savedStatus = srvItems.find(
-              (i) => i.itemId?.toString() === savedLessonId,
-            )?.status;
-            // Chỉ dùng savedFlatIdx nếu lesson đó không bị lock
-            if (savedStatus && savedStatus !== "lock") {
+            if (isRewatch) {
+              // Rewatch: savedFlatIdx luôn hợp lệ
               targetIdx = savedFlatIdx;
+            } else {
+              // Học bình thường: chỉ dùng savedFlatIdx nếu bài đó không bị lock
+              const savedItem = flat[savedFlatIdx];
+              const savedLessonId = getLessonId(savedItem);
+              const savedStatus = srvItems.find(
+                (i) => i.itemId?.toString() === savedLessonId,
+              )?.status;
+              if (savedStatus && savedStatus !== "lock") {
+                targetIdx = savedFlatIdx;
+              }
             }
           }
 
@@ -315,10 +323,10 @@ const LearningPage = () => {
       } catch (err) {
         if (cancelled) return;
         if (err?.response?.status === 403 || err?.response?.status === 401) {
-          message.warning("Bạn chưa đăng ký khóa học này.");
+          toast.error("You are not enrolled in this course");
           navigate(`/courses/${courseId}`);
         } else {
-          message.error("Không tải được khóa học");
+          toast.error("Failed to load course");
           navigate(ROUTES.MY_COURSES);
         }
       } finally {
@@ -498,10 +506,9 @@ const LearningPage = () => {
   /* ── Next ── */
   const handleNext = useCallback(() => {
     const isDone = getServerItemStatus(activeLessonId) === "done";
-    const isQuiz = activeItem?.itemType === "quiz";
 
     if (activeItem?.itemType === "lesson" && !thresholdReached && !isDone) {
-      message.warning("Xem ít nhất 30% bài học để tiếp tục!");
+      toast.warning("Watch at least 30% of the lesson to continue");
       return;
     }
 
@@ -510,7 +517,16 @@ const LearningPage = () => {
     if (activeIdx < flatItems.length - 1) {
       goTo(activeIdx + 1);
     } else {
-      message.success("🎉 Chúc mừng! Bạn đã hoàn thành toàn bộ khóa học!");
+      // Đang ở bài cuối
+      const allDone = itemsProgress.every(
+        (i) => i.itemType !== "lesson" || i.status === "done",
+      );
+      if (allDone) {
+        toast.success(" Bạn đã hoàn thành khoá học!");
+        navigate(ROUTES.MY_CERTIFICATES);
+      } else {
+        goTo(0);
+      }
     }
   }, [
     activeItem,
@@ -518,6 +534,7 @@ const LearningPage = () => {
     activeIdx,
     flatItems.length,
     thresholdReached,
+    itemsProgress,
     getServerItemStatus,
     markCurrentDone,
     goTo,
@@ -604,12 +621,21 @@ const LearningPage = () => {
             completedCount={completedCount}
             isInstructor={isOwner || isAdmin}
             onGoTo={(idx) => {
-              // Kiểm tra lock từ server trước khi cho phép điều hướng
               const targetItem = flatItems[idx];
               const targetLessonId = getLessonId(targetItem);
               const status = getServerItemStatus(targetLessonId);
-              if (status === "lock") {
-                message.warning("Hoàn thành bài trước để mở khóa bài này!");
+
+              // Khi đang rewatch (đã học xong), tất cả bài đều được vào tự do
+              const isRewatching =
+                itemsProgress.length > 0 &&
+                itemsProgress.every(
+                  (i) => i.itemType !== "lesson" || i.status === "done",
+                );
+
+              if (!isRewatching && status === "lock") {
+                toast.warning(
+                  "Complete the previous lesson to unlock this one",
+                );
                 return;
               }
               goTo(idx);
@@ -656,16 +682,6 @@ const LearningPage = () => {
           )}
         </div>
       </div>
-
-      {/* <ReviewModal
-        open={reviewModalOpen}
-        onCancel={() => setReviewModalOpen(false)}
-        courseId={courseId}
-        onReviewSuccess={() => {
-          // Re-fetch reviews in the sidebar if it's open
-          message.success("Review saved!");
-        }}
-      /> */}
     </div>
   );
 };
