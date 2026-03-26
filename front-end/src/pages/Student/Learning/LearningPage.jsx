@@ -24,7 +24,6 @@ const HEARTBEAT_INTERVAL_MS = 10_000;
 
 const COMPLETION_THRESHOLD = 0.3;
 
-/* ─── LoadingScreen ────────────────────────────────────────────────────────── */
 const LoadingScreen = () => (
   <div
     style={{
@@ -49,7 +48,6 @@ const LoadingScreen = () => (
   </div>
 );
 
-/* ─── LessonBottomBar ──────────────────────────────────────────────────────── */
 const LessonBottomBar = ({
   activeIdx,
   flatItemsLength,
