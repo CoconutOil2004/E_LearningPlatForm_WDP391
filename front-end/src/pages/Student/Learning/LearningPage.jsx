@@ -3,10 +3,10 @@ import {
   LeftOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { Button, Typography, message } from "antd";
-import { useToast } from "../../../contexts/ToastContext";
+import { Button, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useToast } from "../../../contexts/ToastContext";
 
 import LearningHeader from "../../../components/learning/LearningHeader";
 import LearningSidebar from "../../../components/learning/LearningSidebar";
@@ -504,41 +504,42 @@ const LearningPage = () => {
   }, [markCurrentDone]);
 
   /* ── Next ── */
-  const handleNext = useCallback(() => {
-    const isDone = getServerItemStatus(activeLessonId) === "done";
+  const handleNext = useCallback(
+    (isManual = false) => {
+      const isDone = getServerItemStatus(activeLessonId) === "done";
 
-    if (activeItem?.itemType === "lesson" && !thresholdReached && !isDone) {
-      toast.warning("Watch at least 30% of the lesson to continue");
-      return;
-    }
-
-    markCurrentDone();
-
-    if (activeIdx < flatItems.length - 1) {
-      goTo(activeIdx + 1);
-    } else {
-      // Đang ở bài cuối
-      const allDone = itemsProgress.every(
-        (i) => i.itemType !== "lesson" || i.status === "done",
-      );
-      if (allDone) {
-        toast.success(" Bạn đã hoàn thành khoá học!");
-        navigate(ROUTES.MY_CERTIFICATES);
-      } else {
-        goTo(0);
+      if (activeItem?.itemType === "lesson" && !thresholdReached && !isDone) {
+        toast.warning("Watch at least 30% of the lesson to continue");
+        return;
       }
-    }
-  }, [
-    activeItem,
-    activeLessonId,
-    activeIdx,
-    flatItems.length,
-    thresholdReached,
-    itemsProgress,
-    getServerItemStatus,
-    markCurrentDone,
-    goTo,
-  ]);
+
+      markCurrentDone();
+
+      if (activeIdx < flatItems.length - 1) {
+        goTo(activeIdx + 1);
+      } else {
+        // Đang ở bài cuối
+        if (isManual) {
+          // Người dùng chủ động bấm Complete → chuyển sang trang chứng chỉ
+          navigate(ROUTES.MY_CERTIFICATES);
+        } else {
+          // Video/quiz tự kết thúc → chỉ thông báo
+          toast.success("Congratulations! You have completed the course.");
+        }
+      }
+    },
+    [
+      activeItem,
+      activeLessonId,
+      activeIdx,
+      flatItems.length,
+      thresholdReached,
+      getServerItemStatus,
+      markCurrentDone,
+      goTo,
+      navigate, // thêm navigate vào deps
+    ],
+  );
 
   /* ── Derived state ── */
   const lessonItems = flatItems.filter((i) => i.itemType === "lesson");
@@ -677,7 +678,7 @@ const LearningPage = () => {
               canGoNext={canGoNext}
               isCurrentDone={isCurrentDone}
               onPrev={() => goTo(Math.max(0, activeIdx - 1))}
-              onNext={handleNext}
+              onNext={() => handleNext(true)}
             />
           )}
         </div>
