@@ -4,25 +4,22 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { Button, Typography } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useToast } from "../../../contexts/ToastContext";
 
 import LearningHeader from "../../../components/learning/LearningHeader";
 import LearningSidebar from "../../../components/learning/LearningSidebar";
 import QuizPlayer from "../../../components/learning/QuizPlayer";
 import VideoPlayer from "../../../components/learning/VideoPlayer";
-import CourseService from "../../../services/api/CourseService";
-import EnrollmentService from "../../../services/api/EnrollmentService";
+import { useCourseLoader } from "../../../hooks/useCourseLoader";
+import { useHeartbeat } from "../../../hooks/useHeartbeat";
+import { useLessonNavigation } from "../../../hooks/useLessonNavigation";
 import useAuthStore from "../../../store/slices/authStore";
-import useCourseStore from "../../../store/slices/courseStore";
 import { ROUTES } from "../../../utils/constants";
 
 const { Text, Title } = Typography;
 
-const HEARTBEAT_INTERVAL_MS = 10_000;
-
-const COMPLETION_THRESHOLD = 0.3;
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 const LoadingScreen = () => (
   <div
@@ -101,6 +98,7 @@ const LessonBottomBar = ({
           color: "#fff",
         }}
       />
+
       <Button
         type="primary"
         size="large"
@@ -124,6 +122,7 @@ const LessonBottomBar = ({
             ? "Complete & Continue"
             : "Watching..."}
       </Button>
+
       <Button
         icon={<RightOutlined />}
         size="large"
@@ -139,441 +138,85 @@ const LessonBottomBar = ({
   </div>
 );
 
-/* ─── LearningPage ─────────────────────────────────────────────────────────── */
+// ─── LearningPage ─────────────────────────────────────────────────────────────
+
 const LearningPage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const toast = useToast();
 
-  const {
-    enrolledCourseIds,
-    syncFromServerItemsProgress,
-    updateItemsProgress,
-    markLessonComplete,
-    setCurrentLesson,
-    getCurrentFlatIdx,
-    getItemsProgress,
-    getCourseProgress,
-  } = useCourseStore();
-
-  const [course, setCourse] = useState(null);
-  const [flatItems, setFlatItems] = useState([]);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const videoPlayerRef = useRef(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // itemsProgress từ server (source of truth cho lock/unlock)
-  const [itemsProgress, setItemsProgress] = useState([]);
-  // % tiến độ tổng thể từ server
-  const [serverProgress, setServerProgress] = useState(0);
-
-  // canGoNext dựa trên threshold 30% của bài hiện tại
-  const [thresholdReached, setThresholdReached] = useState(false);
-
-  // Ref đến VideoPlayer để lấy watchedSeconds
-  const videoPlayerRef = useRef(null);
-
-  // Heartbeat state
-  const heartbeatTimerRef = useRef(null);
-  const lastHeartbeatWatchedRef = useRef(0); // watchedSeconds đã gửi lần trước
-  const heartbeatInFlightRef = useRef(false);
-
-  // Review state
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-
-  /* ── Helpers ── */
-  const getLessonId = useCallback((item) => {
-    return item?.itemId?._id?.toString() ?? item?.itemId?.toString() ?? null;
-  }, []);
-
-  const getServerItemStatus = useCallback(
-    (lessonId) => {
-      if (!lessonId) return null;
-      const found = itemsProgress.find(
-        (i) => i.itemId?.toString() === lessonId,
-      );
-      return found?.status ?? null;
-    },
-    [itemsProgress],
-  );
-
-  const getServerWatchedSeconds = useCallback(
-    (lessonId) => {
-      if (!lessonId) return 0;
-      const found = itemsProgress.find(
-        (i) => i.itemId?.toString() === lessonId,
-      );
-      return found?.watchedSeconds ?? 0;
-    },
-    [itemsProgress],
-  );
-
-  /* ── Load course + sync enrollment progress ── */
-  useEffect(() => {
-    if (!courseId) return;
-
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        // 1. Load course detail
-        const { course: data, isEnrolled: serverEnrolled } =
-          await CourseService.getCourseDetail(courseId);
-
-        if (cancelled) return;
-
-        if (!data) {
-          toast.error("Course not found");
-          navigate(ROUTES.MY_COURSES);
-          return;
-        }
-
-        const hasEnrolled =
-          enrolledCourseIds.includes(courseId) || serverEnrolled;
-        if (!hasEnrolled) {
-          toast.error("You are not enrolled in this course");
-          navigate(`/courses/${courseId}`);
-          return;
-        }
-
-        setCourse(data);
-
-        // Build flatItems
-        const flat = [];
-        (data.sections ?? []).forEach((sec) => {
-          (sec.items ?? []).forEach((item) => {
-            flat.push({
-              ...item,
-              sectionTitle: sec.title,
-              flatIdx: flat.length,
-            });
-          });
-        });
-        setFlatItems(flat);
-
-        // 2. Lấy itemsProgress từ server để restore tiến độ
-        const enrollment =
-          await EnrollmentService.getEnrollmentByCourse(courseId);
-
-        if (cancelled) return;
-
-        if (enrollment?.itemsProgress?.length) {
-          const {
-            itemsProgress: srvItems,
-            progress,
-            completed: srvCompleted,
-            continueLesson,
-          } = enrollment;
-
-          // Sync vào store
-          syncFromServerItemsProgress(
-            courseId,
-            srvItems,
-            progress,
-            continueLesson?.lessonId,
-          );
-
-          setItemsProgress(srvItems);
-          setServerProgress(progress ?? 0);
-
-          // Restore vị trí bài học
-          let targetIdx = 0;
-
-          if (continueLesson?.lessonId) {
-            const serverIdx = flat.findIndex(
-              (f) => getLessonId(f) === continueLesson.lessonId,
-            );
-            if (serverIdx >= 0) targetIdx = serverIdx;
-          }
-
-          // Nếu đang rewatch (completed = true, isRewatch = true):
-          // - Ưu tiên savedFlatIdx (người dùng đang xem bài nào đó)
-          // - Không check lock vì tất cả đều "done", mọi bài đều được phép vào
-          const isRewatch = srvCompleted || continueLesson?.isRewatch;
-
-          const savedFlatIdx = getCurrentFlatIdx(courseId);
-          if (savedFlatIdx > 0 && savedFlatIdx < flat.length) {
-            if (isRewatch) {
-              // Rewatch: savedFlatIdx luôn hợp lệ
-              targetIdx = savedFlatIdx;
-            } else {
-              // Học bình thường: chỉ dùng savedFlatIdx nếu bài đó không bị lock
-              const savedItem = flat[savedFlatIdx];
-              const savedLessonId = getLessonId(savedItem);
-              const savedStatus = srvItems.find(
-                (i) => i.itemId?.toString() === savedLessonId,
-              )?.status;
-              if (savedStatus && savedStatus !== "lock") {
-                targetIdx = savedFlatIdx;
-              }
-            }
-          }
-
-          setActiveIdx(targetIdx);
-        } else {
-          // Không có itemsProgress từ server, dùng vị trí đã lưu local
-          const savedFlatIdx = getCurrentFlatIdx(courseId);
-          if (savedFlatIdx > 0 && savedFlatIdx < flat.length) {
-            setActiveIdx(savedFlatIdx);
-          }
-        }
-      } catch (err) {
-        if (cancelled) return;
-        if (err?.response?.status === 403 || err?.response?.status === 401) {
-          toast.error("You are not enrolled in this course");
-          navigate(`/courses/${courseId}`);
-        } else {
-          toast.error("Failed to load course");
-          navigate(ROUTES.MY_COURSES);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId]);
-
-  /* ── Reset thresholdReached khi đổi bài ── */
-  const activeItem = flatItems[activeIdx];
-  const activeLessonId = getLessonId(activeItem);
-
-  // watchedSeconds của bài đang active từ server (dùng để init ref heartbeat)
-  const activeItemWatchedSeconds = getServerWatchedSeconds(activeLessonId);
-
-  useEffect(() => {
-    setThresholdReached(false);
-    // FIX: init lastHeartbeatWatchedRef bằng watchedSeconds đã có từ server
-    // Nếu để = 0, heartbeat đầu tiên sẽ tính delta = currentWatched - 0
-    // → gửi lại toàn bộ giây đã xem từ trước lên server → server cộng dồn sai (rewatch bị reset)
-    lastHeartbeatWatchedRef.current = activeItemWatchedSeconds;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeIdx]);
-
-  /* ── Heartbeat timer ── */
-  const sendHeartbeat = useCallback(async () => {
-    if (heartbeatInFlightRef.current) return;
-    if (!activeLessonId || activeItem?.itemType !== "lesson") return;
-
-    const currentWatched = videoPlayerRef.current?.getWatchedSeconds() ?? 0;
-    const delta = currentWatched - lastHeartbeatWatchedRef.current;
-    if (delta <= 0) return;
-
-    heartbeatInFlightRef.current = true;
-    try {
-      const res = await EnrollmentService.heartbeat(
-        courseId,
-        activeLessonId,
-        delta,
-      );
-      lastHeartbeatWatchedRef.current = currentWatched;
-
-      if (res?.itemsProgress) {
-        setItemsProgress(res.itemsProgress);
-        setServerProgress(res.progress ?? serverProgress);
-        updateItemsProgress(
-          courseId,
-          res.itemsProgress,
-          res.progress,
-          res.completed,
-        );
-
-        // Nếu BE đã đánh dấu done → cập nhật local
-        const entry = res.itemsProgress.find(
-          (i) => i.itemId?.toString() === activeLessonId,
-        );
-        if (entry?.status === "done") {
-          markLessonComplete(courseId, activeLessonId);
-          setThresholdReached(true);
-        }
-      }
-    } catch {
-      // Heartbeat không critical, silent fail
-    } finally {
-      heartbeatInFlightRef.current = false;
-    }
-  }, [
-    activeLessonId,
-    activeItem,
-    courseId,
+  const {
+    course,
+    flatItems,
+    activeIdx,
+    setActiveIdx,
+    itemsProgress,
+    setItemsProgress,
     serverProgress,
-    updateItemsProgress,
-    markLessonComplete,
-  ]);
+    setServerProgress,
+    loading,
+  } = useCourseLoader(courseId);
 
-  // Gắn/tháo heartbeat timer
-  useEffect(() => {
-    if (activeItem?.itemType !== "lesson") return;
+  const activeItemForHook = flatItems[activeIdx];
+  const activeItemWatchedSecs =
+    itemsProgress.find(
+      (i) =>
+        i.itemId?.toString() ===
+        (activeItemForHook?.itemId?._id?.toString() ??
+          activeItemForHook?.itemId?.toString()),
+    )?.watchedSeconds ?? 0;
 
-    heartbeatTimerRef.current = setInterval(
-      sendHeartbeat,
-      HEARTBEAT_INTERVAL_MS,
-    );
-    return () => clearInterval(heartbeatTimerRef.current);
-  }, [activeItem, sendHeartbeat]);
-
-  // Flush heartbeat khi unmount (navigate ra ngoài)
-  useEffect(() => {
-    return () => {
-      clearInterval(heartbeatTimerRef.current);
-      // Fire lần cuối khi rời trang
-      if (activeLessonId && activeItem?.itemType === "lesson") {
-        const currentWatched = videoPlayerRef.current?.getWatchedSeconds() ?? 0;
-        const delta = currentWatched - lastHeartbeatWatchedRef.current;
-        if (delta > 0) {
-          EnrollmentService.heartbeat(courseId, activeLessonId, delta).catch(
-            () => {},
-          );
-        }
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLessonId, courseId]);
-
-  /* ── Navigation ── */
-  const goTo = useCallback(
-    (idx) => {
-      const targetItem = flatItems[idx];
-      const targetLessonId = getLessonId(targetItem);
-
-      // Flush heartbeat bài hiện tại trước khi chuyển
-      clearInterval(heartbeatTimerRef.current);
-      sendHeartbeat();
-
-      // Reset threshold ĐỒNG BỘ trong cùng 1 batch render với setActiveIdx
-      // để tránh 1 cycle render bài mới vẫn còn thấy thresholdReached=true từ bài cũ
-      setThresholdReached(false);
-
-      // FIX rewatch: khởi tạo lastHeartbeatWatchedRef bằng watchedSeconds đã có của bài target
-      // Nếu để = 0, heartbeat đầu tiên sẽ gửi delta = currentWatched - 0
-      // → server cộng dồn lại toàn bộ giây đã xem từ trước → dữ liệu sai
-      const targetProgress = itemsProgress.find(
-        (i) => i.itemId?.toString() === targetLessonId,
-      );
-      lastHeartbeatWatchedRef.current = targetProgress?.watchedSeconds ?? 0;
-
-      setActiveIdx(idx);
-      setCurrentLesson(courseId, idx, targetLessonId);
-    },
-    [
-      flatItems,
-      getLessonId,
-      courseId,
-      setCurrentLesson,
-      sendHeartbeat,
-      itemsProgress,
-    ],
-  );
-
-  /* ── Đánh dấu done & persist lên server ── */
-  const markCurrentDone = useCallback(async () => {
-    if (!activeItem) return;
-
-    if (activeItem.itemType === "lesson" && activeLessonId) {
-      // Optimistic local update
-      markLessonComplete(courseId, activeLessonId);
-      setThresholdReached(true);
-
-      try {
-        const res = await EnrollmentService.completeLesson(
-          courseId,
-          activeLessonId,
-        );
-        if (res?.itemsProgress) {
-          setItemsProgress(res.itemsProgress);
-          setServerProgress(res.progress ?? serverProgress);
-          updateItemsProgress(
-            courseId,
-            res.itemsProgress,
-            res.progress,
-            res.completed,
-          );
-        }
-      } catch {
-        // Silent — optimistic đã cập nhật UI
-      }
-    } else if (activeItem.itemType === "quiz") {
-      const quizId =
-        activeItem.itemId?._id?.toString() ?? activeItem.itemId?.toString();
-      if (quizId) {
-        try {
-          const res = await EnrollmentService.markQuizDone(courseId, quizId);
-          if (res?.itemsProgress) {
-            setItemsProgress(res.itemsProgress);
-            updateItemsProgress(courseId, res.itemsProgress);
-          }
-        } catch {
-          // Silent
-        }
-      }
-    }
-  }, [
+  const {
+    thresholdReached,
+    setThresholdReached,
     activeItem,
     activeLessonId,
+    isCurrentDone,
+    canGoNext,
+    goTo,
+    handleSidebarGoTo,
+    handleNext,
+    handlePrev,
+    markCurrentDone,
+    handleVideoReachedThreshold,
+  } = useLessonNavigation({
     courseId,
-    markLessonComplete,
+    flatItems,
+    activeIdx,
+    setActiveIdx,
+    itemsProgress,
     serverProgress,
-    updateItemsProgress,
-  ]);
-
-  /* ── Video threshold callback (30%) ── */
-  const handleVideoReachedThreshold = useCallback(() => {
-    setThresholdReached(true);
-    markCurrentDone();
-  }, [markCurrentDone]);
-
-  /* ── Next ── */
-  const handleNext = useCallback(
-    (isManual = false) => {
-      const isDone = getServerItemStatus(activeLessonId) === "done";
-
-      if (activeItem?.itemType === "lesson" && !thresholdReached && !isDone) {
-        toast.warning("Watch at least 30% of the lesson to continue");
-        return;
-      }
-
-      markCurrentDone();
-
-      if (activeIdx < flatItems.length - 1) {
-        goTo(activeIdx + 1);
-      } else {
-        // Đang ở bài cuối
-        if (isManual) {
-          // Người dùng chủ động bấm Complete → chuyển sang trang chứng chỉ
-          navigate(ROUTES.MY_CERTIFICATES);
-        } else {
-          // Video/quiz tự kết thúc → chỉ thông báo
-          toast.success("Congratulations! You have completed the course.");
-        }
-      }
+    onProgressUpdate: (items, progress, completed) => {
+      setItemsProgress(items);
+      if (progress !== undefined) setServerProgress(progress);
     },
-    [
-      activeItem,
-      activeLessonId,
-      activeIdx,
-      flatItems.length,
-      thresholdReached,
-      getServerItemStatus,
-      markCurrentDone,
-      goTo,
-      navigate, // thêm navigate vào deps
-    ],
-  );
+    onFlushHeartbeat: () => heartbeatFlush(),
+    onTimerClear: () => clearInterval(heartbeatTimer.current),
+  });
 
-  /* ── Derived state ── */
+  // ── 3. Heartbeat tracking ─────────────────────────────────────────────────
+  const { flush: heartbeatFlush, timerRef: heartbeatTimer } = useHeartbeat({
+    courseId,
+    activeLessonId,
+    activeItemType: activeItem?.itemType,
+    activeItemWatchedSecs,
+    videoPlayerRef,
+    serverProgress,
+    onDone: () => setThresholdReached(true),
+    onProgressUpdate: (items, progress, completed) => {
+      setItemsProgress(items);
+      if (progress !== undefined) setServerProgress(progress);
+    },
+  });
+
+  // ── 4. Derived state cho render ───────────────────────────────────────────
   const lessonItems = flatItems.filter((i) => i.itemType === "lesson");
-  const completedLessonIds = useCourseStore
-    .getState()
-    .getCompletedLessonIds(courseId);
   const completedCount = itemsProgress.filter(
     (i) => i.itemType === "lesson" && i.status === "done",
   ).length;
-
   const progressPercent =
     serverProgress > 0
       ? serverProgress
@@ -581,44 +224,21 @@ const LearningPage = () => {
         ? Math.round((completedCount / lessonItems.length) * 100)
         : 0;
 
-  const isCurrentDone =
-    getServerItemStatus(activeLessonId) === "done" ||
-    completedLessonIds.includes(activeLessonId);
+  const sectionsWithIdx = buildSectionsWithIdx(
+    course?.sections ?? [],
+    flatItems,
+  );
 
-  // FIX Bug: bài không có video (videoUrl rỗng) thì không thể xem đủ 30%
-  // → cho phép chuyển bài ngay (không bắt threshold)
-  const activeItemHasVideo = !!activeItem?.itemId?.videoUrl;
-
-  const canGoNext =
-    activeItem?.itemType === "quiz" ||
-    isCurrentDone ||
-    thresholdReached ||
-    (activeItem?.itemType === "lesson" && !activeItemHasVideo);
-
-  // initialWatched để VideoPlayer restore thời điểm xem
-  const initialWatched = getServerWatchedSeconds(activeLessonId);
-
-  // Build sidebar sections
-  const sectionsWithIdx = [];
-  let fc = 0;
-  (course?.sections ?? []).forEach((sec) => {
-    const mapped = (sec.items ?? []).map((item) => ({
-      ...item,
-      flatIdx: fc++,
-    }));
-    if (mapped.length) sectionsWithIdx.push({ ...sec, mappedItems: mapped });
-  });
-
-  if (loading) return <LoadingScreen />;
-  if (!course) return null;
-
-  // Derive owner/admin status
   const userId = user?._id || user?.id;
   const isOwner =
     !!userId &&
     (course?.instructorId?._id?.toString() === userId.toString() ||
       course?.instructorId?.toString() === userId.toString());
   const isAdmin = user?.role === "admin";
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (loading) return <LoadingScreen />;
+  if (!course) return null;
 
   return (
     <div
@@ -638,7 +258,6 @@ const LearningPage = () => {
         totalLessons={lessonItems.length}
         onBack={() => navigate(ROUTES.MY_COURSES)}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
-        // onRate={() => setReviewModalOpen(true)}
       />
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -652,32 +271,7 @@ const LearningPage = () => {
             totalLessons={lessonItems.length}
             completedCount={completedCount}
             isInstructor={isOwner || isAdmin}
-            onGoTo={(idx) => {
-              const targetItem = flatItems[idx];
-              const targetLessonId = getLessonId(targetItem);
-              const status = getServerItemStatus(targetLessonId);
-
-              // Khi đang rewatch (đã học xong), tất cả bài đều được vào tự do
-              const isRewatching =
-                itemsProgress.length > 0 &&
-                itemsProgress.every(
-                  (i) => i.itemType !== "lesson" || i.status === "done",
-                );
-
-              // FIX Bug: status === null (không có trong itemsProgress) cũng là locked
-              // Quiz luôn được phép vào
-              const isEffectivelyLocked =
-                targetItem?.itemType !== "quiz" &&
-                (status === "lock" || status === null);
-
-              if (!isRewatching && isEffectivelyLocked) {
-                toast.warning(
-                  "Complete the previous lesson to unlock this one",
-                );
-                return;
-              }
-              goTo(idx);
-            }}
+            onGoTo={handleSidebarGoTo}
           />
         )}
 
@@ -701,12 +295,13 @@ const LearningPage = () => {
               ref={videoPlayerRef}
               url={activeItem?.itemId?.videoUrl}
               lessonKey={activeIdx}
-              initialWatched={initialWatched}
-              threshold={COMPLETION_THRESHOLD}
+              initialWatched={activeItemWatchedSecs}
+              threshold={0.3}
               onReachedThreshold={handleVideoReachedThreshold}
               onEnded={handleNext}
             />
           )}
+
           {activeItem?.itemType !== "quiz" && (
             <LessonBottomBar
               activeIdx={activeIdx}
@@ -714,7 +309,7 @@ const LearningPage = () => {
               activeItem={activeItem}
               canGoNext={canGoNext}
               isCurrentDone={isCurrentDone}
-              onPrev={() => goTo(Math.max(0, activeIdx - 1))}
+              onPrev={handlePrev}
               onNext={() => handleNext(true)}
             />
           )}
@@ -725,3 +320,18 @@ const LearningPage = () => {
 };
 
 export default LearningPage;
+
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
+
+function buildSectionsWithIdx(sections, flatItems) {
+  let fc = 0;
+  return sections
+    .map((sec) => {
+      const mappedItems = (sec.items ?? []).map((item) => ({
+        ...item,
+        flatIdx: fc++,
+      }));
+      return mappedItems.length ? { ...sec, mappedItems } : null;
+    })
+    .filter(Boolean);
+}
