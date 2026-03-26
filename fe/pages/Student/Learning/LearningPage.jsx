@@ -345,16 +345,9 @@ const LearningPage = () => {
   const activeItem = flatItems[activeIdx];
   const activeLessonId = getLessonId(activeItem);
 
-  // watchedSeconds của bài đang active từ server (dùng để init ref heartbeat)
-  const activeItemWatchedSeconds = getServerWatchedSeconds(activeLessonId);
-
   useEffect(() => {
     setThresholdReached(false);
-    // FIX: init lastHeartbeatWatchedRef bằng watchedSeconds đã có từ server
-    // Nếu để = 0, heartbeat đầu tiên sẽ tính delta = currentWatched - 0
-    // → gửi lại toàn bộ giây đã xem từ trước lên server → server cộng dồn sai (rewatch bị reset)
-    lastHeartbeatWatchedRef.current = activeItemWatchedSeconds;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    lastHeartbeatWatchedRef.current = 0;
   }, [activeIdx]);
 
   /* ── Heartbeat timer ── */
@@ -450,26 +443,12 @@ const LearningPage = () => {
       // Reset threshold ĐỒNG BỘ trong cùng 1 batch render với setActiveIdx
       // để tránh 1 cycle render bài mới vẫn còn thấy thresholdReached=true từ bài cũ
       setThresholdReached(false);
-
-      // FIX rewatch: khởi tạo lastHeartbeatWatchedRef bằng watchedSeconds đã có của bài target
-      // Nếu để = 0, heartbeat đầu tiên sẽ gửi delta = currentWatched - 0
-      // → server cộng dồn lại toàn bộ giây đã xem từ trước → dữ liệu sai
-      const targetProgress = itemsProgress.find(
-        (i) => i.itemId?.toString() === targetLessonId,
-      );
-      lastHeartbeatWatchedRef.current = targetProgress?.watchedSeconds ?? 0;
+      lastHeartbeatWatchedRef.current = 0;
 
       setActiveIdx(idx);
       setCurrentLesson(courseId, idx, targetLessonId);
     },
-    [
-      flatItems,
-      getLessonId,
-      courseId,
-      setCurrentLesson,
-      sendHeartbeat,
-      itemsProgress,
-    ],
+    [flatItems, getLessonId, courseId, setCurrentLesson, sendHeartbeat],
   );
 
   /* ── Đánh dấu done & persist lên server ── */

@@ -224,21 +224,6 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* Anti-cheat hint cố định góc phải */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 52,
-          right: 16,
-          fontSize: 11,
-          color: "rgba(255,255,255,0.3)",
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        🔒 Chỉ tua đến điểm đã xem
-      </div>
-
       {/* Toast cảnh báo khi tua quá — nổi bật trung tâm */}
       {toast && (
         <div

@@ -2,18 +2,14 @@ import {
   CheckCircleFilled,
   LoadingOutlined,
   LockOutlined,
-  MessageOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
-  StarOutlined,
 } from "@ant-design/icons";
 import { Space, Tabs, Tag, Tooltip, Typography } from "antd";
 import { useState } from "react";
 
 import { formatDurationClock } from "../../utils/helpers";
-import CourseReview from "../shared/CourseReview";
-import LessonDiscussion from "./LessonDiscussion";
 
 const { Text } = Typography;
 
@@ -170,7 +166,7 @@ const LearningSidebar = ({
                               Quiz
                             </Tag>
                           )}
-                          {isInProgress && !isDone && watchedPct > 0 && (
+                          {/* {isInProgress && !isDone && watchedPct > 0 && (
                             <Tag
                               color="blue"
                               style={{
@@ -181,7 +177,7 @@ const LearningSidebar = ({
                             >
                               {Math.round(watchedPct * 100)}% watched
                             </Tag>
-                          )}
+                          )} */}
                         </Space>
                       </div>
                     </div>

@@ -66,7 +66,13 @@ exports.completeLesson = async (req, res) => {
         .filter((idx) => idx >= 0);
       const currentIdx = items.indexOf(lessonEntry);
       const nextLessonIdx = lessonIndexes.find((idx) => idx > currentIdx);
-      if (nextLessonIdx !== undefined && items[nextLessonIdx]) {
+      // FIX: chỉ unlock bài tiếp theo nếu nó đang bị "lock"
+      // KHÔNG downgrade "done" → "progress" khi user rewatch bài đã học rồi
+      if (
+        nextLessonIdx !== undefined &&
+        items[nextLessonIdx] &&
+        items[nextLessonIdx].status === "lock"
+      ) {
         items[nextLessonIdx].status = "progress";
       }
     }
@@ -138,23 +144,37 @@ exports.heartbeat = async (req, res) => {
 
     lessonEntry.watchedSeconds = (lessonEntry.watchedSeconds || 0) + delta;
     const duration = lessonEntry.duration || 0;
-    const threshold = duration * LESSON_COMPLETE_THRESHOLD;
 
-    if (
-      lessonEntry.status !== "done" &&
-      lessonEntry.watchedSeconds >= threshold
-    ) {
-      lessonEntry.status = "done";
-      const currentIdx = items.indexOf(lessonEntry);
-      const lessonIndexes = items
-        .map((i, idx) => (i.itemType === "lesson" ? idx : -1))
-        .filter((idx) => idx >= 0);
-      const nextLessonIdx = lessonIndexes.find((idx) => idx > currentIdx);
-      if (nextLessonIdx !== undefined && items[nextLessonIdx]) {
-        items[nextLessonIdx].status = "progress";
+    // FIX Bug: nếu duration = 0 thì threshold = 0, mọi heartbeat đầu tiên (watchedSeconds >= 0)
+    // đều đánh dấu lesson "done" ngay lập tức → unlock toàn bộ bài sau sai.
+    // Khi duration = 0: chỉ lưu watchedSeconds, KHÔNG auto-complete qua heartbeat.
+    // Lesson sẽ được complete thủ công khi user bấm "Complete & Continue".
+    if (duration > 0) {
+      const threshold = duration * LESSON_COMPLETE_THRESHOLD;
+      if (
+        lessonEntry.status !== "done" &&
+        lessonEntry.watchedSeconds >= threshold
+      ) {
+        lessonEntry.status = "done";
+        const currentIdx = items.indexOf(lessonEntry);
+        const lessonIndexes = items
+          .map((i, idx) => (i.itemType === "lesson" ? idx : -1))
+          .filter((idx) => idx >= 0);
+        const nextLessonIdx = lessonIndexes.find((idx) => idx > currentIdx);
+        // FIX: chỉ unlock bài tiếp theo nếu nó đang bị "lock"
+        // KHÔNG downgrade "done" → "progress" khi user rewatch bài đã học rồi
+        if (
+          nextLessonIdx !== undefined &&
+          items[nextLessonIdx] &&
+          items[nextLessonIdx].status === "lock"
+        ) {
+          items[nextLessonIdx].status = "progress";
+        }
+        const totalLessons = items.filter(
+          (i) => i.itemType === "lesson",
+        ).length;
+        recalcProgressFromItemsProgress(enrollment, totalLessons);
       }
-      const totalLessons = items.filter((i) => i.itemType === "lesson").length;
-      recalcProgressFromItemsProgress(enrollment, totalLessons);
     }
 
     await enrollment.save();
