@@ -111,11 +111,21 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Client-side trim
+    const trimmedData = {
+      email: formData.email.trim(),
+      password: formData.password,
+    };
+
+    if (!trimmedData.email || !trimmedData.password) {
+      toast.error("Email and Password are required (no spaces only)!");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await AuthenService.login({
-        email: formData.email,
-        password: formData.password,
-      });
+      const response = await AuthenService.login(trimmedData);
       setCredentials(response.user, response.token);
 
       if (response.user?.mustChangePassword) {
@@ -128,6 +138,17 @@ const SignIn = () => {
         navigate("/instructor/dashboard");
       else navigate("/");
     } catch (error) {
+      // Parse detailed validation errors if they exist (usually 400 Validation Error)
+      const backendErrors = error.response?.data?.errors;
+      if (Array.isArray(backendErrors)) {
+        backendErrors.forEach((errObj) => {
+          const [field, message] = Object.entries(errObj)[0];
+          toast.error(`${field}: ${message}`);
+        });
+      } else {
+        // Fallback to error message from interceptor handle or default
+        toast.error(error.message || "Login failed");
+      }
     } finally {
       setIsLoading(false);
     }

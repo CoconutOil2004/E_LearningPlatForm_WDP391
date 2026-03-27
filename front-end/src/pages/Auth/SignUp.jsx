@@ -41,21 +41,41 @@ const SignUp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 1. Client-side trim
+    const trimmedData = {
+      username: formData.username.trim(),
+      fullname: formData.fullname.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
+    };
+
+    // 2. Client-side basic checks
+    if (!trimmedData.username || !trimmedData.fullname || !trimmedData.email) {
+      toast.error("Please fill in all required fields (no spaces only)!");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Password confirmation does not match!");
       return;
     }
+
     setIsLoading(true);
     try {
-      await AuthenService.register({
-        username: formData.username,
-        fullname: formData.fullname,
-        email: formData.email,
-        password: formData.password,
-      });
-
-      navigate("/verify-otp", { state: { email: formData.email } });
+      await AuthenService.register(trimmedData);
+      navigate("/verify-otp", { state: { email: trimmedData.email } });
     } catch (error) {
+      // Parse detailed validation errors if they exist
+      const backendErrors = error.response?.data?.errors;
+      if (Array.isArray(backendErrors)) {
+        backendErrors.forEach((errObj) => {
+          const [field, message] = Object.entries(errObj)[0];
+          toast.error(`${field}: ${message}`);
+        });
+      } else {
+        toast.error(error.message || "Registration failed");
+      }
     } finally {
       setIsLoading(false);
     }

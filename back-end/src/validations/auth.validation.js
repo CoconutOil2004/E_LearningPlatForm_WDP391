@@ -17,8 +17,8 @@ const registerValidation = [
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
   body('fullname')
     .trim()
-    .optional()
-    .isLength({ max: 50 }).withMessage('Full name must be at most 50 characters')
+    .notEmpty().withMessage('Full name is required')
+    .isLength({ max: 50 }).withMessage('Full name must be at most 50 characters'),
 ];
 
 const loginValidation = [
