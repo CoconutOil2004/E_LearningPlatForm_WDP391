@@ -41,7 +41,7 @@ const NAV_ITEMS = [
   // },
   {
     icon: <TeamOutlined />,
-    label: "Students",
+    label: "Student Management",
     path: ROUTES.INSTRUCTOR_STUDENTS,
   },
   // {

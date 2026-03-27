@@ -45,11 +45,11 @@ const COLLAPSED_W = 64;
 const NAV_ITEMS = [
   { key: ROUTES.ADMIN_DASHBOARD, icon: <HomeOutlined />, label: "Dashboard" },
   { key: ROUTES.ADMIN_USERS, icon: <TeamOutlined />, label: "User Management" },
-  { key: ROUTES.ADMIN_COURSES, icon: <BookOutlined />, label: "My Courses" },
+  { key: ROUTES.ADMIN_COURSES, icon: <BookOutlined />, label: "Course Management" },
   {
     key: ROUTES.ADMIN_APPROVAL,
     icon: <CheckSquareOutlined />,
-    label: "Course Approval",
+    label: "Pending Courses",
   },
   // {
   //   key: ROUTES.ADMIN_ANALYTICS,
@@ -261,8 +261,8 @@ const AdminLayout = () => {
                     (e.currentTarget.style.background = "rgba(255,255,255,0.1)")
                   }
                   onMouseLeave={(e) =>
-                    (e.currentTarget.style.background =
-                      "rgba(255,255,255,0.05)")
+                  (e.currentTarget.style.background =
+                    "rgba(255,255,255,0.05)")
                   }
                 >
                   <Avatar
