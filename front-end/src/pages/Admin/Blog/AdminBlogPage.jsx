@@ -8,6 +8,7 @@ import {
   UndoOutlined,
   FileTextOutlined,
   ExclamationCircleOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -26,6 +27,7 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
+import { motion, AnimatePresence } from "framer-motion";
 import BlogService from "../../../services/api/BlogService";
 import CourseService from "../../../services/api/CourseService";
 import { COLOR } from "../../../styles/adminTheme";
@@ -36,24 +38,39 @@ import { FilterBar } from "../../../components/shared";
 const { Title, Text } = Typography;
 
 const C = {
-  primary: COLOR.ocean,
-  primaryBg: "rgba(0,119,182,0.08)",
-  border: "#f1f0fe",
-  text: "#111827",
-  textSub: "#6b7280",
+  primary: "var(--color-primary)",
+  primaryBg: "var(--color-primary-bg)",
+  secondary: "var(--color-secondary)",
+  secondaryBg: "var(--color-secondary-bg)",
+  danger: "var(--color-danger)",
+  warning: "var(--color-warning)",
+  text: "var(--text-heading)",
+  textSub: "var(--text-muted)",
+  border: "var(--border-default)",
+  glass: "var(--glass-bg)",
+  glassBorder: "var(--glass-border)",
 };
 
 const cardStyle = {
-  borderRadius: 16,
+  borderRadius: "var(--radius-lg)",
+  border: `1px solid ${C.glassBorder}`,
+  background: C.glass,
+  backdropFilter: "blur(20px)",
+  boxShadow: "var(--shadow-md)",
+};
+
+const softCardStyle = {
+  borderRadius: "var(--radius-lg)",
   border: `1px solid ${C.border}`,
-  boxShadow: "0 2px 12px rgba(0,119,182,0.06)",
+  background: "#fff",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
 };
 
 const STATUS_CONFIG = {
-  draft:    { label: "Draft",    color: "#6b7280", bg: "#f3f4f6", icon: <FileTextOutlined /> },
-  pending:  { label: "Pending",  color: "#d97706", bg: "#fef3c7", icon: <ClockCircleOutlined /> },
-  approved: { label: "Approved", color: "#059669", bg: "#d1fae5", icon: <CheckCircleOutlined /> },
-  rejected: { label: "Rejected", color: "#dc2626", bg: "#fee2e2", icon: <CloseCircleOutlined /> },
+  draft:    { label: "Draft",    color: "var(--text-muted)", bg: "var(--bg-subtle)", icon: <FileTextOutlined /> },
+  pending:  { label: "Pending",  color: "var(--color-warning)", bg: "rgba(245, 158, 11, 0.1)", icon: <ClockCircleOutlined /> },
+  approved: { label: "Published", color: "var(--color-success)", bg: "var(--color-secondary-bg)", icon: <CheckCircleOutlined /> },
+  rejected: { label: "Rejected", color: "var(--color-danger)", bg: "rgba(239, 68, 68, 0.1)", icon: <CloseCircleOutlined /> },
 };
 
 const TABS = [
@@ -260,37 +277,77 @@ const AdminBlogPage = () => {
     {
       title: "Content",
       key: "content",
+      width: 300,
+      ellipsis: true,
       render: (_, r) => (
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Avatar shape="square" size={48} src={r.thumbnail} icon={<FileTextOutlined />} />
-          <div style={{ minWidth: 0 }}>
-            <Text strong style={{ display: "block", color: COLOR.ocean }} ellipsis>{r.title}</Text>
-            <Text type="secondary" style={{ fontSize: 12 }} ellipsis>{r.summary}</Text>
+        <motion.div 
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          style={{ display: "flex", gap: 16, alignItems: "center" }}
+        >
+          <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
+            <img 
+              src={r.thumbnail} 
+              alt="thumb" 
+              style={{ 
+                width: "100%", 
+                height: "100%", 
+                objectFit: "cover", 
+                borderRadius: "var(--radius-md)",
+                boxShadow: "0 4px 8px rgba(0,0,0,0.1)"
+              }} 
+            />
           </div>
-        </div>
+          <div style={{ minWidth: 0 }}>
+            <Text 
+              strong 
+              style={{ 
+                display: "block", 
+                color: "var(--color-primary)", 
+                fontSize: 15,
+                lineHeight: 1.3,
+                marginBottom: 4
+              }} 
+              ellipsis
+            >
+              {r.title}
+            </Text>
+            <Text 
+              type="secondary" 
+              style={{ fontSize: 13, color: "var(--text-muted)" }} 
+              ellipsis={{ rows: 1 }}
+            >
+              {r.summary}
+            </Text>
+          </div>
+        </motion.div>
       ),
     },
     {
       title: "Author",
       key: "author",
-      width: 180,
+      width: 140,
       render: (_, r) => (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar src={r.author?.avatarURL}
-            style={{ background: `linear-gradient(135deg, ${COLOR.ocean}, ${COLOR.teal})`, fontWeight: 900 }}>
+            style={{ 
+              flexShrink: 0,
+              background: `linear-gradient(135deg, var(--color-primary), var(--color-secondary))`, 
+              fontWeight: 900 
+            }}>
             {r.author?.fullname?.[0]?.toUpperCase()}
           </Avatar>
-          <Space direction="vertical" size={0}>
-            <Text strong style={{ color: COLOR.ocean, fontSize: 13 }}>{r.author?.fullname || "User"}</Text>
-            <Text type="secondary" style={{ fontSize: 11 }}>{r.author?.email}</Text>
-          </Space>
+          <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <Text strong style={{ color: "var(--color-primary)", fontSize: 13, whiteSpace: "nowrap" }}>{r.author?.fullname || "User"}</Text>
+            <Text type="secondary" style={{ fontSize: 11, whiteSpace: "nowrap" }} ellipsis>{r.author?.email}</Text>
+          </div>
         </div>
       ),
     },
     {
       title: "Category",
       key: "category",
-      width: 130,
+      width: 100,
       render: (_, r) => r.category?.name
         ? <Tag style={{ borderRadius: 12, border: "none", background: C.primaryBg, color: C.primary, fontWeight: 600 }}>{r.category.name}</Tag>
         : <Text type="secondary">—</Text>,
@@ -298,37 +355,76 @@ const AdminBlogPage = () => {
     {
       title: "Date",
       dataIndex: "createdAt",
-      width: 110,
-      render: (d) => <Text type="secondary" style={{ fontSize: 13 }}>{dayjs(d).format("DD/MM/YYYY")}</Text>,
+      width: 100,
+      render: (d) => <Text type="secondary" style={{ fontSize: 13, whiteSpace: "nowrap" }}>{dayjs(d).format("DD/MM/YYYY")}</Text>,
     },
     // Actions trước Status
     {
       title: "Actions",
       key: "actions",
-      width: 200,
+      width: 150,
       render: (_, r) => (
-        <Space>
-          <Tooltip title="View"><Button type="text" icon={<EyeOutlined />} onClick={() => setPreviewBlog(r)} /></Tooltip>
+        <Space size="small">
+          <Tooltip title="View">
+            <Button 
+              shape="circle" 
+              icon={<EyeOutlined />} 
+              onClick={() => setPreviewBlog(r)} 
+              style={{ border: "none", background: "var(--bg-subtle)" }}
+            />
+          </Tooltip>
+          
           {r.status === "pending" && (
             <>
               <Tooltip title="Approve">
-                <Button type="text" icon={<CheckCircleOutlined />} style={{ color: COLOR.green }} onClick={() => handleApprove(r._id)} />
+                <Button 
+                  shape="circle" 
+                  icon={<CheckCircleOutlined />} 
+                  style={{ color: "#fff", background: "var(--color-success)", border: "none" }} 
+                  onClick={() => handleApprove(r._id)} 
+                />
               </Tooltip>
               <Tooltip title="Reject">
-                <Button type="text" icon={<CloseCircleOutlined />} style={{ color: COLOR.error }} onClick={() => setRejectBlog(r)} />
+                <Button 
+                  shape="circle" 
+                  icon={<CloseCircleOutlined />} 
+                  style={{ color: "#fff", background: "var(--color-danger)", border: "none" }} 
+                  onClick={() => setRejectBlog(r)} 
+                />
               </Tooltip>
             </>
           )}
+
           {r.deleted ? (
-            <Tooltip title="Restore (make visible)">
-              <Button type="text" icon={<UndoOutlined />} style={{ color: "#059669" }} onClick={() => handleRestore(r._id)} />
+            <Tooltip title="Restore">
+              <Button 
+                shape="circle" 
+                icon={<UndoOutlined />} 
+                style={{ color: "#fff", background: "var(--color-secondary)", border: "none" }} 
+                onClick={() => handleRestore(r._id)} 
+              />
             </Tooltip>
           ) : (
-            <Tooltip title="Hide from public">
-              <Button type="text" icon={<EyeInvisibleOutlined />} style={{ color: "#d97706" }} onClick={() => handleHide(r._id)} />
+            <Tooltip title="Hide">
+              <Button 
+                shape="circle" 
+                icon={<EyeInvisibleOutlined />} 
+                style={{ color: "#fff", background: "var(--color-warning)", border: "none" }} 
+                onClick={() => handleHide(r._id)} 
+              />
             </Tooltip>
           )}
-          <Tooltip title="Delete"><Button type="text" icon={<DeleteOutlined />} danger onClick={() => handleDelete(r._id)} /></Tooltip>
+
+          <Tooltip title="Delete">
+            <Button 
+              shape="circle" 
+              icon={<DeleteOutlined />} 
+              danger 
+              type="primary"
+              ghost
+              onClick={() => handleDelete(r._id)} 
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -336,20 +432,41 @@ const AdminBlogPage = () => {
     {
       title: "Status",
       key: "status",
-      width: 140,
+      width: 110,
       render: (_, r) => {
         const st = STATUS_CONFIG[r.status] || STATUS_CONFIG.draft;
         return (
-          <Space direction="vertical" size={4}>
-            <Tag style={{ borderRadius: 12, border: "none", background: st.bg, color: st.color, fontWeight: 700, padding: "3px 10px" }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Tag 
+              style={{ 
+                borderRadius: 20, 
+                border: "none", 
+                background: st.bg, 
+                color: st.color, 
+                fontWeight: 600, 
+                padding: "4px 12px",
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
               {st.icon} {st.label}
             </Tag>
             {r.deleted && (
-              <Tag style={{ borderRadius: 12, border: "none", background: "#fef3c7", color: "#d97706", fontWeight: 700, padding: "3px 10px" }}>
+              <Tag 
+                style={{ 
+                  borderRadius: 20, 
+                  border: "none", 
+                  background: "rgba(245, 158, 11, 0.1)", 
+                  color: "var(--color-warning)", 
+                  fontWeight: 600, 
+                  padding: "4px 12px" 
+                }}
+              >
                 <EyeInvisibleOutlined /> Hidden
               </Tag>
             )}
-          </Space>
+          </div>
         );
       },
     },
@@ -360,46 +477,72 @@ const AdminBlogPage = () => {
       <PageHeader title="Blog Management" subtitle="Review and manage platform articles" />
 
       {/* FilterBar dùng component dùng chung — đặt dưới header */}
-      <Card bordered={false} style={{ ...cardStyle, marginBottom: 16 }} bodyStyle={{ padding: "12px 24px" }}>
-        <FilterBar
-          filters={filterConfig}
-          values={filterValues}
-          onChange={handleFilterChange}
-          onSearch={handleSearch}
-          onReset={handleReset}
-          theme="blue"
-        />
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card bordered={false} style={{ ...cardStyle, marginBottom: 20 }} bodyStyle={{ padding: "16px 28px" }}>
+          <FilterBar
+            filters={filterConfig}
+            values={filterValues}
+            onChange={handleFilterChange}
+            onSearch={handleSearch}
+            onReset={handleReset}
+            theme="blue"
+          />
+        </Card>
+      </motion.div>
 
-      <Card bordered={false} style={cardStyle} bodyStyle={{ padding: 0 }}>
-        {/* Status tabs */}
-        <div style={{ padding: "14px 24px", borderBottom: `1px solid ${COLOR.gray100}`, display: "flex", gap: 8 }}>
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => { setActiveTab(t.key); setPagination((p) => ({ ...p, current: 1 })); }}
-              style={{
-                padding: "6px 20px", borderRadius: 20, fontSize: 13, fontWeight: 700,
-                border: "none", cursor: "pointer",
-                background: activeTab === t.key ? COLOR.ocean : "transparent",
-                color: activeTab === t.key ? "#fff" : COLOR.gray600,
-                transition: "all 0.2s",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+      >
+        <Card bordered={false} style={softCardStyle} bodyStyle={{ padding: 0 }}>
+          {/* Status tabs */}
+          <div style={{ padding: "16px 24px", borderBottom: `1px solid var(--border-default)`, display: "flex", gap: 12, background: 'rgba(0,0,0,0.01)' }}>
+            {TABS.map((t) => (
+              <motion.button
+                key={t.key}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setActiveTab(t.key); setPagination((p) => ({ ...p, current: 1 })); }}
+                style={{
+                  padding: "8px 24px", 
+                  borderRadius: "var(--radius-full)", 
+                  fontSize: 14, 
+                  fontWeight: 600,
+                  border: "none", 
+                  cursor: "pointer",
+                  background: activeTab === t.key ? "var(--color-primary)" : "transparent",
+                  color: activeTab === t.key ? "#fff" : "var(--text-muted)",
+                  boxShadow: activeTab === t.key ? "var(--shadow-primary)" : "none",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              >
+                {t.label}
+              </motion.button>
+            ))}
+          </div>
 
-        <Table
-          columns={columns}
-          dataSource={blogs}
-          rowKey="_id"
-          loading={loading}
-          pagination={{ ...pagination, onChange: (page) => setPagination((p) => ({ ...p, current: page })) }}
-          locale={{ emptyText: <Empty description="No blogs found" /> }}
-        />
-      </Card>
+          <Table
+            className="premium-table"
+            columns={columns}
+            dataSource={blogs}
+            rowKey="_id"
+            loading={loading}
+            // Removed scroll.x to prevent horizontal scrollbar
+            pagination={{ 
+              ...pagination, 
+              onChange: (page) => setPagination((p) => ({ ...p, current: page })),
+              showSizeChanger: false,
+              style: { padding: '16px 24px' }
+            }}
+            locale={{ emptyText: <Empty description="No blogs found" /> }}
+          />
+        </Card>
+      </motion.div>
 
       <BlogPreviewModal blog={previewBlog} open={!!previewBlog} onClose={() => setPreviewBlog(null)} />
       <RejectModal blog={rejectBlog} open={!!rejectBlog} onClose={() => setRejectBlog(null)} onConfirm={handleReject} />
