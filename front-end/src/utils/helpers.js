@@ -105,3 +105,5 @@ export const formatTimeAgo = (date) => {
 
   return past.toLocaleDateString("en-US");
 };
+
+export const contentRegex = /^(?=.*[a-zA-ZÀ-ỹ0-9])[a-zA-ZÀ-ỹ0-9\s,.\-!?( )]+$/;

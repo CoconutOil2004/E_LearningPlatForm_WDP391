@@ -70,8 +70,8 @@ const CourseCurriculumSection = ({
             Curriculum <span className="text-red-500">*</span>
           </h2>
           <p className="m-0 mt-1 text-xs text-gray-400">
-            At least 1 section · Each section must have at least 1 lesson or
-            quiz
+            At least 1 section · Each section must have at least 1 lesson (with
+            video)
           </p>
         </div>
         {!isLocked && (

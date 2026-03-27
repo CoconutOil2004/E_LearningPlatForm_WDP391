@@ -6,7 +6,6 @@ import {
   EditOutlined,
   EyeOutlined,
   PlusOutlined,
-  SendOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import {
@@ -163,7 +162,6 @@ const InstructorCoursesPage = () => {
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submittingId, setSubmittingId] = useState(null);
 
   const [filterValues, setFilterValues] = useState({
     keyword: "",
@@ -260,23 +258,6 @@ const InstructorCoursesPage = () => {
     }
   };
 
-  const handleSubmit = async (courseId) => {
-    setSubmittingId(courseId);
-    try {
-      await CourseService.submitCourse(courseId);
-      setCourses((prev) =>
-        prev.map((c) => (c._id === courseId ? { ...c, status: "pending" } : c)),
-      );
-      if (selectedCourse?._id === courseId)
-        setSelectedCourse((p) => (p ? { ...p, status: "pending" } : p));
-      loadStats();
-    } catch {
-      /* silent */
-    } finally {
-      setSubmittingId(null);
-    }
-  };
-
   const statCards = [
     {
       label: "Total Courses",
@@ -359,7 +340,6 @@ const InstructorCoursesPage = () => {
       width: 160,
       render: (_, record) => {
         const canEdit = ["draft", "rejected"].includes(record.status);
-        const canSubmit = ["draft", "rejected"].includes(record.status);
         const isPending = record.status === "pending";
         return (
           <Space>
@@ -382,24 +362,6 @@ const InstructorCoursesPage = () => {
                   }
                 />
               </Tooltip>
-            )}
-            {canSubmit && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<SendOutlined />}
-                loading={submittingId === record._id}
-                onClick={() => handleSubmit(record._id)}
-                style={{
-                  background: `linear-gradient(135deg, ${INSTRUCTOR_COLORS.primary}, ${INSTRUCTOR_COLORS.primaryDark})`,
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                Submit
-              </Button>
             )}
           </Space>
         );

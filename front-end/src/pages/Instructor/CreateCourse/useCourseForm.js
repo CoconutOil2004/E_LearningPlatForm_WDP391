@@ -16,7 +16,11 @@ export const validateCurriculum = (sections) => {
       return `Section ${si + 1}: Please enter a section title.`;
     }
     if (!sec.items || sec.items.length === 0) {
-      return `"${secLabel}": Each section must have at least 1 lesson or quiz.`;
+      return `"${secLabel}": Each section must have at least 1 lesson (with video).`;
+    }
+    const hasLesson = sec.items.some((it) => it.itemType === "lesson");
+    if (!hasLesson) {
+      return `"${secLabel}": Each section must have at least 1 lesson with video. Quizzes alone are not enough.`;
     }
     for (let li = 0; li < sec.items.length; li++) {
       const item = sec.items[li];
@@ -138,7 +142,14 @@ const useCourseForm = () => {
             videoUrl: it.itemId?.videoUrl ?? "",
             videoPublicId: it.itemId?.videoPublicId ?? "",
             duration: it.itemId?.duration ?? 0,
-            questions: it.itemId?.questions ?? [],
+            questions: (it.itemId?.questions ?? []).map((q) => ({
+              ...q,
+              // BE lưu correctAnswer là String ("0","1",...), FE so sánh bằng Number index
+              correctAnswer:
+                q.correctAnswer !== undefined && q.correctAnswer !== null
+                  ? Number(q.correctAnswer)
+                  : undefined,
+            })),
           })),
         }));
         setSections(rebuilt);
