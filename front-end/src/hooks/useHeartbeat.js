@@ -2,14 +2,12 @@ import { useCallback, useEffect, useRef } from "react";
 import EnrollmentService from "../services/api/EnrollmentService";
 import useCourseStore from "../store/slices/courseStore";
 
-const HEARTBEAT_INTERVAL_MS = 10_000;
-
 /**
  * useHeartbeat
  *
  * Chịu trách nhiệm:
- *  1. Gửi watchedSecondsDelta lên server mỗi 10s
- *  2. Flush heartbeat cuối khi unmount hoặc chuyển bài
+ *  1. Flush watchedSecondsDelta lên server theo sự kiện (complete/chuyển bài)
+ *  2. Flush heartbeat cuối khi unmount
  *  3. Cập nhật itemsProgress + markLessonComplete khi server báo "done"
  *
  * @param {object} params
@@ -34,9 +32,9 @@ export function useHeartbeat({
 }) {
   const { updateItemsProgress, markLessonComplete } = useCourseStore();
 
-  const timerRef = useRef(null);
   const lastSentRef = useRef(activeItemWatchedSecs);
   const inFlightRef = useRef(false);
+  const inFlightPromiseRef = useRef(null);
 
   // Sync lastSentRef khi chuyển bài để tránh gửi delta sai
   useEffect(() => {
@@ -44,7 +42,10 @@ export function useHeartbeat({
   }, [activeLessonId, activeItemWatchedSecs]);
 
   const flush = useCallback(async () => {
-    if (inFlightRef.current) return;
+    if (inFlightRef.current) {
+      await inFlightPromiseRef.current;
+      return;
+    }
     if (!activeLessonId || activeItemType !== "lesson") return;
 
     const currentWatched = videoPlayerRef.current?.getWatchedSeconds() ?? 0;
@@ -52,41 +53,41 @@ export function useHeartbeat({
     if (delta <= 0) return;
 
     inFlightRef.current = true;
-    try {
-      const res = await EnrollmentService.heartbeat(
-        courseId,
-        activeLessonId,
-        delta,
-      );
-      lastSentRef.current = currentWatched;
+    const reqPromise = EnrollmentService.heartbeat(courseId, activeLessonId, delta)
+      .then((res) => {
+        lastSentRef.current = currentWatched;
 
-      if (!res?.itemsProgress) return;
+        if (!res?.itemsProgress) return;
 
-      onProgressUpdate(
-        res.itemsProgress,
-        res.progress ?? serverProgress,
-        res.completed,
-      );
-      updateItemsProgress(
-        courseId,
-        res.itemsProgress,
-        res.progress,
-        res.completed,
-      );
+        onProgressUpdate(
+          res.itemsProgress,
+          res.progress ?? serverProgress,
+          res.completed,
+        );
+        updateItemsProgress(
+          courseId,
+          res.itemsProgress,
+          res.progress,
+          res.completed,
+        );
 
-      const isDone =
-        res.itemsProgress.find((i) => i.itemId?.toString() === activeLessonId)
-          ?.status === "done";
+        // Dùng flag lessonJustCompleted từ BE (chính xác hơn tự suy từ status)
+        // vì status "done" có thể đã tồn tại từ trước, không phải do heartbeat này
+        if (res.lessonJustCompleted) {
+          markLessonComplete(courseId, activeLessonId);
+          onDone();
+        }
+      })
+      .catch(() => {
+        // Heartbeat không critical → silent fail
+      })
+      .finally(() => {
+        inFlightRef.current = false;
+        inFlightPromiseRef.current = null;
+      });
 
-      if (isDone) {
-        markLessonComplete(courseId, activeLessonId);
-        onDone();
-      }
-    } catch {
-      // Heartbeat không critical → silent fail
-    } finally {
-      inFlightRef.current = false;
-    }
+    inFlightPromiseRef.current = reqPromise;
+    await reqPromise;
   }, [
     activeLessonId,
     activeItemType,
@@ -99,19 +100,12 @@ export function useHeartbeat({
     markLessonComplete,
   ]);
 
-  // Bật/tắt interval khi đổi bài hoặc loại item
-  useEffect(() => {
-    if (activeItemType !== "lesson") return;
-    timerRef.current = setInterval(flush, HEARTBEAT_INTERVAL_MS);
-    return () => clearInterval(timerRef.current);
-  }, [activeItemType, flush]);
-
   // Flush khi unmount (rời trang)
   useEffect(() => {
+    const videoPlayer = videoPlayerRef.current;
     return () => {
-      clearInterval(timerRef.current);
       if (activeLessonId && activeItemType === "lesson") {
-        const currentWatched = videoPlayerRef.current?.getWatchedSeconds() ?? 0;
+        const currentWatched = videoPlayer?.getWatchedSeconds() ?? 0;
         const delta = currentWatched - lastSentRef.current;
         if (delta > 0) {
           EnrollmentService.heartbeat(courseId, activeLessonId, delta).catch(
@@ -123,5 +117,5 @@ export function useHeartbeat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLessonId, courseId]);
 
-  return { flush, timerRef };
+  return { flush };
 }

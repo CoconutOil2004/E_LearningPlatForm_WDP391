@@ -59,15 +59,34 @@ exports.completeLesson = async (req, res) => {
     const lessonEntry = items.find(
       (i) => i.itemType === "lesson" && i.itemId?.toString() === lidStr,
     );
-    if (lessonEntry) {
+
+    if (!lessonEntry) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Lesson not found in progress" });
+    }
+
+    // Anti-cheat: kiểm tra watchedSeconds >= 30% duration trước khi cho phép complete.
+    // Bỏ qua check khi duration = 0 (video chưa có duration → cho phép complete thủ công).
+    const duration = lessonEntry.duration || 0;
+    if (duration > 0) {
+      const threshold = duration * LESSON_COMPLETE_THRESHOLD;
+      if ((lessonEntry.watchedSeconds || 0) < threshold) {
+        return res.status(403).json({
+          success: false,
+          message: `Watch at least 30% of the lesson before completing (${Math.ceil(threshold)}s required, ${Math.floor(lessonEntry.watchedSeconds || 0)}s watched).`,
+        });
+      }
+    }
+
+    if (lessonEntry.status !== "done") {
       lessonEntry.status = "done";
       const lessonIndexes = items
         .map((i, idx) => (i.itemType === "lesson" ? idx : -1))
         .filter((idx) => idx >= 0);
       const currentIdx = items.indexOf(lessonEntry);
       const nextLessonIdx = lessonIndexes.find((idx) => idx > currentIdx);
-      // FIX: chỉ unlock bài tiếp theo nếu nó đang bị "lock"
-      // KHÔNG downgrade "done" → "progress" khi user rewatch bài đã học rồi
+      // Chỉ unlock bài tiếp theo nếu nó đang bị "lock"
       if (
         nextLessonIdx !== undefined &&
         items[nextLessonIdx] &&
@@ -142,6 +161,8 @@ exports.heartbeat = async (req, res) => {
       });
     }
 
+    let lessonJustCompleted = false;
+
     lessonEntry.watchedSeconds = (lessonEntry.watchedSeconds || 0) + delta;
     const duration = lessonEntry.duration || 0;
 
@@ -156,6 +177,7 @@ exports.heartbeat = async (req, res) => {
         lessonEntry.watchedSeconds >= threshold
       ) {
         lessonEntry.status = "done";
+        lessonJustCompleted = true;
         const currentIdx = items.indexOf(lessonEntry);
         const lessonIndexes = items
           .map((i, idx) => (i.itemType === "lesson" ? idx : -1))
@@ -184,6 +206,7 @@ exports.heartbeat = async (req, res) => {
       progress: enrollment.progress,
       completed: enrollment.completed,
       itemsProgress: enrollment.itemsProgress,
+      lessonJustCompleted,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

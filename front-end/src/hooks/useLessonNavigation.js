@@ -1,19 +1,11 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../contexts/ToastContext";
 import EnrollmentService from "../services/api/EnrollmentService";
 import useCourseStore from "../store/slices/courseStore";
 import { ROUTES } from "../utils/constants";
 
-/**
- * useLessonNavigation
- *
- * Chịu trách nhiệm:
- *  1. Điều hướng giữa các bài (goTo, handleNext, handlePrev)
- *  2. Đánh dấu hoàn thành lesson/quiz (markCurrentDone)
- *  3. Tính canGoNext, isCurrentDone
- *  4. Kiểm tra lock trước khi cho phép chuyển bài từ sidebar
- */
+/** Quản lý điều hướng sidebar + complete lesson/quiz trong Learning page. */
 export function useLessonNavigation({
   courseId,
   flatItems,
@@ -23,25 +15,19 @@ export function useLessonNavigation({
   serverProgress,
   onProgressUpdate,
   onFlushHeartbeat,
-  onTimerClear,
 }) {
   const navigate = useNavigate();
   const toast = useToast();
   const { markLessonComplete, setCurrentLesson, updateItemsProgress } =
     useCourseStore();
 
-  // Dùng ref để reset đồng bộ khi chuyển bài (tránh stale state 1 render)
-  const thresholdReachedRef = useRef(false);
-  const [thresholdReached, setThresholdReachedState] = useState(false);
-  const setThresholdReached = useCallback((val) => {
-    thresholdReachedRef.current = val;
-    setThresholdReachedState(val);
-  }, []);
+  // idx hiện tại đủ điều kiện complete (>=30% hoặc done từ server)
+  const canCompleteForIdxRef = useRef(-1);
+  const [, setCanCompleteVersion] = useState(0);
+  const [userCompletedIdx, setUserCompletedIdx] = useState(-1);
 
   const activeItem = flatItems[activeIdx];
   const activeLessonId = getLessonId(activeItem);
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
 
   const getItemStatus = useCallback(
     (lessonId) => {
@@ -56,7 +42,7 @@ export function useLessonNavigation({
 
   const isEffectivelyLocked = useCallback(
     (item) => {
-      if (item?.itemType === "quiz") return false; // quiz luôn unlocked
+      if (item?.itemType === "quiz") return false;
       const status = getItemStatus(getLessonId(item));
       return status === "lock" || status === null;
     },
@@ -67,68 +53,74 @@ export function useLessonNavigation({
     itemsProgress.length > 0 &&
     itemsProgress.every((i) => i.itemType !== "lesson" || i.status === "done");
 
-  // ── Điều hướng ───────────────────────────────────────────────────────────
+  const canComplete = canCompleteForIdxRef.current === activeIdx;
 
-  const goTo = useCallback(
-    (idx) => {
+  const markThresholdReached = useCallback(
+    (forIdx) => {
+      const idx = forIdx ?? activeIdx;
+      if (canCompleteForIdxRef.current !== idx) {
+        canCompleteForIdxRef.current = idx;
+        setCanCompleteVersion((v) => v + 1);
+      }
+    },
+    [activeIdx],
+  );
+
+  const isCurrentDone = getItemStatus(activeLessonId) === "done";
+
+  useEffect(() => {
+    if (isCurrentDone && canCompleteForIdxRef.current !== activeIdx) {
+      canCompleteForIdxRef.current = activeIdx;
+      setCanCompleteVersion((v) => v + 1);
+    }
+  }, [isCurrentDone, activeIdx]);
+
+  const navigateToLesson = useCallback(
+    async (idx) => {
       const targetItem = flatItems[idx];
       const targetLessonId = getLessonId(targetItem);
-      const targetWatched =
-        itemsProgress.find((i) => i.itemId?.toString() === targetLessonId)
-          ?.watchedSeconds ?? 0;
 
-      // Flush heartbeat bài hiện tại trước khi chuyển
-      onTimerClear();
-      onFlushHeartbeat();
+      await onFlushHeartbeat();
 
-      // Reset đồng bộ qua ref trước — tránh render bài mới thấy thresholdReached=true cũ
-      thresholdReachedRef.current = false;
-      setThresholdReachedState(false);
+      canCompleteForIdxRef.current = -1;
+      setCanCompleteVersion((v) => v + 1);
+      setUserCompletedIdx(-1);
+
       setActiveIdx(idx);
       setCurrentLesson(courseId, idx, targetLessonId);
-
-      // Trả về watchedSeconds của bài target để caller init lastSentRef
-      return targetWatched;
     },
     [
       flatItems,
       courseId,
-      itemsProgress,
       setActiveIdx,
       setCurrentLesson,
       onFlushHeartbeat,
-      onTimerClear,
     ],
   );
 
   const handleSidebarGoTo = useCallback(
-    (idx) => {
+    async (idx) => {
       const targetItem = flatItems[idx];
       if (!isRewatching && isEffectivelyLocked(targetItem)) {
-        toast.warning("Complete the previous lesson to unlock this one");
+        toast.info("Complete the previous lesson to unlock this one");
         return;
       }
-      goTo(idx);
+      await navigateToLesson(idx);
     },
-    [flatItems, isRewatching, isEffectivelyLocked, goTo, toast],
+    [flatItems, isRewatching, isEffectivelyLocked, navigateToLesson, toast],
   );
 
-  // ── Đánh dấu hoàn thành ──────────────────────────────────────────────────
-
   const markCurrentDone = useCallback(async () => {
-    if (!activeItem) return;
+    if (!activeItem) return false;
 
     if (activeItem.itemType === "lesson" && activeLessonId) {
-      // Optimistic update trước khi gọi API
-      markLessonComplete(courseId, activeLessonId);
-      setThresholdReached(true);
-
       try {
         const res = await EnrollmentService.completeLesson(
           courseId,
           activeLessonId,
         );
         if (res?.itemsProgress) {
+          markLessonComplete(courseId, activeLessonId);
           onProgressUpdate(
             res.itemsProgress,
             res.progress ?? serverProgress,
@@ -141,23 +133,26 @@ export function useLessonNavigation({
             res.completed,
           );
         }
+        return true;
       } catch {
-        // Silent — optimistic đã cập nhật UI
+        return false;
       }
     } else if (activeItem.itemType === "quiz") {
       const quizId =
         activeItem.itemId?._id?.toString() ?? activeItem.itemId?.toString();
-      if (!quizId) return;
+      if (!quizId) return false;
       try {
         const res = await EnrollmentService.markQuizDone(courseId, quizId);
         if (res?.itemsProgress) {
           onProgressUpdate(res.itemsProgress);
           updateItemsProgress(courseId, res.itemsProgress);
         }
+        return true;
       } catch {
-        // Silent
+        return false;
       }
     }
+    return false;
   }, [
     activeItem,
     activeLessonId,
@@ -168,75 +163,51 @@ export function useLessonNavigation({
     updateItemsProgress,
   ]);
 
-  // ── Next / Prev ───────────────────────────────────────────────────────────
+  const handleComplete = useCallback(async () => {
+    const isLesson = activeItem?.itemType === "lesson";
+    const hasVideo = !!activeItem?.itemId?.videoUrl;
 
-  const handleNext = useCallback(
-    (isManual = false) => {
-      const isDone = getItemStatus(activeLessonId) === "done";
-      const isLesson = activeItem?.itemType === "lesson";
-      const hasVideo = !!activeItem?.itemId?.videoUrl;
+    if (isLesson && hasVideo && canCompleteForIdxRef.current !== activeIdx) {
+      toast.info("Watch at least 30% of the lesson to continue");
+      return;
+    }
 
-      if (isLesson && hasVideo && !thresholdReachedRef.current && !isDone) {
-        toast.warning("Watch at least 30% of the lesson to continue");
-        return;
-      }
+    const isLastItem = activeIdx === flatItems.length - 1;
 
-      markCurrentDone();
+    await onFlushHeartbeat();
 
-      if (activeIdx < flatItems.length - 1) {
-        goTo(activeIdx + 1);
-      } else if (isManual) {
-        navigate(ROUTES.MY_CERTIFICATES);
-      } else {
-        toast.success("Congratulations! You have completed the course.");
-      }
-    },
-    [
-      activeItem,
-      activeLessonId,
-      activeIdx,
-      flatItems.length,
-      thresholdReached,
-      getItemStatus,
-      markCurrentDone,
-      goTo,
-      navigate,
-      toast,
-    ],
-  );
+    const completed = await markCurrentDone();
+    if (!completed) return;
 
-  const handlePrev = useCallback(() => {
-    if (activeIdx > 0) goTo(activeIdx - 1);
-  }, [activeIdx, goTo]);
+    setUserCompletedIdx(activeIdx);
 
-  // ── Derived state ─────────────────────────────────────────────────────────
-
-  const isCurrentDone = getItemStatus(activeLessonId) === "done";
-  const activeItemHasVideo = !!activeItem?.itemId?.videoUrl;
-
-  // Dùng ref để đảm bảo canGoNext luôn phản ánh đúng trạng thái hiện tại
-  const canGoNext =
-    activeItem?.itemType === "quiz" ||
-    isCurrentDone ||
-    thresholdReachedRef.current ||
-    (activeItem?.itemType === "lesson" && !activeItemHasVideo);
+    if (!isLastItem) {
+      await navigateToLesson(activeIdx + 1);
+    } else {
+      setTimeout(() => navigate(ROUTES.MY_CERTIFICATES), 600);
+    }
+  }, [
+    activeItem,
+    activeIdx,
+    flatItems.length,
+    markCurrentDone,
+    onFlushHeartbeat,
+    navigateToLesson,
+    navigate,
+    toast,
+  ]);
 
   const handleVideoReachedThreshold = useCallback(() => {
-    setThresholdReached(true);
-    markCurrentDone();
-  }, [markCurrentDone]);
+    markThresholdReached(activeIdx);
+  }, [activeIdx, markThresholdReached]);
 
   return {
-    thresholdReached,
-    setThresholdReached,
     activeItem,
     activeLessonId,
-    isCurrentDone,
-    canGoNext,
-    goTo,
+    canComplete,
+    userCompletedIdx,
     handleSidebarGoTo,
-    handleNext,
-    handlePrev,
+    handleComplete,
     markCurrentDone,
     handleVideoReachedThreshold,
   };

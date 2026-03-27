@@ -1,7 +1,5 @@
 import {
   CheckCircleOutlined,
-  LeftOutlined,
-  RightOutlined,
 } from "@ant-design/icons";
 import { Button, Typography } from "antd";
 import { useRef, useState } from "react";
@@ -19,7 +17,7 @@ import { ROUTES } from "../../../utils/constants";
 
 const { Text, Title } = Typography;
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── LoadingScreen ────────────────────────────────────────────────────────────
 const LoadingScreen = () => (
   <div
     style={{
@@ -43,98 +41,105 @@ const LoadingScreen = () => (
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
+
+// ─── LessonBottomBar ──────────────────────────────────────────────────────────
+/**
+ * Props:
+ *  activeIdx       – index bài hiện tại
+ *  flatItemsLength – tổng số item
+ *  activeItem      – item object
+ *  canComplete     – true khi đã xem đủ 30% (hiện nút Complete)
+ *  isUserDone      – true khi user đã bấm Complete ở bài này (hiện Completed disabled)
+ *  isLastLesson    – bài cuối → label "Complete Course"
+ *  onComplete      – nút Complete & Continue / Complete Course
+ */
 const LessonBottomBar = ({
   activeIdx,
   flatItemsLength,
   activeItem,
-  canGoNext,
-  isCurrentDone,
-  onPrev,
-  onNext,
-}) => (
-  <div
-    style={{
-      padding: "14px 24px",
-      background: "#111827",
-      borderTop: "1px solid rgba(255,255,255,0.08)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexShrink: 0,
-    }}
-  >
-    <div>
-      <Text
-        style={{
-          color: "#9CA3AF",
-          fontSize: 13,
-          display: "block",
-          marginBottom: 2,
-        }}
-      >
-        Lesson {activeIdx + 1} / {flatItemsLength}
-      </Text>
-      <Title level={5} style={{ color: "#fff", margin: 0 }}>
-        {activeItem?.title}
-      </Title>
-      {!canGoNext && (
-        <Text style={{ color: "#F59E0B", fontSize: 12 }}>
-          ⚠️ Watch at least 30% to unlock the next lesson
+  canComplete,
+  isUserDone,
+  isLastLesson,
+  onComplete,
+}) => {
+  const isLesson = activeItem?.itemType === "lesson";
+  const hasVideo = !!activeItem?.itemId?.videoUrl;
+
+  // Hiện nút Complete khi: không phải lesson có video, HOẶC đã xem đủ 30%, HOẶC đã done
+  const showCompleteBtn = !isLesson || !hasVideo || canComplete || isUserDone;
+
+  // Label nút
+  const btnLabel = isUserDone
+    ? "Completed"
+    : isLastLesson
+      ? "Complete Course"
+      : "Complete & Continue";
+
+  // Màu nút
+  const btnBg = isUserDone
+    ? "#10b981"
+    : isLastLesson
+      ? "linear-gradient(135deg,#f59e0b,#ef4444)"
+      : "linear-gradient(135deg,#667eea,#764ba2)";
+
+  return (
+    <div
+      style={{
+        padding: "14px 24px",
+        background: "#111827",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexShrink: 0,
+      }}
+    >
+      {/* Thông tin bài */}
+      <div>
+        <Text
+          style={{
+            color: "#9CA3AF",
+            fontSize: 13,
+            display: "block",
+            marginBottom: 2,
+          }}
+        >
+          Lesson {activeIdx + 1} / {flatItemsLength}
         </Text>
-      )}
+        <Title level={5} style={{ color: "#fff", margin: 0 }}>
+          {activeItem?.title}
+        </Title>
+        {isLesson && hasVideo && !canComplete && !isUserDone && (
+          <Text style={{ color: "#F59E0B", fontSize: 12 }}>
+            ⏱ Watch at least 30% of the video to unlock
+          </Text>
+        )}
+      </div>
+
+      {/* Nút hành động */}
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        {/* Nút Complete — chỉ hiện khi đủ điều kiện */}
+        {showCompleteBtn && (
+          <Button
+            type="primary"
+            size="large"
+            onClick={onComplete}
+            disabled={isUserDone}
+            icon={isUserDone ? <CheckCircleOutlined /> : null}
+            style={{
+              background: btnBg,
+              border: "none",
+              minWidth: 170,
+              opacity: isUserDone ? 0.85 : 1,
+            }}
+          >
+            {btnLabel}
+          </Button>
+        )}
+      </div>
     </div>
-
-    <div style={{ display: "flex", gap: 12 }}>
-      <Button
-        icon={<LeftOutlined />}
-        size="large"
-        disabled={activeIdx === 0}
-        onClick={onPrev}
-        style={{
-          background: "rgba(255,255,255,0.1)",
-          border: "none",
-          color: "#fff",
-        }}
-      />
-
-      <Button
-        type="primary"
-        size="large"
-        onClick={onNext}
-        disabled={!canGoNext && activeItem?.itemType === "lesson"}
-        icon={isCurrentDone ? <CheckCircleOutlined /> : null}
-        style={{
-          background: isCurrentDone
-            ? "#10b981"
-            : canGoNext
-              ? "linear-gradient(135deg,#667eea,#764ba2)"
-              : "#374151",
-          border: "none",
-          minWidth: 175,
-          opacity: !canGoNext ? 0.65 : 1,
-        }}
-      >
-        {isCurrentDone
-          ? "Completed"
-          : canGoNext
-            ? "Complete & Continue"
-            : "Watching..."}
-      </Button>
-
-      <Button
-        icon={<RightOutlined />}
-        size="large"
-        disabled={activeIdx === flatItemsLength - 1}
-        onClick={onNext}
-        style={{
-          background: "rgba(255,255,255,0.1)",
-          border: "none",
-          color: "#fff",
-        }}
-      />
-    </div>
-  </div>
-);
+  );
+};
 
 // ─── LearningPage ─────────────────────────────────────────────────────────────
 const LearningPage = () => {
@@ -157,6 +162,7 @@ const LearningPage = () => {
     loading,
   } = useCourseLoader(courseId);
 
+  // watchedSeconds của bài đang học (để init heartbeat ref)
   const activeItemForHook = flatItems[activeIdx];
   const activeItemWatchedSecs =
     itemsProgress.find(
@@ -167,16 +173,12 @@ const LearningPage = () => {
     )?.watchedSeconds ?? 0;
 
   const {
-    thresholdReached,
-    setThresholdReached,
     activeItem,
     activeLessonId,
-    isCurrentDone,
-    canGoNext,
-    goTo,
+    canComplete,
+    userCompletedIdx,
     handleSidebarGoTo,
-    handleNext,
-    handlePrev,
+    handleComplete,
     markCurrentDone,
     handleVideoReachedThreshold,
   } = useLessonNavigation({
@@ -186,30 +188,30 @@ const LearningPage = () => {
     setActiveIdx,
     itemsProgress,
     serverProgress,
-    onProgressUpdate: (items, progress, completed) => {
+    onProgressUpdate: (items, progress) => {
       setItemsProgress(items);
       if (progress !== undefined) setServerProgress(progress);
     },
     onFlushHeartbeat: () => heartbeatFlush(),
-    onTimerClear: () => clearInterval(heartbeatTimer.current),
   });
 
-  // ── 3. Heartbeat tracking ─────────────────────────────────────────────────
-  const { flush: heartbeatFlush, timerRef: heartbeatTimer } = useHeartbeat({
+  // ── Heartbeat ──────────────────────────────────────────────────────────
+  const { flush: heartbeatFlush } = useHeartbeat({
     courseId,
     activeLessonId,
     activeItemType: activeItem?.itemType,
     activeItemWatchedSecs,
     videoPlayerRef,
     serverProgress,
-    onDone: () => setThresholdReached(true),
-    onProgressUpdate: (items, progress, completed) => {
+    // Khi BE heartbeat mark done → mở khóa nút Complete ngay
+    onDone: () => handleVideoReachedThreshold(),
+    onProgressUpdate: (items, progress) => {
       setItemsProgress(items);
       if (progress !== undefined) setServerProgress(progress);
     },
   });
 
-  // ── 4. Derived state cho render ───────────────────────────────────────────
+  // ── Derived state ──────────────────────────────────────────────────────
   const lessonItems = flatItems.filter((i) => i.itemType === "lesson");
   const completedCount = itemsProgress.filter(
     (i) => i.itemType === "lesson" && i.status === "done",
@@ -233,7 +235,12 @@ const LearningPage = () => {
       course?.instructorId?.toString() === userId.toString());
   const isAdmin = user?.role === "admin";
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // isUserDone: user đã bấm Complete ở bài này trong session hiện tại
+  const isUserDone = userCompletedIdx === activeIdx;
+
+  const isLastLesson = activeIdx === flatItems.length - 1;
+
+  // ── Render ────────────────────────────────────────────────────────────
   if (loading) return <LoadingScreen />;
   if (!course) return null;
 
@@ -285,7 +292,7 @@ const LearningPage = () => {
               quiz={activeItem.itemId}
               courseId={courseId}
               onComplete={markCurrentDone}
-              onNext={handleNext}
+              onNext={handleComplete}
             />
           ) : (
             <VideoPlayer
@@ -293,9 +300,10 @@ const LearningPage = () => {
               url={activeItem?.itemId?.videoUrl}
               lessonKey={activeIdx}
               initialWatched={activeItemWatchedSecs}
-              threshold={0.3}
+              thresholdPercent={0.3}
               onReachedThreshold={handleVideoReachedThreshold}
-              onEnded={handleNext}
+              onEnded={handleVideoReachedThreshold}
+              onTimeUpdate={undefined}
             />
           )}
 
@@ -304,10 +312,10 @@ const LearningPage = () => {
               activeIdx={activeIdx}
               flatItemsLength={flatItems.length}
               activeItem={activeItem}
-              canGoNext={canGoNext}
-              isCurrentDone={isCurrentDone}
-              onPrev={handlePrev}
-              onNext={() => handleNext(true)}
+              canComplete={canComplete}
+              isUserDone={isUserDone}
+              isLastLesson={isLastLesson}
+              onComplete={handleComplete}
             />
           )}
         </div>
@@ -319,7 +327,6 @@ const LearningPage = () => {
 export default LearningPage;
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
-
 function buildSectionsWithIdx(sections, flatItems) {
   let fc = 0;
   return sections

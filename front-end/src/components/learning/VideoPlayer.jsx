@@ -15,16 +15,21 @@ const { Text } = Typography;
  * VideoPlayer (HTML5 native)
  *
  * Anti-cheat rules:
- *  1. Không tua vượt quá highestWatched → snap back + hiện toast cảnh báo overlay.
- *  2. Sau khi xem đủ threshold% (mặc định 30%) → gọi onReachedThreshold() 1 lần.
- *  3. Khi video kết thúc → gọi onEnded().
+ *  1. Chặn tua hoàn toàn cho đến khi xem đủ thresholdSeconds giây thực sự.
+ *     "Thực sự" = tổng số giây cao nhất đã phát liên tục, không tính tua.
+ *     Sau khi đủ thresholdSeconds → tua tự do trong toàn bộ video.
+ *  2. initialWatched từ server được tính vào highestWatched.
+ *     Nếu initialWatched >= thresholdSeconds → mở khóa tua ngay từ đầu.
+ *     Nếu chưa đủ → người dùng phải xem tiếp cho đến khi tổng đạt threshold.
+ *  3. Sau khi đủ thresholdSeconds → gọi onReachedThreshold() 1 lần.
+ *  4. Khi video kết thúc → gọi onEnded().
  *
  * Props:
  *  url                – string | undefined
  *  lessonKey          – unique key để reset player khi chuyển bài
  *  initialWatched     – số giây đã xem từ server (để restore progress)
- *  threshold          – % để đánh dấu done (mặc định 0.3 = 30%)
- *  onReachedThreshold – () => void
+ *  thresholdSeconds   – số giây tuyệt đối để mở khóa tua & nút Complete (mặc định 30)
+ *  onReachedThreshold – () => void  — fired khi đủ thresholdSeconds
  *  onEnded            – () => void
  *  onTimeUpdate       – (currentTime, duration) => void
  *
@@ -35,7 +40,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     url,
     lessonKey,
     initialWatched = 0,
-    threshold = 0.3,
+    thresholdSeconds, // deprecated – kept for compat
+    thresholdPercent = 0.3, // 30% of video duration (min 30s if video is long)
     onReachedThreshold,
     onEnded,
     onTimeUpdate,
@@ -43,18 +49,28 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   ref,
 ) {
   const videoRef = useRef(null);
-  // Số giây cao nhất đã thực sự xem (chỉ tăng khi video đang PLAY, không phải khi seeking)
+
+  // Effective threshold in seconds — computed once video metadata is available
+  // Falls back to thresholdSeconds prop if supplied (legacy), else 30s initially.
+  const effectiveThresholdRef = useRef(thresholdSeconds ?? 30);
+
+  // Số giây cao nhất đã thực sự xem (chỉ tăng khi PLAY, không seeking)
+  // Khởi tạo từ initialWatched — tiếp tục từ điểm server đã ghi nhận
   const highestWatchedRef = useRef(initialWatched);
+
+  // true nếu đã fire onReachedThreshold (tránh fire nhiều lần)
   const thresholdFiredRef = useRef(false);
-  // Snapshot highestWatched tại thời điểm onSeeking bắt đầu — dùng để so sánh trong onSeeked
+
+  // Snapshot highestWatched tại thời điểm seeking bắt đầu
   const watchedAtSeekStartRef = useRef(initialWatched);
-  // Flag: đang trong quá trình snap back (tránh vòng lặp seeking → seeked → seeking)
+
+  // Flag: đang snap back (tránh vòng lặp seeking → seeked → seeking)
   const isSnappingRef = useRef(false);
 
   const [showNoVideo, setShowNoVideo] = useState(!url);
 
-  // Toast cảnh báo overlay trên video
-  const [toast, setToast] = useState(null); // { msg, key }
+  // Toast cảnh báo overlay
+  const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
 
   const showToast = useCallback((msg) => {
@@ -63,47 +79,68 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     toastTimerRef.current = setTimeout(() => setToast(null), 2800);
   }, []);
 
-  // Reset khi chuyển bài
+  // Reset khi chuyển bài (lessonKey thay đổi)
   useEffect(() => {
     highestWatchedRef.current = initialWatched;
-    thresholdFiredRef.current = false;
     watchedAtSeekStartRef.current = initialWatched;
     isSnappingRef.current = false;
+    // Reset threshold về default cho đến khi metadata load
+    effectiveThresholdRef.current = thresholdSeconds ?? 30;
     setShowNoVideo(!url);
     setToast(null);
     clearTimeout(toastTimerRef.current);
-  }, [lessonKey, url, initialWatched]);
 
-  // Restore currentTime từ server watchedSeconds khi load metadata
+    // Nếu server đã ghi nhận >= threshold → fire ngay để mở khóa nút Complete
+    if (initialWatched >= effectiveThresholdRef.current) {
+      thresholdFiredRef.current = true;
+      onReachedThreshold?.();
+    } else {
+      thresholdFiredRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonKey]); // Chỉ chạy khi chuyển bài. Các deps khác là config ổn định.
+
+  // Restore currentTime từ server watchedSeconds khi video load metadata
   useEffect(() => {
-    if (!videoRef.current || !initialWatched) return;
+    if (!videoRef.current) return;
     const video = videoRef.current;
     const onLoaded = () => {
-      if (initialWatched > 0 && video.duration > 0) {
-        // Nếu đã xem xong (watchedSeconds >= 95% duration) → rewatch từ đầu
-        const isCompleted = initialWatched >= video.duration * 0.95;
-        if (isCompleted) {
-          // Rewatch mode: reset về đầu, cho phép tua tự do toàn bộ video
-          highestWatchedRef.current = video.duration;
-          watchedAtSeekStartRef.current = video.duration;
-          video.currentTime = 0;
-        } else {
-          const restoreTo = Math.min(initialWatched, video.duration * 0.98);
-          video.currentTime = restoreTo;
+      if (video.duration > 0) {
+        // Tính threshold động: 30% thời lượng, tối đa 30s
+        const dynThreshold = Math.min(video.duration * thresholdPercent, 30);
+        effectiveThresholdRef.current = dynThreshold;
+
+        // Nếu initialWatched đạt ngưỡng mới → fire ngay
+        if (!thresholdFiredRef.current && initialWatched >= dynThreshold) {
+          thresholdFiredRef.current = true;
+          onReachedThreshold?.();
+        }
+
+        if (initialWatched > 0) {
+          const isCompleted = initialWatched >= video.duration * 0.95;
+          if (isCompleted) {
+            // Đã xem gần hết / hoàn thành → reset về đầu, tua tự do
+            highestWatchedRef.current = video.duration;
+            watchedAtSeekStartRef.current = video.duration;
+            thresholdFiredRef.current = true;
+            video.currentTime = 0;
+          } else {
+            // Restore về đúng điểm đã xem
+            const restoreTo = Math.min(initialWatched, video.duration * 0.98);
+            video.currentTime = restoreTo;
+          }
         }
       }
     };
     video.addEventListener("loadedmetadata", onLoaded);
     return () => video.removeEventListener("loadedmetadata", onLoaded);
-  }, [lessonKey, initialWatched]);
+  }, [lessonKey, initialWatched, thresholdPercent, onReachedThreshold]);
 
   useImperativeHandle(ref, () => ({
     getWatchedSeconds: () => highestWatchedRef.current,
   }));
 
-  // Cập nhật highestWatched khi video chạy bình thường
-  // QUAN TRỌNG: bỏ qua hoàn toàn khi video.seeking = true hoặc đang snap
-  // để tránh highestWatched bị cập nhật trong lúc user đang kéo thanh seek
+  // Cập nhật highestWatched khi video phát bình thường (không tua)
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.paused || video.seeking || isSnappingRef.current)
@@ -112,69 +149,59 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     const current = video.currentTime;
     const duration = video.duration;
 
+    // Chỉ tăng, không giảm
     if (current > highestWatchedRef.current) {
       highestWatchedRef.current = current;
     }
 
     onTimeUpdate?.(current, duration);
 
-    if (!thresholdFiredRef.current && duration > 0) {
-      if (highestWatchedRef.current / duration >= threshold) {
-        thresholdFiredRef.current = true;
-        onReachedThreshold?.();
-      }
+    // Kiểm tra đã đủ threshold chưa
+    if (
+      !thresholdFiredRef.current &&
+      highestWatchedRef.current >= effectiveThresholdRef.current
+    ) {
+      thresholdFiredRef.current = true;
+      onReachedThreshold?.();
     }
-  }, [onReachedThreshold, onTimeUpdate, threshold]);
+  }, [onReachedThreshold, onTimeUpdate]);
 
-  // Ghi lại snapshot của highestWatched tại thời điểm seek BẮT ĐẦU
-  // (trước khi highestWatched có thể bị ảnh hưởng bởi bất kỳ event nào khác)
+  // Ghi snapshot highestWatched tại thời điểm seek BẮT ĐẦU
   const handleSeeking = useCallback(() => {
-    if (isSnappingRef.current) return; // đang snap back → bỏ qua
-    // Freeze snapshot — đây là "điểm tối đa được phép" cho lần seek này
+    if (isSnappingRef.current) return;
     watchedAtSeekStartRef.current = highestWatchedRef.current;
   }, []);
 
-  // Sau khi seek xong → so sánh với snapshot đã freeze ở onSeeking
+  // Sau khi seek xong → kiểm tra có được phép tua không
   const handleSeeked = useCallback(() => {
     if (isSnappingRef.current) {
       isSnappingRef.current = false;
-
-      // Sau khi snap back, đảm bảo highestWatched khớp với vị trí thực tế
-      const video = videoRef.current;
-      if (video) {
-        // Clamp lại highestWatched về đúng maxAllowed sau snap
-        highestWatchedRef.current = watchedAtSeekStartRef.current;
-        // Nếu highestWatched chưa đủ threshold → reset cờ để tránh fire nhầm
-        if (
-          video.duration > 0 &&
-          highestWatchedRef.current / video.duration < threshold
-        ) {
-          thresholdFiredRef.current = false;
-        }
-      }
+      // Clamp highestWatched về đúng vị trí snap
+      highestWatchedRef.current = watchedAtSeekStartRef.current;
       return;
     }
+
     const video = videoRef.current;
     if (!video) return;
 
+    // Đã xem đủ threshold (kể cả từ initialWatched) → tua tự do
+    if (highestWatchedRef.current >= effectiveThresholdRef.current) return;
+
     const seekedTo = video.currentTime;
-    // Dùng snapshot đã đóng băng lúc seeking bắt đầu, không phải giá trị hiện tại
     const maxAllowed = watchedAtSeekStartRef.current;
 
-    // Buffer 0.3s để tránh false positive khi click chính xác vào thanh seek
+    // Chưa đủ threshold → chặn tua vượt quá điểm cao nhất đã xem
     if (seekedTo > maxAllowed + 0.3) {
       isSnappingRef.current = true;
-      // Clamp ngay highestWatched để handleTimeUpdate không fire threshold nhầm
       highestWatchedRef.current = maxAllowed;
       video.currentTime = maxAllowed;
 
-      const overBy = Math.round(seekedTo - maxAllowed);
-      showToast(
-        `⛔ Không thể tua vượt! Quay lại ${formatTime(maxAllowed)} (tua thêm ~${overBy}s)`,
-      );
+      const remaining = Math.ceil(effectiveThresholdRef.current - maxAllowed);
+      showToast(`⛔ Xem thêm ~${remaining}s nữa để mở khóa tua video`);
     }
-  }, [showToast, threshold]);
+  }, [showToast]);
 
+  // Khi video kết thúc tự nhiên
   const handleEnded = useCallback(() => {
     if (!thresholdFiredRef.current) {
       thresholdFiredRef.current = true;
@@ -240,7 +267,6 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {/* Toast cảnh báo khi tua quá — nổi bật trung tâm */}
       {toast && (
         <div
           key={toast.key}
@@ -279,13 +305,5 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     </div>
   );
 });
-
-/** Định dạng giây → mm:ss */
-function formatTime(secs) {
-  const s = Math.floor(secs);
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return `${m}:${rem.toString().padStart(2, "0")}`;
-}
 
 export default VideoPlayer;
