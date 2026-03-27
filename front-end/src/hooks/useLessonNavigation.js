@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../contexts/ToastContext";
 import EnrollmentService from "../services/api/EnrollmentService";
@@ -30,7 +30,13 @@ export function useLessonNavigation({
   const { markLessonComplete, setCurrentLesson, updateItemsProgress } =
     useCourseStore();
 
-  const [thresholdReached, setThresholdReached] = useState(false);
+  // Dùng ref để reset đồng bộ khi chuyển bài (tránh stale state 1 render)
+  const thresholdReachedRef = useRef(false);
+  const [thresholdReached, setThresholdReachedState] = useState(false);
+  const setThresholdReached = useCallback((val) => {
+    thresholdReachedRef.current = val;
+    setThresholdReachedState(val);
+  }, []);
 
   const activeItem = flatItems[activeIdx];
   const activeLessonId = getLessonId(activeItem);
@@ -75,7 +81,9 @@ export function useLessonNavigation({
       onTimerClear();
       onFlushHeartbeat();
 
-      setThresholdReached(false);
+      // Reset đồng bộ qua ref trước — tránh render bài mới thấy thresholdReached=true cũ
+      thresholdReachedRef.current = false;
+      setThresholdReachedState(false);
       setActiveIdx(idx);
       setCurrentLesson(courseId, idx, targetLessonId);
 
@@ -168,7 +176,7 @@ export function useLessonNavigation({
       const isLesson = activeItem?.itemType === "lesson";
       const hasVideo = !!activeItem?.itemId?.videoUrl;
 
-      if (isLesson && hasVideo && !thresholdReached && !isDone) {
+      if (isLesson && hasVideo && !thresholdReachedRef.current && !isDone) {
         toast.warning("Watch at least 30% of the lesson to continue");
         return;
       }
@@ -206,10 +214,11 @@ export function useLessonNavigation({
   const isCurrentDone = getItemStatus(activeLessonId) === "done";
   const activeItemHasVideo = !!activeItem?.itemId?.videoUrl;
 
+  // Dùng ref để đảm bảo canGoNext luôn phản ánh đúng trạng thái hiện tại
   const canGoNext =
     activeItem?.itemType === "quiz" ||
     isCurrentDone ||
-    thresholdReached ||
+    thresholdReachedRef.current ||
     (activeItem?.itemType === "lesson" && !activeItemHasVideo);
 
   const handleVideoReachedThreshold = useCallback(() => {

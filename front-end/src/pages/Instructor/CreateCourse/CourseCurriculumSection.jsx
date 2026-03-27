@@ -1,11 +1,11 @@
 import {
   BookOutlined,
-  LoadingOutlined,
   PlusOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
-import { Alert, Button } from "antd";
+import { Alert, Button, Spin } from "antd";
 import { INSTRUCTOR_COLORS } from "../../../../src/styles/instructorTheme";
+import { useUploading } from "../CreateCourse/UploadingContext";
 import SectionEditor from "./SectionEditor";
 
 /**
@@ -22,10 +22,10 @@ const CourseCurriculumSection = ({
   onUpdateSection,
   onRemoveSection,
   isLocked,
-  uploadingCount,
   curriculumError,
   showSectionErrors,
 }) => {
+  const { count: uploadingCount } = useUploading();
   return (
     <div
       id="curriculum-section"
@@ -35,32 +35,30 @@ const CourseCurriculumSection = ({
         borderColor: curriculumError ? "#fca5a5" : undefined,
       }}
     >
-      {/* ── Upload-in-progress banner ── */}
+      {/* ── Full-section upload overlay ── */}
       {uploadingCount > 0 && (
         <div
           style={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            padding: "10px 24px",
+            inset: 0,
+            zIndex: 20,
+            borderRadius: "inherit",
+            background: "rgba(255, 255, 255, 0.65)",
+            backdropFilter: "blur(2px)",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: 10,
-            color: "#fff",
+            justifyContent: "center",
+            gap: 12,
+            cursor: "not-allowed",
           }}
         >
-          <LoadingOutlined spin style={{ fontSize: 16 }} />
-          <span style={{ fontWeight: 600, fontSize: 13 }}>
-            Uploading {uploadingCount} video...
+          <Spin size="large" />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#7c3aed" }}>
+            Uploading {uploadingCount} video{uploadingCount > 1 ? "s" : ""}...
           </span>
         </div>
       )}
-      {uploadingCount > 0 && <div style={{ height: 40 }} />}
 
       {/* ── Section header ── */}
       <div className="flex items-center justify-between mb-6">

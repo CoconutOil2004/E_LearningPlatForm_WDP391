@@ -138,6 +138,20 @@ const VideoPlayer = forwardRef(function VideoPlayer(
   const handleSeeked = useCallback(() => {
     if (isSnappingRef.current) {
       isSnappingRef.current = false;
+
+      // Sau khi snap back, đảm bảo highestWatched khớp với vị trí thực tế
+      const video = videoRef.current;
+      if (video) {
+        // Clamp lại highestWatched về đúng maxAllowed sau snap
+        highestWatchedRef.current = watchedAtSeekStartRef.current;
+        // Nếu highestWatched chưa đủ threshold → reset cờ để tránh fire nhầm
+        if (
+          video.duration > 0 &&
+          highestWatchedRef.current / video.duration < threshold
+        ) {
+          thresholdFiredRef.current = false;
+        }
+      }
       return;
     }
     const video = videoRef.current;
@@ -150,6 +164,8 @@ const VideoPlayer = forwardRef(function VideoPlayer(
     // Buffer 0.3s để tránh false positive khi click chính xác vào thanh seek
     if (seekedTo > maxAllowed + 0.3) {
       isSnappingRef.current = true;
+      // Clamp ngay highestWatched để handleTimeUpdate không fire threshold nhầm
+      highestWatchedRef.current = maxAllowed;
       video.currentTime = maxAllowed;
 
       const overBy = Math.round(seekedTo - maxAllowed);
@@ -157,7 +173,7 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         `⛔ Không thể tua vượt! Quay lại ${formatTime(maxAllowed)} (tua thêm ~${overBy}s)`,
       );
     }
-  }, [showToast]);
+  }, [showToast, threshold]);
 
   const handleEnded = useCallback(() => {
     if (!thresholdFiredRef.current) {
