@@ -20,7 +20,6 @@ import { ROUTES } from "../../../utils/constants";
 const { Text, Title } = Typography;
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
-
 const LoadingScreen = () => (
   <div
     style={{
@@ -44,7 +43,6 @@ const LoadingScreen = () => (
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
-
 const LessonBottomBar = ({
   activeIdx,
   flatItemsLength,
@@ -139,7 +137,6 @@ const LessonBottomBar = ({
 );
 
 // ─── LearningPage ─────────────────────────────────────────────────────────────
-
 const LearningPage = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();

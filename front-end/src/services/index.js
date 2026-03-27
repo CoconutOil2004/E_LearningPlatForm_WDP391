@@ -72,10 +72,16 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (err) {
         console.error("Failed to refresh token:", err);
-        // Redirect to login or dispatch logout action
+        const hadToken =
+          !!localStorage.getItem("token") ||
+          !!localStorage.getItem("accessToken");
         localStorage.removeItem("token");
         localStorage.removeItem("accessToken");
-        window.location.href = "/signin";
+        // Guest hoàn toàn (không có token) → không redirect, để tiếp tục browse
+        // User có token cũ bị expired → mới redirect về login
+        if (hadToken) {
+          window.location.href = "/signin";
+        }
       }
     } else if (error.response && error.response.status === 403) {
       const responseData = error.response.data || {};
@@ -117,7 +123,7 @@ api.interceptors.response.use(
     // Auto toast: bắn error từ BE message
     // Ngoại lệ: 403 từ course/enrollment/lesson → component tự xử lý, không toast toàn cục
     const _status = error.response?.status;
-    const _url    = originalRequest?.url || "";
+    const _url = originalRequest?.url || "";
     const _isCourseAccess =
       _status === 403 &&
       (_url.includes("/courses/") ||
