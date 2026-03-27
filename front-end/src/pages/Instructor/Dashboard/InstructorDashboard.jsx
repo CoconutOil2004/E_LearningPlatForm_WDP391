@@ -313,7 +313,7 @@ const InstructorDashboard = () => {
                         </Text>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <Text strong style={{ fontSize: 14, color: C.primary }}>{formatThousands(c.value)}</Text>
+                        <Text strong style={{ fontSize: 14, color: C.primary }}>{formatThousands(c.revenue)}</Text>
                       </div>
                     </div>
                   ))}

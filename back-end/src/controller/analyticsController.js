@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { Course, User, Order, Category, Enrollment } = require("../models");
+const { Course, User, Order, Category, Enrollment, Payment } = require("../models");
 const logger = require("../utils/logger");
 
 /**
@@ -152,17 +152,30 @@ const getInstructorAnalytics = async (req, res) => {
       enrollmentTrend,
       avgInstructorRating
     ] = await Promise.all([
-      // 1. Revenue split by Course (only paid orders)
-      Order.aggregate([
+      // 1. Revenue split by Course — using Payment model (VNPay flow stores in Payment, not Order)
+      Payment.aggregate([
         {
+          $match: { status: "success" }
+        },
+        {
+          // Join to Enrollment to get courseId
+          $lookup: {
+            from: "enrollments",
+            localField: "enrollmentId",
+            foreignField: "_id",
+            as: "enrollment"
+          }
+        },
+        { $unwind: "$enrollment" },
+        {
+          // Only keep payments for courses belonging to this instructor
           $match: {
-            courseId: { $in: courseIds },
-            status: 'paid'
+            "enrollment.courseId": { $in: courseIds }
           }
         },
         {
           $group: {
-            _id: "$courseId",
+            _id: "$enrollment.courseId",
             revenue: { $sum: "$amount" },
             sales: { $sum: 1 }
           }
