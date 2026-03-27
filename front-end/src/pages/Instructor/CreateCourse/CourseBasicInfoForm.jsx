@@ -12,6 +12,7 @@ import {
 import { INSTRUCTOR_COLORS } from "../../../../src/styles/instructorTheme";
 import CourseService from "../../../services/api/CourseService";
 import {
+  contentRegex,
   inputNumberFormatter,
   inputNumberParser,
 } from "../../../utils/helpers";
@@ -47,6 +48,11 @@ const CourseBasicInfoForm = ({
               </span>
             }
             rules={[
+              {
+                pattern: contentRegex,
+                message:
+                  "Title cannot contain special characters and must include at least one letter or number",
+              },
               { required: true, message: "Please enter a course title" },
               { min: 10, message: "Title must be at least 10 characters" },
               { max: 60, message: "Maximum 60 characters" },
@@ -73,6 +79,11 @@ const CourseBasicInfoForm = ({
               </span>
             }
             rules={[
+              {
+                pattern: contentRegex,
+                message:
+                  "Title cannot contain special characters and must include at least one letter or number",
+              },
               { required: true, message: "Please describe your course" },
               {
                 min: 20,
