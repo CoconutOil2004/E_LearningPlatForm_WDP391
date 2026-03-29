@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import CertificateStatusBadge from "../../../components/student/CertificateStatusBadge";
 import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
 import PaymentService from "../../../services/api/PaymentService";
@@ -14,16 +15,34 @@ const MyCertificatesPage = () => {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  console.log("Current certificates state:", certificates);
+  console.log("Certificates length:", certificates.length);
+  console.log("Loading:", loading);
+
   useEffect(() => {
+    // Get all completed courses (approved, pending, rejected)
     PaymentService.getMyCourses()
       .then((data) => {
-        // Filter only courses that are 100% completed
-        const completedCourses = (data || []).filter(
-          (e) => e.progress === 100 || e.completed,
-        );
+        console.log("=== MY COURSES DATA ===");
+        console.log("Raw data:", data);
+        console.log("Data length:", data?.length);
+        console.log("First item:", data?.[0]);
+        console.log("First item keys:", data?.[0] ? Object.keys(data[0]) : "no data");
+        console.log("certificateStatus:", data?.[0]?.certificateStatus);
+        
+        // Show ALL completed courses (ignore certificateStatus for now)
+        const completedCourses = (data || []).filter((e) => e.completed);
+        
+        console.log("=== FILTERED RESULTS ===");
+        console.log("Completed courses:", completedCourses);
+        console.log("Count:", completedCourses.length);
+        
         setCertificates(completedCourses);
       })
-      .catch(() => toast.error("Failed to load your certificates"))
+      .catch((error) => {
+        console.error("Certificate fetch error:", error);
+        toast.error("Failed to load your certificates");
+      })
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -53,6 +72,7 @@ const MyCertificatesPage = () => {
             </p>
           </motion.div>
         </div>
+        
         {/* Loading State */}
         {loading ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -78,8 +98,7 @@ const MyCertificatesPage = () => {
               No Certificates Yet
             </h2>
             <p className="max-w-sm mx-auto mb-8 text-muted">
-              You haven't completed any courses yet. Finish your training
-              programs to unlock and download your certificates.
+              Complete your courses to earn certificates. Once completed, your certificate will be reviewed by an admin.
             </p>
             <button
               onClick={() => navigate(ROUTES.MY_COURSES)}
@@ -91,19 +110,34 @@ const MyCertificatesPage = () => {
         ) : (
           /* Certificates Grid */
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {certificates.map((item, i) => {
-              const { course } = item;
+            {certificates.map((enrollment, i) => {
+              const course = enrollment.course || enrollment.courseId;
+              const status = enrollment.certificateStatus;
+              
+              console.log(`=== Certificate ${i} ===`);
+              console.log("Enrollment:", enrollment);
+              console.log("Course title:", course?.title);
+              console.log("Certificate status:", status);
+              console.log("Status type:", typeof status);
+              console.log("Is approved?", status === "approved");
+              console.log("Is pending?", status === "pending");
+              console.log("Is rejected?", status === "rejected");
+              
               const completedDate = new Date(
-                item.lastUpdated || Date.now(),
+                enrollment.certificateApprovedAt || enrollment.updatedAt || Date.now(),
               ).toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
-                year: "numeric",
+                year: "numeric"
               });
+
+              const isApproved = status === "approved";
+              const isPending = status === "pending";
+              const isRejected = status === "rejected";
 
               return (
                 <motion.div
-                  key={item.enrollmentId || i}
+                  key={enrollment._id || enrollment.enrollmentId || i}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
@@ -120,9 +154,7 @@ const MyCertificatesPage = () => {
                     {/* Course Info */}
                     <div className="z-10 mb-6">
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
-                          Completed
-                        </span>
+                        <CertificateStatusBadge status={status} />
                       </div>
                       <h3 className="pr-12 mb-2 text-lg font-bold leading-snug text-gray-900 line-clamp-2">
                         {course?.title}
@@ -130,28 +162,71 @@ const MyCertificatesPage = () => {
                       <p className="mb-1 text-sm text-gray-500">
                         Instructor:{" "}
                         <span className="font-medium text-gray-700">
-                          {course?.instructor?.fullname ||
-                            course?.instructor?.email ||
+                          {course?.instructorId?.fullname ||
+                            course?.instructor?.fullname ||
+                            course?.instructorId?.email ||
                             "Lead Instructor"}
                         </span>
                       </p>
                       <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                        <Icon name="calendar" size={14} /> Issued:{" "}
+                        <Icon name="calendar" size={14} /> 
+                        {isApproved ? "Approved: " : isPending ? "Completed: " : "Rejected: "}
                         {completedDate}
                       </p>
+                      
+                      {/* Rejection reason */}
+                      {isRejected && enrollment.certificateRejectionReason && (
+                        <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded-lg">
+                          <p className="text-xs text-red-600">
+                            <span className="font-semibold">Reason: </span>
+                            {enrollment.certificateRejectionReason}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Pending message */}
+                      {isPending && (
+                        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-100 rounded-lg">
+                          <p className="text-xs text-yellow-700">
+                            Your certificate is awaiting admin approval
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}
                     <div className="pt-4 mt-auto border-t border-gray-50">
-                      <button
-                        onClick={() =>
-                          navigate(`/student/certificate/${course._id}`)
-                        }
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-white border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98]"
-                      >
-                        <Icon name="eye" size={18} />
-                        View Certificate
-                      </button>
+                      {isApproved ? (
+                        <button
+                          onClick={() => {
+                            if (!course?._id) {
+                              toast.error("Course ID not found");
+                              return;
+                            }
+                            navigate(`/student/certificate/${course._id}`);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-white border-2 border-primary text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98]"
+                        >
+                          <Icon name="eye" size={18} />
+                          View Certificate
+                        </button>
+                      ) : isPending ? (
+                        <button
+                          disabled
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 border-2 border-gray-200 text-gray-400 font-bold rounded-xl cursor-not-allowed"
+                        >
+                          <Icon name="clock" size={18} />
+                          Pending Approval
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-red-50 border-2 border-red-200 text-red-400 font-bold rounded-xl cursor-not-allowed"
+                        >
+                          <Icon name="x-circle" size={18} />
+                          Rejected
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

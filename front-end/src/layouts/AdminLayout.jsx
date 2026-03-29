@@ -2,6 +2,7 @@ import {
   // BarChartOutlined,
   BookOutlined,
   CheckSquareOutlined,
+  SafetyCertificateOutlined,
   // DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
@@ -50,6 +51,11 @@ const NAV_ITEMS = [
     key: ROUTES.ADMIN_APPROVAL,
     icon: <CheckSquareOutlined />,
     label: "Pending Courses",
+  },
+  {
+    key: ROUTES.ADMIN_CERTIFICATES_PENDING,
+    icon: <SafetyCertificateOutlined />,
+    label: "Certificates",
   },
   // {
   //   key: ROUTES.ADMIN_ANALYTICS,

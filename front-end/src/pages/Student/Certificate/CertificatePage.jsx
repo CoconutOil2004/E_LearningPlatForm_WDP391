@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Icon } from "../../../components/ui";
 import { useToast } from "../../../contexts/ToastContext";
+import CertificateService from "../../../services/api/CertificateService";
 import PaymentService from "../../../services/api/PaymentService";
 import useAuthStore from "../../../store/slices/authStore";
 import { ROUTES } from "../../../utils/constants";
@@ -19,26 +20,47 @@ const CertificatePage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    PaymentService.getMyCourses()
-      .then((data) => {
-        const found = data?.find((e) => e.course?._id === courseId);
-        if (!found) {
-          toast.error("Course not found or not enrolled.");
+    const fetchCertificate = async () => {
+      try {
+        // Get full enrollment data with course info
+        const enrollmentData = await PaymentService.getEnrollmentByCourseId(courseId);
+        
+        console.log("Enrollment data:", enrollmentData);
+        
+        if (!enrollmentData) {
+          toast.error("Enrollment not found.");
           navigate(ROUTES.MY_COURSES);
           return;
         }
-        if (found.progress !== 100 && !found.completed) {
+        
+        if (!enrollmentData.completed) {
           toast.warning("You must complete this course to view the certificate.");
           navigate(ROUTES.MY_COURSES);
           return;
         }
-        setEnrollment(found);
-      })
-      .catch(() => {
+        
+        if (enrollmentData.certificateStatus !== "approved") {
+          const statusMsg = enrollmentData.certificateStatus === "pending" 
+            ? "Your certificate is pending admin approval."
+            : enrollmentData.certificateStatus === "rejected"
+            ? `Your certificate was rejected. Reason: ${enrollmentData.certificateRejectionReason || "N/A"}`
+            : "Certificate not available.";
+          toast.warning(statusMsg);
+          navigate(ROUTES.MY_CERTIFICATES);
+          return;
+        }
+
+        setEnrollment(enrollmentData);
+      } catch (error) {
+        console.error("Certificate fetch error:", error);
         toast.error("Failed to load certificate data");
         navigate(ROUTES.MY_COURSES);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCertificate();
   }, [courseId, navigate, toast]);
 
   const handlePrint = () => {
@@ -55,12 +77,15 @@ const CertificatePage = () => {
 
   if (!enrollment) return null;
 
-  const { course } = enrollment;
+  const course = enrollment.courseId || enrollment.course;
   const instructorName =
-    course?.instructor?.fullname ||
     course?.instructorId?.fullname ||
+    course?.instructor?.fullname ||
     "Lead Instructor";
-  const completedDate = new Date(enrollment.lastUpdated || Date.now()).toLocaleDateString('en-US', {
+  const adminName = enrollment.certificateApprovedBy?.fullname || "Admin";
+  const approvedDate = new Date(
+    enrollment.certificateApprovedAt || enrollment.updatedAt || Date.now()
+  ).toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric'
@@ -154,9 +179,9 @@ const CertificatePage = () => {
               <div className="flex items-end justify-between w-full px-12 mt-auto mb-16">
                 <div className="text-center w-48">
                   <div className="text-xl font-medium text-gray-800 border-b border-gray-300 pb-2 mb-2">
-                    {completedDate}
+                    {approvedDate}
                   </div>
-                  <p className="text-[13px] font-bold tracking-wider text-gray-400 uppercase">Date Earned</p>
+                  <p className="text-[13px] font-bold tracking-wider text-gray-400 uppercase">Date Approved</p>
                 </div>
 
                 <div className="flex flex-col items-center w-32">
@@ -168,10 +193,17 @@ const CertificatePage = () => {
 
                 <div className="text-center w-48">
                   <div className="text-[22px] font-serif italic text-gray-800 border-b border-gray-300 pb-2 mb-2">
-                    {instructorName}
+                    {adminName}
                   </div>
-                  <p className="text-[13px] font-bold tracking-wider text-gray-400 uppercase">Course Instructor</p>
+                  <p className="text-[13px] font-bold tracking-wider text-gray-400 uppercase">Approved By</p>
                 </div>
+              </div>
+
+              {/* Instructor Info (smaller, below signatures) */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
+                <p className="text-xs text-gray-400">
+                  Course Instructor: <span className="font-medium text-gray-600">{instructorName}</span>
+                </p>
               </div>
 
             </div>

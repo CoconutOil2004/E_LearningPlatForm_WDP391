@@ -80,6 +80,9 @@ exports.getMyCourses = async (req, res) => {
           enrollmentId: e._id,
           progress: e.progress,
           completed: e.completed,
+          certificateStatus: e.certificateStatus,
+          certificateApprovedAt: e.certificateApprovedAt,
+          certificateRejectionReason: e.certificateRejectionReason,
           lastUpdated: e.updatedAt,
           continueLesson,
           itemsProgress: itemsProgress.length > 0 ? itemsProgress : undefined,
@@ -270,7 +273,14 @@ exports.getEnrollmentByCourseId = async (req, res) => {
       userId,
       courseId,
       paymentStatus: "paid",
-    }).lean();
+    })
+      .populate({
+        path: "courseId",
+        select: "title thumbnail instructorId",
+        populate: { path: "instructorId", select: "fullname email" }
+      })
+      .populate("certificateApprovedBy", "fullname email")
+      .lean();
 
     if (!enrollment) {
       return res.json({
@@ -281,12 +291,7 @@ exports.getEnrollmentByCourseId = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        enrollmentId: enrollment._id,
-        progress: enrollment.progress,
-        completed: enrollment.completed,
-        updatedAt: enrollment.updatedAt,
-      },
+      data: enrollment,
     });
   } catch (error) {
     console.error("getEnrollmentByCourseId error:", error);

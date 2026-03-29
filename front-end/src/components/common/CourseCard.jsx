@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import CertificateStatusBadge from "../student/CertificateStatusBadge";
 import {
   cardVariants,
   formatDurationClock,
@@ -63,6 +64,8 @@ const CourseCard = ({
   // Enrolled-mode data
   const progressPct = Math.min(100, Math.max(0, enrollment?.progress ?? 0));
   const continueTitle = enrollment?.continueLesson?.title;
+  const certificateStatus = enrollment?.certificateStatus;
+  const isCompleted = progressPct === 100 || enrollment?.completed;
 
   const goToDetail = () => navigate(`/courses/${course._id}`);
 
@@ -70,8 +73,14 @@ const CourseCard = ({
     e.stopPropagation();
     if (variant === "enrolled") {
       // Enrolled card: button => continue/certificate
-      if (progressPct === 100) {
-        navigate(`/student/certificate/${course._id}`);
+      if (isCompleted) {
+        // Only navigate to certificate if approved
+        if (certificateStatus === "approved") {
+          navigate(`/student/certificate/${course._id}`);
+        } else {
+          // Pending or rejected - go to certificates page
+          navigate(`/student/certificates`);
+        }
       } else {
         navigate(`/student/learning/${course._id}`);
       }
@@ -93,7 +102,12 @@ const CourseCard = ({
   const enrollBtnLabel = () => {
     if (variant === "enrolled") {
       if (progressPct === 0) return "Start Learning";
-      if (progressPct === 100) return "View Certificate";
+      if (isCompleted) {
+        if (certificateStatus === "approved") return "View Certificate";
+        if (certificateStatus === "pending") return "Certificate Pending";
+        if (certificateStatus === "rejected") return "Certificate Rejected";
+        return "View Certificate";
+      }
       if (continueTitle)
         return `Continue: ${continueTitle.slice(0, 28)}${continueTitle.length > 28 ? "…" : ""}`;
       return "Continue";
@@ -104,8 +118,15 @@ const CourseCard = ({
   const enrollBtnClass = () => {
     const base =
       "px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all";
-    if (variant === "enrolled" && progressPct === 100)
+    if (variant === "enrolled" && isCompleted) {
+      if (certificateStatus === "approved")
+        return `${base} bg-primary text-white shadow-lg shadow-primary/30`;
+      if (certificateStatus === "pending")
+        return `${base} bg-yellow-500 text-white shadow-lg shadow-yellow-500/30`;
+      if (certificateStatus === "rejected")
+        return `${base} bg-red-500 text-white shadow-lg shadow-red-500/30`;
       return `${base} bg-primary text-white shadow-lg shadow-primary/30`;
+    }
     if (isEnrolled)
       return `${base} bg-secondary/10 text-secondary border border-secondary/30`;
     return `${base} btn-aurora`;
@@ -194,6 +215,10 @@ const CourseCard = ({
               {course.level}
             </span>
           )}
+          {/* Certificate status badge for completed courses */}
+          {variant === "enrolled" && isCompleted && certificateStatus && (
+            <CertificateStatusBadge status={certificateStatus} size="sm" />
+          )}
         </div>
 
         {/* Title */}
@@ -234,7 +259,7 @@ const CourseCard = ({
               <span className="font-semibold text-body">
                 {progressPct > 0 ? `${progressPct}% complete` : "Not started"}
               </span>
-              {progressPct === 100 && (
+              {isCompleted && (
                 <span className="flex items-center gap-1 font-bold text-green-600">
                   <Icon name="award" size={12} color="#10B981" /> Complete
                 </span>
@@ -246,12 +271,36 @@ const CourseCard = ({
                 style={{
                   width: `${progressPct}%`,
                   background:
-                    progressPct === 100
+                    isCompleted
                       ? "#10B981"
                       : "var(--gradient-brand, #667eea)",
                 }}
               />
             </div>
+            
+            {/* Certificate status message for completed courses */}
+            {isCompleted && certificateStatus && (
+              <div className="mt-2">
+                {certificateStatus === "pending" && (
+                  <p className="text-xs text-yellow-600 flex items-center gap-1">
+                    <Icon name="clock" size={12} color="#ca8a04" />
+                    Certificate awaiting admin approval
+                  </p>
+                )}
+                {certificateStatus === "approved" && (
+                  <p className="text-xs text-green-600 flex items-center gap-1">
+                    <Icon name="check-circle" size={12} color="#15803d" />
+                    Certificate ready to view
+                  </p>
+                )}
+                {certificateStatus === "rejected" && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <Icon name="x-circle" size={12} color="#dc2626" />
+                    Certificate was rejected
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -3,6 +3,8 @@ const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const { LESSON_COMPLETE_THRESHOLD } = require("../models/Enrollment");
 const { buildItemsProgress } = require("../utils/buildItemsProgress");
+const { sendNotification, notifyAdmins } = require("../utils/notificationUtils");
+const User = require("../models/User");
 
 function countLessonItems(sections) {
   let n = 0;
@@ -19,7 +21,15 @@ function recalcProgressFromItemsProgress(enrollment, totalLessons) {
     (i) => i.itemType === "lesson" && i.status === "done",
   ).length;
   enrollment.progress = Math.round((doneCount / totalLessons) * 100);
-  if (enrollment.progress >= 100) enrollment.completed = true;
+  
+  // Khi hoàn thành 100% → chuyển sang pending để chờ admin duyệt
+  if (enrollment.progress >= 100) {
+    enrollment.completed = true;
+    // Chỉ chuyển sang pending nếu chưa được duyệt
+    if (enrollment.certificateStatus === "not_eligible") {
+      enrollment.certificateStatus = "pending";
+    }
+  }
 }
 
 exports.completeLesson = async (req, res) => {
@@ -195,7 +205,48 @@ exports.heartbeat = async (req, res) => {
         const totalLessons = items.filter(
           (i) => i.itemType === "lesson",
         ).length;
+        
+        const wasCompleted = enrollment.completed;
         recalcProgressFromItemsProgress(enrollment, totalLessons);
+        
+        // Kiểm tra nếu vừa hoàn thành khóa học (chuyển từ chưa hoàn thành → hoàn thành)
+        if (!wasCompleted && enrollment.completed && enrollment.certificateStatus === "pending") {
+          // Lấy thông tin course và user
+          const course = await Course.findById(enrollment.courseId)
+            .select("title instructorId")
+            .lean();
+          const user = await User.findById(enrollment.userId)
+            .select("fullname username")
+            .lean();
+          
+          // Gửi notification cho student
+          await sendNotification(req.app, {
+            userId: enrollment.userId,
+            title: "Course completed! 🎉",
+            message: `Congratulations! You have completed "${course?.title}". Your certificate is pending admin approval.`,
+            type: "success",
+            link: `/student/certificates`
+          });
+          
+          // Gửi notification cho tất cả admin
+          await notifyAdmins(req.app, {
+            title: "Certificate approval needed",
+            message: `Student ${user?.fullname || user?.username} completed course "${course?.title}" and is waiting for certificate approval.`,
+            type: "info",
+            link: `/admin/certificates/pending`
+          });
+          
+          // Gửi notification cho instructor (optional)
+          if (course?.instructorId) {
+            await sendNotification(req.app, {
+              userId: course.instructorId,
+              title: "Student completed course",
+              message: `${user?.fullname || user?.username} has completed your course "${course?.title}"`,
+              type: "info",
+              link: `/instructor/students`
+            });
+          }
+        }
       }
     }
 

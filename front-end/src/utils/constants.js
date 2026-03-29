@@ -72,6 +72,8 @@ const ROUTES = {
   ADMIN_BLOG: "/admin/blog",
   ADMIN_REVIEWS: "/admin/reviews",
   ADMIN_COMMENTS: "/admin/comments",
+  ADMIN_CERTIFICATES_PENDING: "/admin/certificates/pending",
+  ADMIN_CERTIFICATES_ALL: "/admin/certificates/all",
   ADMIN_PROFILE: "/admin/profile",
 };
 

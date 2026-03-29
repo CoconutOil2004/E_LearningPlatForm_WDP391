@@ -78,6 +78,8 @@ import AdminRevenuePage from "./pages/Admin/Revenue/AdminRevenuePage";
 import AdminReviewPage from "./pages/Admin/Review/AdminReviewPage";
 import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
 import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
+import PendingCertificatesPage from "./pages/Admin/Certificates/PendingCertificatesPage";
+import AllCertificatesPage from "./pages/Admin/Certificates/AllCertificatesPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -219,6 +221,8 @@ const router = createBrowserRouter(
         <Route path={ROUTES.ADMIN_BLOG} element={<AdminBlogPage />} />
         <Route path={ROUTES.ADMIN_REVIEWS} element={<AdminReviewPage />} />
         <Route path={ROUTES.ADMIN_COMMENTS} element={<AdminCommentPage />} />
+        <Route path={ROUTES.ADMIN_CERTIFICATES_PENDING} element={<PendingCertificatesPage />} />
+        <Route path={ROUTES.ADMIN_CERTIFICATES_ALL} element={<AllCertificatesPage />} />
         <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
       </Route>
 

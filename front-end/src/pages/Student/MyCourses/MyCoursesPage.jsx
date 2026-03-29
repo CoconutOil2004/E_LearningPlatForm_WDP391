@@ -39,7 +39,10 @@ const MyCoursesPage = () => {
 
   useEffect(() => {
     PaymentService.getMyCourses()
-      .then((data) => setEnrollments(data ?? []))
+      .then((data) => {
+        console.log("My courses data:", data);
+        setEnrollments(data ?? []);
+      })
       .catch(() => toast.error("Failed to load your courses"))
       .finally(() => setLoading(false));
   }, []);

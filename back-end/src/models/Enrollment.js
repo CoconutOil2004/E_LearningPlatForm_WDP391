@@ -80,6 +80,26 @@ const enrollmentSchema = new mongoose.Schema(
       default: false
     },
 
+    /** Certificate approval status */
+    certificateStatus: {
+      type: String,
+      enum: ["not_eligible", "pending", "approved", "rejected"],
+      default: "not_eligible"
+    },
+
+    certificateApprovedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+
+    certificateApprovedAt: {
+      type: Date
+    },
+
+    certificateRejectionReason: {
+      type: String
+    },
+
     /** Tiến độ từng item (lesson + quiz). Lesson: lock/progress/done + watchedSeconds, duration. Quiz: open/done. */
     itemsProgress: {
       type: [itemProgressSchema],
