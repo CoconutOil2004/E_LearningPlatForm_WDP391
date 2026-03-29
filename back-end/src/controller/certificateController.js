@@ -199,7 +199,6 @@ exports.approveCertificate = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Certificate approved successfully.",
       data: enrollment,
     });
   } catch (error) {
@@ -271,7 +270,6 @@ exports.rejectCertificate = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Certificate rejected.",
       data: enrollment,
     });
   } catch (error) {

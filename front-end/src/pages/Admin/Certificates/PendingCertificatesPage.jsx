@@ -41,7 +41,6 @@ const PendingCertificatesPage = () => {
     try {
       const res = await CertificateService.approveCertificate(enrollmentId);
       if (res.success) {
-        toast.success("Certificate approved successfully!");
         fetchPendingCertificates();
       }
     } catch (error) {
@@ -61,7 +60,6 @@ const PendingCertificatesPage = () => {
     try {
       const res = await CertificateService.rejectCertificate(rejectModal, rejectReason);
       if (res.success) {
-        toast.success("Certificate rejected");
         setRejectModal(null);
         setRejectReason("");
         fetchPendingCertificates();

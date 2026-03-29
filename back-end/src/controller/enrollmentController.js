@@ -228,7 +228,6 @@ exports.enrollFreeCourse = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Successfully enrolled in free course",
       data: {
         enrollmentId: enrollment._id,
         courseId: enrollment.courseId,

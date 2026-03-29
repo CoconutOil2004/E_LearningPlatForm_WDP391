@@ -55,7 +55,6 @@ const HomePage = () => {
       return;
     }
     enroll(course._id);
-    toast.success(`Enrolled in "${course.title}"!`);
     navigate(`/student/learning/${course._id}`);
   };
 

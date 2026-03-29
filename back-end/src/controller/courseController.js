@@ -803,7 +803,6 @@ exports.submitCourse = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Course submitted for review",
       data: course,
     });
   } catch (error) {
@@ -905,7 +904,6 @@ exports.approveCourse = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Course approved and published",
       data: course,
     });
   } catch (error) {
@@ -1018,7 +1016,6 @@ exports.rejectCourse = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Course rejected",
       data: populated,
     });
   } catch (error) {

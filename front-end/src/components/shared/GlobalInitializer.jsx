@@ -40,14 +40,12 @@ const GlobalInitializer = () => {
 
     if (payment === "success") {
       if (!invalidCourseId) {
-        toast.success("Payment successful! You can start learning now.");
         enroll(courseIdParam);
         PaymentService.getEnrolledCourseIds()
           .then(setEnrolledCourseIds)
           .catch(() => {});
         navigate(`/courses/${courseIdParam}`, { replace: true });
       } else {
-        toast.success("Payment successful!");
         navigate(
           { pathname: location.pathname, search: "" },
           { replace: true },
