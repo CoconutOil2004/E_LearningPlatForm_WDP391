@@ -74,7 +74,18 @@ const ROUTES = {
   ADMIN_COMMENTS: "/admin/comments",
   ADMIN_CERTIFICATES_PENDING: "/admin/certificates/pending",
   ADMIN_CERTIFICATES_ALL: "/admin/certificates/all",
+  ADMIN_PAYOUTS_PENDING: "/admin/payouts/pending",
+  ADMIN_PAYOUTS_ALL: "/admin/payouts/all",
+  ADMIN_PAYOUTS_STATISTICS: "/admin/payouts/statistics",
+  ADMIN_PAYOUTS_EARNINGS: "/admin/payouts/earnings",
+  ADMIN_PAYOUTS_SETTINGS: "/admin/payouts/settings",
   ADMIN_PROFILE: "/admin/profile",
+
+  // --- Instructor Earnings ---
+  INSTRUCTOR_EARNINGS_DASHBOARD: "/instructor/earnings",
+  INSTRUCTOR_EARNINGS_PAYOUT: "/instructor/earnings/payout",
+  INSTRUCTOR_EARNINGS_HISTORY: "/instructor/earnings/payout-history",
+  INSTRUCTOR_EARNINGS_SETTINGS: "/instructor/earnings/settings",
 };
 
 export { API_BASE_URL, BACKEND_API_URI, ROLES, ROUTES };

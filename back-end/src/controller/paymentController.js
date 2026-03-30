@@ -2,9 +2,14 @@ const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const Payment = require("../models/Payment");
 const User = require("../models/User");
+const InstructorEarning = require("../models/InstructorEarning");
 const { createPaymentUrl, verifyReturnUrl } = require("../utils/vnpay");
 const { buildItemsProgress } = require("../utils/buildItemsProgress");
 const { sendNotification } = require("../utils/notificationUtils");
+const {
+  calculateEarning,
+  calculateAvailableDate,
+} = require("../utils/payoutUtils");
 
 /** Chuỗi courseId cho redirect URL (populate có thể trả về object). */
 function getCourseIdForRedirect(payment) {
@@ -164,6 +169,36 @@ exports.paymentCallback = async (req, res) => {
              type: "success",
              link: `/instructor/courses/edit/${course._id}`,
            });
+
+           // ✨ CREATE INSTRUCTOR EARNING
+           try {
+             const { platformAmount, instructorAmount, platformFeePercent } =
+               calculateEarning(payment.amount);
+             const earnedAt = payment.paymentDate || new Date();
+             const availableAt = calculateAvailableDate(earnedAt);
+
+             await InstructorEarning.create({
+               instructorId: course.instructorId,
+               courseId: course._id,
+               paymentId: payment._id,
+               enrollmentId: enrollment._id,
+               studentId: enrollment.userId,
+               coursePrice: payment.amount,
+               platformFeePercent,
+               platformAmount,
+               instructorAmount,
+               status: "pending",
+               earnedAt,
+               availableAt,
+             });
+
+             console.log(
+               `✅ Created instructor earning: ${instructorAmount} VND for instructor ${course.instructorId}`
+             );
+           } catch (earningError) {
+             console.error("❌ Failed to create instructor earning:", earningError);
+             // Don't fail the payment if earning creation fails
+           }
         }
       }
     }

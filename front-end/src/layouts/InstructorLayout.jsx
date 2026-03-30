@@ -1,5 +1,6 @@
 import {
   BookOutlined,
+  DollarOutlined,
   EditOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -34,11 +35,11 @@ const NAV_ITEMS = [
     label: "My Courses",
     path: ROUTES.INSTRUCTOR_COURSES,
   },
-  // {
-  //   icon: <DollarOutlined />,
-  //   label: "Revenue",
-  //   path: ROUTES.INSTRUCTOR_REVENUE,
-  // },
+  {
+    icon: <DollarOutlined />,
+    label: "Earnings",
+    path: ROUTES.INSTRUCTOR_EARNINGS_DASHBOARD,
+  },
   {
     icon: <TeamOutlined />,
     label: "Student Management",

@@ -2,8 +2,8 @@ import {
   // BarChartOutlined,
   BookOutlined,
   CheckSquareOutlined,
+  DollarOutlined,
   SafetyCertificateOutlined,
-  // DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -56,6 +56,11 @@ const NAV_ITEMS = [
     key: ROUTES.ADMIN_CERTIFICATES_PENDING,
     icon: <SafetyCertificateOutlined />,
     label: "Certificates",
+  },
+  {
+    key: ROUTES.ADMIN_PAYOUTS_PENDING,
+    icon: <DollarOutlined />,
+    label: "Payouts",
   },
   // {
   //   key: ROUTES.ADMIN_ANALYTICS,

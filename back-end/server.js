@@ -69,6 +69,9 @@ app.use("/api/reviews", require("./src/routes/reviewRoutes"));
 app.use("/api/comments", require("./src/routes/commentRoutes"));
 app.use("/api/analytics", require("./src/routes/analyticsRoutes"));
 app.use("/api/certificates", require("./src/routes/certificateRoutes"));
+app.use("/api/instructor/earnings", require("./src/routes/instructorEarningRoutes"));
+app.use("/api/instructor/payout", require("./src/routes/payoutRoutes"));
+app.use("/api/instructor/payment-settings", require("./src/routes/paymentSettingsRoutes"));
 /* ========================================== */
 
 const PORT = process.env.PORT || 9999;
@@ -76,6 +79,11 @@ const PORT = process.env.PORT || 9999;
 /* ================= ERROR HANDLING ================= */
 const errorMiddleware = require("./src/middleware/error.middleware");
 app.use(errorMiddleware);
+
+/* ================= SCHEDULER ================= */
+const { initScheduler } = require("./src/config/scheduler");
+// Pass app instance to scheduler for notifications
+initScheduler(app);
 
 server.listen(PORT, () =>
   console.log(`✅ Server running on http://localhost:${PORT}`),

@@ -63,6 +63,10 @@ import InstructorDashboard from "./pages/Instructor/Dashboard/InstructorDashboar
 import InstructorProfilePage from "./pages/Instructor/Profile/InstructorProfilePage";
 import InstructorRevenuePage from "./pages/Instructor/Revenue/InstructorRevenuePage";
 import InstructorStudentsPage from "./pages/Instructor/Students/InstructorStudentsPage";
+import EarningsDashboard from "./pages/Instructor/Earnings/EarningsDashboard";
+import RequestPayoutPage from "./pages/Instructor/Earnings/RequestPayoutPage";
+import PayoutHistoryPage from "./pages/Instructor/Earnings/PayoutHistoryPage";
+import PaymentSettingsPage from "./pages/Instructor/Earnings/PaymentSettingsPage";
 
 // ─── Admin Pages ──────────────────────────────────────────────────────────────
 import AdminAnalyticsPage from "./pages/Admin/Analytics/AdminAnalyticsPage";
@@ -80,6 +84,11 @@ import AdminSettingsPage from "./pages/Admin/Settings/AdminSettingsPage";
 import AdminUsersPage from "./pages/Admin/Users/AdminUsersPage";
 import PendingCertificatesPage from "./pages/Admin/Certificates/PendingCertificatesPage";
 import AllCertificatesPage from "./pages/Admin/Certificates/AllCertificatesPage";
+import PendingPayoutsPage from "./pages/Admin/Payouts/PendingPayoutsPage";
+import AllPayoutsPage from "./pages/Admin/Payouts/AllPayoutsPage";
+import PayoutStatisticsPage from "./pages/Admin/Payouts/PayoutStatisticsPage";
+import InstructorEarningsPage from "./pages/Admin/Payouts/InstructorEarningsPage";
+import PaymentSettingsManagementPage from "./pages/Admin/Payouts/PaymentSettingsManagementPage";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -199,6 +208,22 @@ const router = createBrowserRouter(
           path={ROUTES.INSTRUCTOR_PROFILE}
           element={<InstructorProfilePage />}
         />
+        <Route
+          path={ROUTES.INSTRUCTOR_EARNINGS_DASHBOARD}
+          element={<EarningsDashboard />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_EARNINGS_PAYOUT}
+          element={<RequestPayoutPage />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_EARNINGS_HISTORY}
+          element={<PayoutHistoryPage />}
+        />
+        <Route
+          path={ROUTES.INSTRUCTOR_EARNINGS_SETTINGS}
+          element={<PaymentSettingsPage />}
+        />
       </Route>
 
       {/* ─── Admin Routes ─── */}
@@ -223,6 +248,11 @@ const router = createBrowserRouter(
         <Route path={ROUTES.ADMIN_COMMENTS} element={<AdminCommentPage />} />
         <Route path={ROUTES.ADMIN_CERTIFICATES_PENDING} element={<PendingCertificatesPage />} />
         <Route path={ROUTES.ADMIN_CERTIFICATES_ALL} element={<AllCertificatesPage />} />
+        <Route path={ROUTES.ADMIN_PAYOUTS_PENDING} element={<PendingPayoutsPage />} />
+        <Route path={ROUTES.ADMIN_PAYOUTS_ALL} element={<AllPayoutsPage />} />
+        <Route path={ROUTES.ADMIN_PAYOUTS_STATISTICS} element={<PayoutStatisticsPage />} />
+        <Route path={ROUTES.ADMIN_PAYOUTS_EARNINGS} element={<InstructorEarningsPage />} />
+        <Route path={ROUTES.ADMIN_PAYOUTS_SETTINGS} element={<PaymentSettingsManagementPage />} />
         <Route path={ROUTES.ADMIN_PROFILE} element={<AdminProfilePage />} />
       </Route>
 
